@@ -27,8 +27,8 @@ User Browser → Vue 3 Frontend (Vite) → Spring Boot Backend → MySQL
 | -------- | -------------------------------- |
 | Frontend | Vue 3, Vite, Element Plus, Axios |
 | Backend  | Spring Boot 3.5, Spring Data JPA |
-| Database | MySQL 8.0                        |
-| Auth     | JWT (jjwt)                       |
+| Database | MySQL 8.0 (prod) / H2 (dev)      |
+| Auth     | JWT (jjwt) + Spring Security     |
 | API Docs | SpringDoc OpenAPI (Swagger)      |
 | Testing  | JUnit 5, MockMvc                 |
 | Build    | Maven (backend), Vite (frontend) |
@@ -38,13 +38,39 @@ User Browser → Vue 3 Frontend (Vite) → Spring Boot Backend → MySQL
 
 ```
 MyLibrarySystem/
-├── library-server/        # Spring Boot backend
-├── library-frontend/      # Vue 3 frontend
-├── docs/                  # Design docs & references
-├── Logs/                  # Runtime logs
-├── docker-compose.yml     # One-command deploy
-├── README.md              # This file
-└── .gitignore
+├── library-server/                # Spring Boot 3.5 backend
+│   ├── arc/                       #   Archived old scaffold (MyBatis-Plus reference)
+│   ├── src/main/java/com/library/
+│   │   ├── LibraryApplication.java
+│   │   ├── common/ApiResponse.java
+│   │   ├── config/                #   Cors, Security, Swagger
+│   │   ├── exception/             #   GlobalExceptionHandler
+│   │   ├── entity/                #   JPA entities
+│   │   ├── repository/            #   Spring Data repositories
+│   │   ├── service/               #   Business logic
+│   │   ├── controller/            #   REST controllers
+│   │   ├── dto/                   #   Request/Response DTOs
+│   │   └── security/              #   JWT provider & filters
+│   ├── src/main/resources/
+│   │   └── application.yml        #   H2 (dev) + MySQL (prod) profiles
+│   └── pom.xml
+├── library-frontend/              # Vue 3 + Vite frontend
+│   ├── src/
+│   │   ├── api/                   #   12 API modules (book, borrow, reader, ...)
+│   │   ├── views/                 #   16 view pages
+│   │   ├── router/                #   Vue Router config
+│   │   ├── layouts/               #   MainLayout
+│   │   └── utils/                 #   Axios request wrapper
+│   ├── package.json
+│   └── vite.config.js
+├── docs/                          # Entity docs & API reference from old project
+│   ├── Entity.md
+│   ├── API.ReadMe.md
+│   ├── FRONTEND_MODULES.md
+│   └── MIGRATION.md
+├── Logs/                          # Runtime logs (.gitkeep)
+├── .gitignore
+└── README.md
 ```
 
 ## Quick Start
@@ -52,52 +78,70 @@ MyLibrarySystem/
 ### Prerequisites
 
 - JDK 17+
-- Node.js 18+
-- MySQL 8.0
-- Maven 3.9+
+- Node.js 20+
+- MySQL 8.0 (optional — H2 dev mode works without it)
 
-### Development
+### Backend (library-server)
 
 ```bash
-# Backend
 cd library-server
-mvn spring-boot:run
-# → http://localhost:8080/swagger-ui.html
 
-# Frontend
+# Dev mode: H2 in-memory database, no MySQL needed
+./mvnw spring-boot:run
+# → Swagger UI:  http://localhost:8080/api/swagger-ui.html
+# → H2 Console:  http://localhost:8080/api/h2-console
+
+# Prod mode: MySQL
+./mvnw spring-boot:run -Dspring-boot.run.profiles=prod
+```
+
+### Frontend (library-frontend)
+
+```bash
 cd library-frontend
 npm install
 npm run dev
 # → http://localhost:5173
 ```
 
-### Docker Deployment
-
-```bash
-docker compose up -d
-# → http://localhost
-```
-
 ## API Overview
 
-Full API documentation available at `http://localhost:8080/swagger-ui.html` after starting the backend.
+Full interactive docs at `http://localhost:8080/api/swagger-ui.html`.
 
-| Endpoint Group | Description                                  |
-| -------------- | -------------------------------------------- |
-| `/users/*`     | Admin login & management                     |
-| `/duzhe/*`     | Reader registration, login, profile          |
-| `/book/*`      | Book CRUD & paginated search                 |
-| `/category/*`  | Category management                          |
-| `/borrow/*`    | Borrow/return/renewal application & approval |
-| `/penalty/*`   | Fine query & payment                         |
-| `/news/*`      | Announcement CRUD                            |
-| `/messages/*`  | Reader messages & admin reply                |
-| `/file/upload` | Cover image upload                           |
-| `/common/*`    | Dashboard statistics                         |
-| `/remind/*`    | Pending count & due-date reminders           |
+| Endpoint Group   | Description                                  | Old Path          |
+| ---------------- | -------------------------------------------- | ----------------- |
+| `/api/users/*`   | Admin login & management                     | `/users/*`        |
+| `/api/readers/*` | Reader registration, login, profile          | `/duzhe/*`        |
+| `/api/books/*`   | Book CRUD & paginated search                 | `/tushuxinxi/*`   |
+| `/api/categories/*` | Category management                       | `/tushuleibie/*`  |
+| `/api/borrows/*` | Borrow application & approval                | `/tushujieyue/*`  |
+| `/api/returns/*` | Return application & approval                | `/tushuguihai/*`  |
+| `/api/renewals/*`| Renewal application & approval               | `/tushuxujie/*`   |
+| `/api/penalties/*`| Fine query & payment                        | `/chaoqifakuan/*` |
+| `/api/news/*`    | Announcement CRUD                            | `/news/*`         |
+| `/api/messages/*`| Reader messages & admin reply                | `/messages/*`     |
+| `/api/upload/*`  | Cover image upload                           | `/file/*`         |
+| `/api/dashboard/*`| Dashboard statistics                        | `/common/*`       |
 
-## Status
+## Phase Progress
 
-> 🚧 **Phase 1** — Backend scaffolding in progress.
+| Phase                                     | Status                                                                 |
+| ----------------------------------------- | ---------------------------------------------------------------------- |
+| Phase 1 — Backend Scaffold                | ✅ Complete — Spring Boot 3.5, H2, Swagger, compile & start verified   |
+| Phase 2 — Auth (JWT + Spring Security)    | ⬜ Pending                                                             |
+| Phase 3 — Book Management API             | ⬜ Pending                                                             |
+| Phase 4 — Borrow/Return/Renewal/Penalty   | ⬜ Pending                                                             |
+| Phase 5 — News/Messages + Frontend Integration | ⬜ Pending                                                        |
+| Phase 6 — Docker + Tests + Docs           | ⬜ Pending                                                             |
 
-See [docs/](docs/) for detailed design documents and migration notes.
+> See [Docs/internship-plan-main.md](../Docs/internship-plan-main.md) for detailed plan.
+
+## Git
+
+```bash
+# Repo: Projects/MyLibrarySystem
+# Branch: master
+# Key commits:
+#   a8562cf  feat(server): Phase 1 scaffold
+#   4bcad1d  chore: init MyLibrarySystem workspace
+```
