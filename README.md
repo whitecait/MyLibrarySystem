@@ -63,13 +63,15 @@ MyLibrarySystem/
 │   │   └── utils/                 #   Axios request wrapper
 │   ├── package.json
 │   └── vite.config.js
-├── docs/                          # Entity docs & API reference from old project
-│   ├── Entity.md
-│   ├── API.ReadMe.md
-│   ├── FRONTEND_MODULES.md
-│   └── MIGRATION.md
+├── docs/                          # Technical documentation
+│   ├── ARCHITECTURE.md            #   System design & role model
+│   ├── API-SPEC.md                #   REST API contract & path mapping
+│   ├── DATA-MODEL.md              #   ER diagram & entity field dictionary
+│   ├── test/TEST-CASES.md         #   Test cases
+│   └── arc/                       #   Archived old reference docs
 ├── Logs/                          # Runtime logs (.gitkeep)
 ├── .gitignore
+├── .codegraph/                    # Code intelligence index
 └── README.md
 ```
 

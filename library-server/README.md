@@ -7,9 +7,12 @@ Library Management System backend. Phase 1 scaffold.
 | Path                           | Description                                                                    |
 | ------------------------------ | ------------------------------------------------------------------------------ |
 | `arc/`                         | Archived old backend (Spring Boot 2.2 + MyBatis-Plus + Shiro) — reference only |
-| `../docs/Entity.md`            | Old entity field definitions                                                   |
-| `../docs/API.ReadMe.md`        | Old API endpoint documentation                                                 |
-| `../library-frontend/src/api/` | Frontend API modules (API contract source of truth)                            |
+| `../docs/arc/Entity.md`        | Old entity field definitions (pinyin)                                         |
+| `../docs/arc/API.ReadMe.md`    | Old API endpoint documentation                                                |
+| `../docs/DATA-MODEL.md`        | New ER diagram & entity field dictionary (current target)                     |
+| `../docs/API-SPEC.md`          | New REST API specification & old→new path mapping                             |
+| `../docs/ARCHITECTURE.md`      | System architecture & role model                                              |
+| `../library-frontend/src/api/` | Frontend API modules (API contract source of truth)                           |
 
 ## Restructuring Map
 
@@ -63,7 +66,8 @@ library-server/
 │   │   └── SecurityConfig.java   # Spring Security (permit-all in Phase 1)
 │   ├── entity/                   # JPA entities (Phase 2+)
 │   ├── repository/               # Spring Data JPA repositories
-│   ├── service/                  # Business services
+│   ├── service/                  # Business interfaces
+│   │   └── impl/                  #   implementations
 │   ├── controller/               # REST controllers
 │   ├── dto/                      # Request/Response DTOs
 │   ├── security/                 # JWT provider & filter (Phase 2)
@@ -73,6 +77,8 @@ library-server/
 ├── src/main/resources/
 │   └── application.yml           # H2 (dev) + MySQL (prod) profiles
 ├── src/test/java/com/library/
+├── .mvn/wrapper/                 # Maven Wrapper 3.9.9
+├── mvnw / mvnw.cmd
 └── pom.xml                       # Spring Boot 3.5 + JPA + Security + Swagger
 ```
 
@@ -100,7 +106,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=prod
 
 | Phase                                          | Status         |
 | ---------------------------------------------- | -------------- |
-| Phase 1 — Backend Scaffold                     | ✅ In progress |
+| Phase 1 — Backend Scaffold                     | ✅ Complete    |
 | Phase 2 — Auth (JWT + Spring Security)         | ⬜ Pending     |
 | Phase 3 — Book Management API                  | ⬜ Pending     |
 | Phase 4 — Borrow/Return/Renewal/Penalty        | ⬜ Pending     |
