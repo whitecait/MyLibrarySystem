@@ -108,31 +108,31 @@ npm run dev
 
 Full interactive docs at `http://localhost:8080/api/swagger-ui.html`.
 
-| Endpoint Group   | Description                                  | Old Path          |
-| ---------------- | -------------------------------------------- | ----------------- |
-| `/api/users/*`   | Admin login & management                     | `/users/*`        |
-| `/api/readers/*` | Reader registration, login, profile          | `/duzhe/*`        |
-| `/api/books/*`   | Book CRUD & paginated search                 | `/tushuxinxi/*`   |
-| `/api/categories/*` | Category management                       | `/tushuleibie/*`  |
-| `/api/borrows/*` | Borrow application & approval                | `/tushujieyue/*`  |
-| `/api/returns/*` | Return application & approval                | `/tushuguihai/*`  |
-| `/api/renewals/*`| Renewal application & approval               | `/tushuxujie/*`   |
-| `/api/penalties/*`| Fine query & payment                        | `/chaoqifakuan/*` |
-| `/api/news/*`    | Announcement CRUD                            | `/news/*`         |
-| `/api/messages/*`| Reader messages & admin reply                | `/messages/*`     |
-| `/api/upload/*`  | Cover image upload                           | `/file/*`         |
-| `/api/dashboard/*`| Dashboard statistics                        | `/common/*`       |
+| Endpoint Group      | Description                         | Old Path          |
+| ------------------- | ----------------------------------- | ----------------- |
+| `/api/users/*`      | Admin login & management            | `/users/*`        |
+| `/api/readers/*`    | Reader registration, login, profile | `/duzhe/*`        |
+| `/api/books/*`      | Book CRUD & paginated search        | `/tushuxinxi/*`   |
+| `/api/categories/*` | Category management                 | `/tushuleibie/*`  |
+| `/api/borrows/*`    | Borrow application & approval       | `/tushujieyue/*`  |
+| `/api/returns/*`    | Return application & approval       | `/tushuguihai/*`  |
+| `/api/renewals/*`   | Renewal application & approval      | `/tushuxujie/*`   |
+| `/api/penalties/*`  | Fine query & payment                | `/chaoqifakuan/*` |
+| `/api/news/*`       | Announcement CRUD                   | `/news/*`         |
+| `/api/messages/*`   | Reader messages & admin reply       | `/messages/*`     |
+| `/api/upload/*`     | Cover image upload                  | `/file/*`         |
+| `/api/dashboard/*`  | Dashboard statistics                | `/common/*`       |
 
 ## Phase Progress
 
-| Phase                                     | Status                                                                 |
-| ----------------------------------------- | ---------------------------------------------------------------------- |
-| Phase 1 — Backend Scaffold                | ✅ Complete — Spring Boot 3.5, H2, Swagger, compile & start verified   |
-| Phase 2 — Auth (JWT + Spring Security)    | ⬜ Pending                                                             |
-| Phase 3 — Book Management API             | ⬜ Pending                                                             |
-| Phase 4 — Borrow/Return/Renewal/Penalty   | ⬜ Pending                                                             |
-| Phase 5 — News/Messages + Frontend Integration | ⬜ Pending                                                        |
-| Phase 6 — Docker + Tests + Docs           | ⬜ Pending                                                             |
+| Phase                                          | Status                                                               |
+| ---------------------------------------------- | -------------------------------------------------------------------- |
+| Phase 1 — Backend Scaffold                     | ✅ Complete — Spring Boot 3.5, H2, Swagger, compile & start verified |
+| Phase 2 — Auth (JWT + Spring Security)         | ⬜ Pending                                                           |
+| Phase 3 — Book Management API                  | ⬜ Pending                                                           |
+| Phase 4 — Borrow/Return/Renewal/Penalty        | ⬜ Pending                                                           |
+| Phase 5 — News/Messages + Frontend Integration | ⬜ Pending                                                           |
+| Phase 6 — Docker + Tests + Docs                | ⬜ Pending                                                           |
 
 > See [Docs/internship-plan-main.md](../Docs/internship-plan-main.md) for detailed plan.
 
