@@ -1,134 +1,72 @@
 # library-server — Spring Boot Backend
 
-Library Management System backend. Phase 2 — entity/repository/JWT complete.
-
-## Reference Paths
-
-| Path                           | Description                                                                    |
-| ------------------------------ | ------------------------------------------------------------------------------ |
-| `arc/`                         | Archived old backend (Spring Boot 2.2 + MyBatis-Plus + Shiro) — reference only |
-| `../docs/arc/Entity.md`        | Old entity field definitions (pinyin)                                          |
-| `../docs/arc/API.ReadMe.md`    | Old API endpoint documentation                                                 |
-| `../docs/DATA-MODEL.md`        | New ER diagram & entity field dictionary (current target)                      |
-| `../docs/API-SPEC.md`          | New REST API specification & old→new path mapping                              |
-| `../docs/ARCHITECTURE.md`      | System architecture & role model                                               |
-| `../library-frontend/src/api/` | Frontend API modules (API contract source of truth)                            |
-
-## Restructuring Map
-
-### Entity / Table renaming
-
-| Old (Chinese pinyin) | New (English)  | Old Table    | New Table     |
-| -------------------- | -------------- | ------------ | ------------- |
-| DuzheEntity          | `Reader`       | duzhe        | readers       |
-| UsersEntity          | `User`         | users        | users         |
-| TushuxinxiEntity     | `Book`         | tushuxinxi   | books         |
-| TushuleibieEntity    | `Category`     | tushuleibie  | categories    |
-| TushujieyueEntity    | `Borrow`       | tushujieyue  | borrows       |
-| TushuguihaiEntity    | `BorrowReturn` | tushuguihai  | returns       |
-| TushuxujieEntity     | `Renewal`      | tushuxujie   | renewals      |
-| ChaoqifakuanEntity   | `Penalty`      | chaoqifakuan | penalties     |
-| JieyuekaEntity       | `LibraryCard`  | jieyueka     | library_cards |
-| NewsEntity           | `News`         | news         | news          |
-| MessagesEntity       | `Message`      | messages     | messages      |
-
-### API path mapping (old → new)
-
-| Old Path          | New Path            |
-| ----------------- | ------------------- |
-| `/duzhe/*`        | `/api/readers/*`    |
-| `/users/*`        | `/api/users/*`      |
-| `/tushuxinxi/*`   | `/api/books/*`      |
-| `/tushuleibie/*`  | `/api/categories/*` |
-| `/tushujieyue/*`  | `/api/borrows/*`    |
-| `/tushuguihai/*`  | `/api/returns/*`    |
-| `/tushuxujie/*`   | `/api/renewals/*`   |
-| `/chaoqifakuan/*` | `/api/penalties/*`  |
-| `/jieyueka/*`     | `/api/cards/*`      |
-| `/news/*`         | `/api/news/*`       |
-| `/messages/*`     | `/api/messages/*`   |
-| `/file/*`         | `/api/upload/*`     |
-| `/common/*`       | `/api/dashboard/*`  |
-| `/option/*`       | `/api/options/*`    |
-
-## Project Structure
-
-```
-library-server/
-├── arc/                          # Archived old backend (reference)
-├── src/main/java/com/library/
-│   ├── LibraryApplication.java   # Entry point
-│   ├── common/
-│   │   └── ApiResponse.java      # Unified response wrapper
-│   ├── config/
-│   │   ├── CorsConfig.java       # CORS
-│   │   ├── OpenApiConfig.java    # Swagger/OpenAPI
-│   │   └── SecurityConfig.java   # Spring Security + JWT filter chain
-│   ├── entity/
-│   │   ├── User.java             # Unified auth (admin + reader)
-│   │   ├── Reader.java           # Reader profile (no auth fields)
-│   │   ├── Book.java             # Book with categoryId FK
-│   │   ├── Category.java         # Book category
-│   │   ├── Borrow.java           # Borrow record (3NF, with dueDate)
-│   │   └── enums/
-│   │       ├── UserRole.java
-│   │       ├── ApprovalStatus.java
-│   │       ├── PaymentStatus.java
-│   │       └── Gender.java
-│   ├── repository/
-│   │   ├── UserRepository.java
-│   │   ├── ReaderRepository.java
-│   │   ├── BookRepository.java
-│   │   ├── CategoryRepository.java
-│   │   └── BorrowRepository.java
-│   ├── dto/
-│   │   ├── LoginRequest.java
-│   │   ├── RegisterRequest.java
-│   │   └── LoginResponse.java
-│   ├── security/
-│   │   ├── JwtProvider.java      # Token generation & validation
-│   │   └── JwtAuthFilter.java    # OncePerRequestFilter
-│   ├── service/                  # Business logic (Phase 3+)
-│   │   └── impl/
-│   ├── controller/               # REST controllers (Phase 3+)
-│   └── exception/
-│       ├── ApiException.java
-│       └── GlobalExceptionHandler.java
-├── src/main/resources/
-│   └── application.yml           # H2 (dev) + MySQL (prod) profiles + JWT config
-├── src/test/java/com/library/
-├── .mvn/wrapper/
-├── mvnw / mvnw.cmd
-└── pom.xml                       # Spring Boot 3.5 + JPA + Security + jjwt + Swagger
-```
+Library Management System backend. **Phase 2 complete** — entity/repository/JWT layer built.
 
 ## Quick Start
 
-### Dev mode (H2 in-memory, no MySQL required)
-
 ```bash
 cd library-server
-mvn spring-boot:run
+
+# Dev: H2 in-memory (no MySQL needed)
+./mvnw spring-boot:run
+# -> Swagger:  http://localhost:8080/api/swagger-ui.html
+# -> H2:       http://localhost:8080/api/h2-console
+
+# Prod: MySQL
+./mvnw spring-boot:run -Dspring-boot.run.profiles=prod
 ```
 
-- **Swagger UI:** http://localhost:8080/api/swagger-ui.html
-- **H2 Console:** http://localhost:8080/api/h2-console
+## Structure
 
-### Prod mode (MySQL)
-
-```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=prod
+```
+src/main/java/com/library/
+├── LibraryApplication.java
+├── common/ApiResponse.java              # { code, msg, data }
+├── config/{Cors,Security,OpenApi}       # CORS, JWT filter chain, Swagger
+├── entity/
+│   ├── User.java                        # Unified auth (admin + reader)
+│   ├── Reader.java                      # Profile only (no password)
+│   ├── Book.java, Category.java         # Book catalog
+│   ├── Borrow.java                      # 3NF + dueDate
+│   └── enums/{UserRole,ApprovalStatus,PaymentStatus,Gender}
+├── repository/{User,Reader,Book,Category,Borrow}Repository
+├── dto/{LoginRequest,RegisterRequest,LoginResponse}
+├── security/{JwtProvider,JwtAuthFilter}
+├── service/                             # Phase 3+
+├── controller/                          # Phase 3+
+└── exception/{ApiException,GlobalExceptionHandler}
 ```
 
-> Requires MySQL 8.0 running with database `library` created.
+## Key Design Decisions
+
+| # | Decision | Choice |
+|---|----------|--------|
+| D1 | Table names | English (`users`, `readers`, `books`, ...) |
+| D2 | Auth model | Single `users` table for all roles; `readers` is pure profile |
+| D3 | Status fields | Java enums (`UserRole`, `ApprovalStatus`, ...) + `@Enumerated(STRING)` |
+| D4 | Normalization | Strict 3NF — no redundant FK snapshot fields |
+| D5 | dueDate | Added to Borrow; set on approval (borrowDate + 30d) |
+| D6 | Scope | P2 = 5 entities only; BorrowReturn/Renewal/Penalty deferred to P4 |
+
+Full rationale in [P2 design spec](../docs/superpowers/specs/2026-06-15-p2-entity-repository-jwt-design.md).
 
 ## Phase Progress
 
-| Phase                                          | Status     |
-| ---------------------------------------------- | ---------- |
-| Phase 1 — Backend Scaffold                     | √ Complete |
-| Phase 2 — Auth (JWT + Spring Security)         | √ Complete |
-| Phase 3 — Book Management API                  | ○ Pending  |
-| Phase 4 — Borrow/Return/Renewal/Penalty        | ○ Pending  |
-| Phase 5 — News/Messages + Frontend integration | ○ Pending  |
-| Phase 6 — Docker + Tests + Docs                | ○ Pending  |
+| Phase | Status |
+|-------|:------:|
+| P1 — Scaffold (Spring Boot + H2 + Swagger) | √ Done |
+| P2 — Entity + Repository + JWT | √ Done |
+| P3 — Book & Category CRUD | ○ Next |
+| P4 — Borrow/Return/Renewal/Penalty | ○ |
+| P5 — News/Messages + Frontend integration | ○ |
+| P6 — Docker + Tests + Docs | ○ |
+
+## Reference
+
+| Doc | Content |
+|-----|---------|
+| [ARCHITECTURE.md](../docs/ARCHITECTURE.md) | System design, request flow, role model |
+| [API-SPEC.md](../docs/API-SPEC.md) | REST API contract, old->new path mapping |
+| [DATA-MODEL.md](../docs/DATA-MODEL.md) | ER diagram, entity definitions, field dictionary |
+| [TEST-CASES.md](../docs/test/TEST-CASES.md) | Acceptance tests (35 cases) |
+| `arc/` | Archived old backend (Spring Boot 2.2 + MyBatis-Plus) |

@@ -67,8 +67,11 @@ MyLibrarySystem/
 │   ├── ARCHITECTURE.md            #   System design & role model
 │   ├── API-SPEC.md                #   REST API contract & path mapping
 │   ├── DATA-MODEL.md              #   ER diagram & entity field dictionary
-│   ├── test/TEST-CASES.md         #   Test cases
-│   └── arc/                       #   Archived old reference docs
+│   ├── test/TEST-CASES.md         #   Acceptance test cases (35 cases, 11 modules)
+│   ├── arc/                       #   Archived old reference docs
+│   └── superpowers/               #   Design specs & implementation plans
+│       ├── specs/                 #     Per-phase design documents
+│       └── plans/                 #     Per-phase implementation plans
 ├── Logs/                          # Runtime logs (.gitkeep)
 ├── .gitignore
 ├── .codegraph/                    # Code intelligence index
@@ -144,6 +147,17 @@ Full interactive docs at `http://localhost:8080/api/swagger-ui.html`.
 # Repo: Projects/MyLibrarySystem
 # Branch: master
 # Key commits:
+#   8784001  docs: sync DATA-MODEL, READMEs with P2 implementation
+#   ccc18f5  feat(p2): add JwtProvider + JwtAuthFilter, wire into SecurityConfig
+#   303248c  feat(p2): add 5 repositories + 3 DTOs
+#   6714786  feat(p2): add 5 JPA entities
+#   038e20a  feat(p2): add enum classes
 #   a8562cf  feat(server): Phase 1 scaffold
-#   4bcad1d  chore: init MyLibrarySystem workspace
 ```
+
+## Sub-READMEs
+
+| README | Content |
+|--------|---------|
+| [library-server/README.md](library-server/README.md) | Backend structure, design decisions, phase progress |
+| [library-frontend/README.md](library-frontend/README.md) | Frontend state, migration checklist, quick start |
