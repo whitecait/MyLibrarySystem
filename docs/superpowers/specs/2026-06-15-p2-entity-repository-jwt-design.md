@@ -12,94 +12,94 @@
 
 P2 builds the data access and authentication foundation. No controllers or services yet — those come in P3/P4.
 
-| Layer | Files | Count |
-|-------|-------|:-----:|
-| `entity/` | User, Reader, Book, Category, Borrow | 5 |
-| `entity/enums/` | UserRole, ApprovalStatus, PaymentStatus, Gender | 4 |
-| `repository/` | UserRepo, ReaderRepo, BookRepo, CategoryRepo, BorrowRepo | 5 |
-| `security/` | JwtProvider, JwtAuthFilter | 2 |
-| `dto/` | LoginRequest, RegisterRequest, LoginResponse | 3 |
-| `config/` | SecurityConfig (update existing) | 1 |
-| **Total** | **19 new + 1 modified** | **20** |
+| Layer           | Files                                                    | Count  |
+| --------------- | -------------------------------------------------------- | :----: |
+| `entity/`       | User, Reader, Book, Category, Borrow                     |   5    |
+| `entity/enums/` | UserRole, ApprovalStatus, PaymentStatus, Gender          |   4    |
+| `repository/`   | UserRepo, ReaderRepo, BookRepo, CategoryRepo, BorrowRepo |   5    |
+| `security/`     | JwtProvider, JwtAuthFilter                               |   2    |
+| `dto/`          | LoginRequest, RegisterRequest, LoginResponse             |   3    |
+| `config/`       | SecurityConfig (update existing)                         |   1    |
+| **Total**       | **19 new + 1 modified**                                  | **20** |
 
 ## 2. Design Decisions (4/4 resolved)
 
-| # | Decision | Choice | Rationale |
-|---|----------|--------|-----------|
-| D1 | Table naming | **English** (`users`, `readers`, `books`, `categories`, `borrows`) | Matches DATA-MODEL.md ER diagram. Code readability. |
-| D2 | Auth model | **Single User table for all auth, Reader table for profile only** | Clean separation: User.username = studentId for readers. Single login endpoint. Single JWT filter. Reader has zero auth fields. |
-| D3 | P2 entity scope | **5 entities only** (User, Reader, Book, Category, Borrow) | BorrowReturn/Renewal/Penalty have complex workflow logic — defer to P4 with their controllers. News/Message/LibraryCard are independent — insert anytime. |
-| D4 | Status fields | **Java enums + @Enumerated(STRING)** | Compile-time safety. DB stores "是"/"否" — frontend-compatible. |
-| D5 | Normalization | **Strict 3NF** — no redundant snapshot fields | Borrow keeps only readerId + bookId FKs. Display data via JPA @ManyToOne JOIN. No update anomalies. |
-| D6 | Due date | **dueDate added to Borrow** | Required by RET-01/RET-02/RNW-02. Set on approval: borrowDate + 30 days. Extended by renewal. |
+| #   | Decision        | Choice                                                             | Rationale                                                                                                                                                 |
+| --- | --------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Table naming    | **English** (`users`, `readers`, `books`, `categories`, `borrows`) | Matches DATA-MODEL.md ER diagram. Code readability.                                                                                                       |
+| D2  | Auth model      | **Single User table for all auth, Reader table for profile only**  | Clean separation: User.username = studentId for readers. Single login endpoint. Single JWT filter. Reader has zero auth fields.                           |
+| D3  | P2 entity scope | **5 entities only** (User, Reader, Book, Category, Borrow)         | BorrowReturn/Renewal/Penalty have complex workflow logic — defer to P4 with their controllers. News/Message/LibraryCard are independent — insert anytime. |
+| D4  | Status fields   | **Java enums + @Enumerated(STRING)**                               | Compile-time safety. DB stores "是"/"否" — frontend-compatible.                                                                                           |
+| D5  | Normalization   | **Strict 3NF** — no redundant snapshot fields                      | Borrow keeps only readerId + bookId FKs. Display data via JPA @ManyToOne JOIN. No update anomalies.                                                       |
+| D6  | Due date        | **dueDate added to Borrow**                                        | Required by RET-01/RET-02/RNW-02. Set on approval: borrowDate + 30 days. Extended by renewal.                                                             |
 
 ## 3. Entity Definitions
 
 ### 3.1 User (`users`)
 
-| Field | Type | Constraint | Note |
-|-------|------|-----------|------|
-| `id` | Long | PK, auto | |
-| `username` | String | unique, not-null | admin="admin", reader=studentId |
-| `password` | String | not-null | BCrypt encoded |
-| `role` | UserRole | not-null | enum: ADMIN, READER |
-| `readerId` | Long | FK → readers, nullable | null for admin |
-| `addtime` | LocalDateTime | auto | @CreatedDate |
+| Field      | Type          | Constraint             | Note                            |
+| ---------- | ------------- | ---------------------- | ------------------------------- |
+| `id`       | Long          | PK, auto               |                                 |
+| `username` | String        | unique, not-null       | admin="admin", reader=studentId |
+| `password` | String        | not-null               | BCrypt encoded                  |
+| `role`     | UserRole      | not-null               | enum: ADMIN, READER             |
+| `readerId` | Long          | FK → readers, nullable | null for admin                  |
+| `addtime`  | LocalDateTime | auto                   | @CreatedDate                    |
 
 ### 3.2 Reader (`readers`)
 
-| Field | Type | Constraint | Old Name |
-|-------|------|-----------|----------|
-| `id` | Long | PK, auto | `id` |
-| `studentId` | String | unique, not-null | `xueshengxuehao` |
-| `name` | String | not-null | `xingming` |
-| `gender` | Gender | — | enum: 男, 女 |
-| `department` | String | — | `yuanxi` |
-| `birthDate` | String | — | `chushengnianyue` |
-| `phone` | String | — | `shouji` |
-| `avatar` | String | — | `touxiang` |
-| `addtime` | LocalDateTime | auto | |
+| Field        | Type          | Constraint       | Old Name          |
+| ------------ | ------------- | ---------------- | ----------------- |
+| `id`         | Long          | PK, auto         | `id`              |
+| `studentId`  | String        | unique, not-null | `xueshengxuehao`  |
+| `name`       | String        | not-null         | `xingming`        |
+| `gender`     | Gender        | —                | enum: 男, 女      |
+| `department` | String        | —                | `yuanxi`          |
+| `birthDate`  | String        | —                | `chushengnianyue` |
+| `phone`      | String        | —                | `shouji`          |
+| `avatar`     | String        | —                | `touxiang`        |
+| `addtime`    | LocalDateTime | auto             |                   |
 
 > **Removed from old model:** `password` (mima) — auth moved to User table.
 
 ### 3.3 Book (`books`)
 
-| Field | Type | Constraint | Old Name |
-|-------|------|-----------|----------|
-| `id` | Long | PK, auto | |
-| `isbn` | String | — | `tushubianhao` |
-| `title` | String | — | `tushumingcheng` |
-| `author` | String | — | `zuozhe` |
-| `publisher` | String | — | `chubanshe` |
-| `year` | String | — | `nianfen` |
-| `coverImage` | String | — | `tushufengmian` |
-| `stock` | Integer | default 1 | `shuliang` |
-| `description` | String | @Lob TEXT | `tushuxiangqing` |
-| `categoryId` | Long | FK → categories | `tushuleixing` (was String) |
-| `addtime` | LocalDateTime | auto | |
+| Field         | Type          | Constraint      | Old Name                    |
+| ------------- | ------------- | --------------- | --------------------------- |
+| `id`          | Long          | PK, auto        |                             |
+| `isbn`        | String        | —               | `tushubianhao`              |
+| `title`       | String        | —               | `tushumingcheng`            |
+| `author`      | String        | —               | `zuozhe`                    |
+| `publisher`   | String        | —               | `chubanshe`                 |
+| `year`        | String        | —               | `nianfen`                   |
+| `coverImage`  | String        | —               | `tushufengmian`             |
+| `stock`       | Integer       | default 1       | `shuliang`                  |
+| `description` | String        | @Lob TEXT       | `tushuxiangqing`            |
+| `categoryId`  | Long          | FK → categories | `tushuleixing` (was String) |
+| `addtime`     | LocalDateTime | auto            |                             |
 
 > **Changed from old model:** `categoryId` is now a Long FK instead of storing category name directly.
 
 ### 3.4 Category (`categories`)
 
-| Field | Type | Constraint | Old Name |
-|-------|------|-----------|----------|
-| `id` | Long | PK, auto | |
-| `name` | String | — | `tushuleibie` |
-| `addtime` | LocalDateTime | auto | |
+| Field     | Type          | Constraint | Old Name      |
+| --------- | ------------- | ---------- | ------------- |
+| `id`      | Long          | PK, auto   |               |
+| `name`    | String        | —          | `tushuleibie` |
+| `addtime` | LocalDateTime | auto       |               |
 
 ### 3.5 Borrow (`borrows`)
 
-| Field | Type | Constraint | Note |
-|-------|------|-----------|------|
-| `id` | Long | PK, auto | |
-| `readerId` | Long | FK → readers | @ManyToOne |
-| `bookId` | Long | FK → books | @ManyToOne |
-| `borrowDate` | LocalDateTime | — | Set on application |
-| `dueDate` | LocalDate | — | **NEW** — set on approval (borrowDate + 30d) |
-| `approved` | ApprovalStatus | — | enum: 是, 否 |
-| `reply` | String | — | Admin approval comment |
-| `addtime` | LocalDateTime | auto | |
+| Field        | Type           | Constraint   | Note                                         |
+| ------------ | -------------- | ------------ | -------------------------------------------- |
+| `id`         | Long           | PK, auto     |                                              |
+| `readerId`   | Long           | FK → readers | @ManyToOne                                   |
+| `bookId`     | Long           | FK → books   | @ManyToOne                                   |
+| `borrowDate` | LocalDateTime  | —            | Set on application                           |
+| `dueDate`    | LocalDate      | —            | **NEW** — set on approval (borrowDate + 30d) |
+| `approved`   | ApprovalStatus | —            | enum: 是, 否                                 |
+| `reply`      | String         | —            | Admin approval comment                       |
+| `addtime`    | LocalDateTime  | auto         |                                              |
 
 > **Removed from old model:** `readerName`, `studentId`, `bookIsbn`, `bookTitle` — all obtainable via FK JOIN. Strict 3NF.
 
@@ -116,13 +116,13 @@ public enum Gender          { 男, 女 }                   // @Enumerated(STRING
 
 All extend `JpaRepository<Entity, Long>`. Custom methods use Spring Data derived query convention.
 
-| Repository | Custom Methods | Purpose |
-|------------|---------------|---------|
-| `UserRepository` | `findByUsername(String)`, `existsByUsername(String)` | Login, duplicate check |
-| `ReaderRepository` | `findByStudentId(String)`, `existsByStudentId(String)` | Profile lookup |
-| `BookRepository` | `findByIsbn(String)` | Duplicate ISBN check (P3) |
-| `CategoryRepository` | `findByName(String)` | Duplicate name check (P3) |
-| `BorrowRepository` | `findByReaderId(Long)`, `countByReaderIdAndApproved(Long, ApprovalStatus)` | My borrows, limit check (P4) |
+| Repository           | Custom Methods                                                             | Purpose                      |
+| -------------------- | -------------------------------------------------------------------------- | ---------------------------- |
+| `UserRepository`     | `findByUsername(String)`, `existsByUsername(String)`                       | Login, duplicate check       |
+| `ReaderRepository`   | `findByStudentId(String)`, `existsByStudentId(String)`                     | Profile lookup               |
+| `BookRepository`     | `findByIsbn(String)`                                                       | Duplicate ISBN check (P3)    |
+| `CategoryRepository` | `findByName(String)`                                                       | Duplicate name check (P3)    |
+| `BorrowRepository`   | `findByReaderId(Long)`, `countByReaderIdAndApproved(Long, ApprovalStatus)` | My borrows, limit check (P4) |
 
 ## 5. JWT Security Design
 
@@ -130,12 +130,12 @@ All extend `JpaRepository<Entity, Long>`. Custom methods use Spring Data derived
 
 ```json
 {
-  "sub": "2",           // userId
-  "username": "2021001",// login identifier
-  "role": "READER",     // UserRole enum name
-  "readerId": 1,        // null for admin
+  "sub": "2", // userId
+  "username": "2021001", // login identifier
+  "role": "READER", // UserRole enum name
+  "readerId": 1, // null for admin
   "iat": 1718400000,
-  "exp": 1718486400     // +24 hours
+  "exp": 1718486400 // +24 hours
 }
 ```
 
@@ -161,12 +161,14 @@ Wire `JwtAuthFilter` before `UsernamePasswordAuthenticationFilter`. Permit publi
 ## 6. DTOs
 
 ### LoginRequest
+
 ```
 username: String  @NotBlank
 password: String  @NotBlank
 ```
 
 ### RegisterRequest
+
 ```
 studentId:  String  @NotBlank
 name:       String  @NotBlank
@@ -178,6 +180,7 @@ phone:      String  @Pattern(regexp = "^1[3-9]\\d{9}$")
 ```
 
 ### LoginResponse
+
 ```
 token:    String
 userId:   Long
@@ -192,17 +195,18 @@ readerId: Long?   // null for admin
 app:
   jwt:
     secret: ${JWT_SECRET:library-jwt-secret-key-min-256-bits-long}
-    expiration-ms: 86400000  # 24 hours
+    expiration-ms: 86400000 # 24 hours
 
 spring:
   jpa:
     hibernate:
-      ddl-auto: update  # H2 dev: auto-create tables from @Entity
+      ddl-auto: update # H2 dev: auto-create tables from @Entity
 ```
 
 ## 8. Auth Flows (for P3 Controller implementation)
 
 ### Login
+
 ```
 POST /api/auth/login { username, password }
   → UserRepository.findByUsername()
@@ -213,6 +217,7 @@ POST /api/auth/login { username, password }
 ```
 
 ### Register
+
 ```
 POST /api/auth/register { studentId, name, password, ... }
   → UserRepository.existsByUsername(studentId)
@@ -228,13 +233,13 @@ POST /api/auth/register { studentId, name, password, ... }
 
 P2 entities + security directly enable these test cases:
 
-| Test Case | Enabled By |
-|-----------|-----------|
-| AUTH-01 | User entity + JWT (reader login via username=studentId) |
-| AUTH-02 | User entity + JWT (admin login via username=admin) |
-| AUTH-03 | JWT validation (bad credentials → 401) |
-| AUTH-04 | User + Reader entities (register creates both) |
-| AUTH-05 | UserRepository.existsByUsername() |
+| Test Case | Enabled By                                              |
+| --------- | ------------------------------------------------------- |
+| AUTH-01   | User entity + JWT (reader login via username=studentId) |
+| AUTH-02   | User entity + JWT (admin login via username=admin)      |
+| AUTH-03   | JWT validation (bad credentials → 401)                  |
+| AUTH-04   | User + Reader entities (register creates both)          |
+| AUTH-05   | UserRepository.existsByUsername()                       |
 
 Remaining 30 cases require P3-P5 controllers/services.
 

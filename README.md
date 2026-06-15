@@ -127,14 +127,14 @@ Full interactive docs at `http://localhost:8080/api/swagger-ui.html`.
 
 ## Phase Progress
 
-| Phase                                          | Status                                                               |
-| ---------------------------------------------- | -------------------------------------------------------------------- |
-| Phase 1 — Backend Scaffold                     | ✅ Complete — Spring Boot 3.5, H2, Swagger, compile & start verified |
-| Phase 2 — Auth (JWT + Spring Security)         | ⬜ Pending                                                           |
-| Phase 3 — Book Management API                  | ⬜ Pending                                                           |
-| Phase 4 — Borrow/Return/Renewal/Penalty        | ⬜ Pending                                                           |
-| Phase 5 — News/Messages + Frontend Integration | ⬜ Pending                                                           |
-| Phase 6 — Docker + Tests + Docs                | ⬜ Pending                                                           |
+| Phase                                          | Status                                                              |
+| ---------------------------------------------- | ------------------------------------------------------------------- |
+| Phase 1 — Backend Scaffold                     | √ Complete — Spring Boot 3.5, H2, Swagger, compile & start verified |
+| Phase 2 — Auth (JWT + Spring Security)         | √ Complete — 5 entities, 4 enums, 5 repos, JWT auth filter verified |
+| Phase 3 — Book Management API                  | ○ Pending                                                           |
+| Phase 4 — Borrow/Return/Renewal/Penalty        | ○ Pending                                                           |
+| Phase 5 — News/Messages + Frontend Integration | ○ Pending                                                           |
+| Phase 6 — Docker + Tests + Docs                | ○ Pending                                                           |
 
 > See [Docs/internship-plan-main.md](../Docs/internship-plan-main.md) for detailed plan.
 

@@ -1,18 +1,18 @@
 # library-server — Spring Boot Backend
 
-Library Management System backend. Phase 1 scaffold.
+Library Management System backend. Phase 2 — entity/repository/JWT complete.
 
 ## Reference Paths
 
 | Path                           | Description                                                                    |
 | ------------------------------ | ------------------------------------------------------------------------------ |
 | `arc/`                         | Archived old backend (Spring Boot 2.2 + MyBatis-Plus + Shiro) — reference only |
-| `../docs/arc/Entity.md`        | Old entity field definitions (pinyin)                                         |
-| `../docs/arc/API.ReadMe.md`    | Old API endpoint documentation                                                |
-| `../docs/DATA-MODEL.md`        | New ER diagram & entity field dictionary (current target)                     |
-| `../docs/API-SPEC.md`          | New REST API specification & old→new path mapping                             |
-| `../docs/ARCHITECTURE.md`      | System architecture & role model                                              |
-| `../library-frontend/src/api/` | Frontend API modules (API contract source of truth)                           |
+| `../docs/arc/Entity.md`        | Old entity field definitions (pinyin)                                          |
+| `../docs/arc/API.ReadMe.md`    | Old API endpoint documentation                                                 |
+| `../docs/DATA-MODEL.md`        | New ER diagram & entity field dictionary (current target)                      |
+| `../docs/API-SPEC.md`          | New REST API specification & old→new path mapping                              |
+| `../docs/ARCHITECTURE.md`      | System architecture & role model                                               |
+| `../library-frontend/src/api/` | Frontend API modules (API contract source of truth)                            |
 
 ## Restructuring Map
 
@@ -63,23 +63,43 @@ library-server/
 │   ├── config/
 │   │   ├── CorsConfig.java       # CORS
 │   │   ├── OpenApiConfig.java    # Swagger/OpenAPI
-│   │   └── SecurityConfig.java   # Spring Security (permit-all in Phase 1)
-│   ├── entity/                   # JPA entities (Phase 2+)
-│   ├── repository/               # Spring Data JPA repositories
-│   ├── service/                  # Business interfaces
-│   │   └── impl/                  #   implementations
-│   ├── controller/               # REST controllers
-│   ├── dto/                      # Request/Response DTOs
-│   ├── security/                 # JWT provider & filter (Phase 2)
+│   │   └── SecurityConfig.java   # Spring Security + JWT filter chain
+│   ├── entity/
+│   │   ├── User.java             # Unified auth (admin + reader)
+│   │   ├── Reader.java           # Reader profile (no auth fields)
+│   │   ├── Book.java             # Book with categoryId FK
+│   │   ├── Category.java         # Book category
+│   │   ├── Borrow.java           # Borrow record (3NF, with dueDate)
+│   │   └── enums/
+│   │       ├── UserRole.java
+│   │       ├── ApprovalStatus.java
+│   │       ├── PaymentStatus.java
+│   │       └── Gender.java
+│   ├── repository/
+│   │   ├── UserRepository.java
+│   │   ├── ReaderRepository.java
+│   │   ├── BookRepository.java
+│   │   ├── CategoryRepository.java
+│   │   └── BorrowRepository.java
+│   ├── dto/
+│   │   ├── LoginRequest.java
+│   │   ├── RegisterRequest.java
+│   │   └── LoginResponse.java
+│   ├── security/
+│   │   ├── JwtProvider.java      # Token generation & validation
+│   │   └── JwtAuthFilter.java    # OncePerRequestFilter
+│   ├── service/                  # Business logic (Phase 3+)
+│   │   └── impl/
+│   ├── controller/               # REST controllers (Phase 3+)
 │   └── exception/
 │       ├── ApiException.java
 │       └── GlobalExceptionHandler.java
 ├── src/main/resources/
-│   └── application.yml           # H2 (dev) + MySQL (prod) profiles
+│   └── application.yml           # H2 (dev) + MySQL (prod) profiles + JWT config
 ├── src/test/java/com/library/
-├── .mvn/wrapper/                 # Maven Wrapper 3.9.9
+├── .mvn/wrapper/
 ├── mvnw / mvnw.cmd
-└── pom.xml                       # Spring Boot 3.5 + JPA + Security + Swagger
+└── pom.xml                       # Spring Boot 3.5 + JPA + Security + jjwt + Swagger
 ```
 
 ## Quick Start
@@ -104,11 +124,11 @@ mvn spring-boot:run -Dspring-boot.run.profiles=prod
 
 ## Phase Progress
 
-| Phase                                          | Status         |
-| ---------------------------------------------- | -------------- |
-| Phase 1 — Backend Scaffold                     | ✅ Complete    |
-| Phase 2 — Auth (JWT + Spring Security)         | ⬜ Pending     |
-| Phase 3 — Book Management API                  | ⬜ Pending     |
-| Phase 4 — Borrow/Return/Renewal/Penalty        | ⬜ Pending     |
-| Phase 5 — News/Messages + Frontend integration | ⬜ Pending     |
-| Phase 6 — Docker + Tests + Docs                | ⬜ Pending     |
+| Phase                                          | Status     |
+| ---------------------------------------------- | ---------- |
+| Phase 1 — Backend Scaffold                     | √ Complete |
+| Phase 2 — Auth (JWT + Spring Security)         | √ Complete |
+| Phase 3 — Book Management API                  | ○ Pending  |
+| Phase 4 — Borrow/Return/Renewal/Penalty        | ○ Pending  |
+| Phase 5 — News/Messages + Frontend integration | ○ Pending  |
+| Phase 6 — Docker + Tests + Docs                | ○ Pending  |

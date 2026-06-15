@@ -162,41 +162,41 @@ Backend :8080/api
 
 | Route                  | View                      | Public? | Role         |
 | ---------------------- | ------------------------- | :-----: | ------------ |
-| `/login`               | LoginView                 |   ✅    | —            |
-| `/register`            | LoginView (register mode) |   ✅    | —            |
-| `/home`                | HomeView                  |   ❌    | Admin/Reader |
-| `/book-management`     | BookManagement            |   ❌    | Admin        |
-| `/book-browsing`       | BookBrowsing              |   ❌    | Reader       |
-| `/category-management` | CategoryManagement        |   ❌    | Admin        |
-| `/reader-management`   | ReaderManagement          |   ❌    | Admin        |
-| `/reader-profile`      | ReaderProfile             |   ❌    | Reader       |
-| `/my-borrowing`        | MyBorrowing               |   ❌    | Reader       |
-| `/my-fines`            | MyFines                   |   ❌    | Reader       |
-| `/borrow-approval`     | BorrowApproval            |   ❌    | Admin        |
-| `/return-approval`     | ReturnApproval            |   ❌    | Admin        |
-| `/renewal-approval`    | RenewalApproval           |   ❌    | Admin        |
-| `/penalty-management`  | PenaltyManagement         |   ❌    | Admin        |
-| `/news-management`     | NewsManagement            |   ❌    | Admin        |
+| `/login`               | LoginView                 |    √    | —            |
+| `/register`            | LoginView (register mode) |    √    | —            |
+| `/home`                | HomeView                  |    ×    | Admin/Reader |
+| `/book-management`     | BookManagement            |    ×    | Admin        |
+| `/book-browsing`       | BookBrowsing              |    ×    | Reader       |
+| `/category-management` | CategoryManagement        |    ×    | Admin        |
+| `/reader-management`   | ReaderManagement          |    ×    | Admin        |
+| `/reader-profile`      | ReaderProfile             |    ×    | Reader       |
+| `/my-borrowing`        | MyBorrowing               |    ×    | Reader       |
+| `/my-fines`            | MyFines                   |    ×    | Reader       |
+| `/borrow-approval`     | BorrowApproval            |    ×    | Admin        |
+| `/return-approval`     | ReturnApproval            |    ×    | Admin        |
+| `/renewal-approval`    | RenewalApproval           |    ×    | Admin        |
+| `/penalty-management`  | PenaltyManagement         |    ×    | Admin        |
+| `/news-management`     | NewsManagement            |    ×    | Admin        |
 
 ## 4. Dual-Role Model
 
-| Capability                       |        Admin         |           Reader           |
-| -------------------------------- | :------------------: | :------------------------: |
-| Login                            | ✅ username/password |   ✅ studentId/password    |
-| Register                         |   ❌ (pre-seeded)    |      ✅ self-register      |
-| Manage books (CRUD)              |          ✅          |             ❌             |
-| Browse / search books            |          ✅          |             ✅             |
-| Borrow book                      |          ❌          | ✅ (apply → admin approve) |
-| Return book                      |          ❌          | ✅ (apply → admin confirm) |
-| Renew book                       |          ❌          | ✅ (apply → admin approve) |
-| Approve borrows/returns/renewals |          ✅          |             ❌             |
-| View own borrows/fines           |          ❌          |             ✅             |
-| Manage penalties                 |          ✅          |             ❌             |
-| Manage readers (CRUD)            |          ✅          |             ❌             |
-| Post announcements               |          ✅          |             ❌             |
-| Send messages                    |          ❌          |             ✅             |
-| Reply to messages                |          ✅          |             ❌             |
-| View dashboard statistics        |          ✅          |             ❌             |
+| Capability                       |        Admin        |          Reader           |
+| -------------------------------- | :-----------------: | :-----------------------: |
+| Login                            | √ username/password |   √ studentId/password    |
+| Register                         |   × (pre-seeded)    |      √ self-register      |
+| Manage books (CRUD)              |          √          |             ×             |
+| Browse / search books            |          √          |             √             |
+| Borrow book                      |          ×          | √ (apply → admin approve) |
+| Return book                      |          ×          | √ (apply → admin confirm) |
+| Renew book                       |          ×          | √ (apply → admin approve) |
+| Approve borrows/returns/renewals |          √          |             ×             |
+| View own borrows/fines           |          ×          |             √             |
+| Manage penalties                 |          √          |             ×             |
+| Manage readers (CRUD)            |          √          |             ×             |
+| Post announcements               |          √          |             ×             |
+| Send messages                    |          ×          |             √             |
+| Reply to messages                |          √          |             ×             |
+| View dashboard statistics        |          √          |             ×             |
 
 ## 5. Project File Tree (Abbreviated)
 

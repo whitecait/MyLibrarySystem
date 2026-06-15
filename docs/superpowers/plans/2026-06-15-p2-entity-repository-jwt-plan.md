@@ -10,6 +10,8 @@
 
 **Spec:** [2026-06-15-p2-entity-repository-jwt-design.md](../specs/2026-06-15-p2-entity-repository-jwt-design.md)
 
+> **Status:** Implemented (2026-06-15) — `./mvnw compile` BUILD SUCCESS, 26 source files
+
 ---
 
 ### Task 1: Create Enum Classes
