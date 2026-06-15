@@ -1,5 +1,6 @@
 package com.library.config;
 
+import com.library.security.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -8,13 +9,17 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-/**
- * Phase 1: permit-all. JWT filter wired in Phase 2.
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final JwtAuthFilter jwtAuthFilter;
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -32,13 +37,20 @@ public class SecurityConfig {
                                 "/swagger-ui/**", "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/h2-console/**",
-                                "/error"
-                        ).permitAll()
-                        // Everything else — open for now (Phase 2 adds auth)
-                        .anyRequest().permitAll()
+                                "/error")
+                                .permitAll()
+                        // Auth endpoints (P3 — controllers not yet created)
+                        .requestMatchers("/auth/login", "/auth/register")
+                                .permitAll()
+                        // Book public listing (P3)
+                        .requestMatchers("/books/list")
+                                .permitAll()
+                        // Everything else requires authentication
+                        .anyRequest().authenticated()
                 )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .headers(headers -> headers
-                        .frameOptions(fo -> fo.sameOrigin()) // allow H2 console in frames
+                        .frameOptions(fo -> fo.sameOrigin())
                 );
 
         return http.build();
