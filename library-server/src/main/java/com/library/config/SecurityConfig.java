@@ -62,6 +62,22 @@ public class SecurityConfig {
                                 "/categories/update",
                                 "/categories/delete")
                                 .hasRole("ADMIN")
+                        // ---- Borrower flow (reader/admin apply, admin approve) ----
+                        .requestMatchers(HttpMethod.POST, "/borrows/add",
+                                "/returns/add", "/renewals/add")
+                                .hasAnyRole("READER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/borrows/page",
+                                "/returns/page", "/renewals/page",
+                                "/penalties/page")
+                                .authenticated()
+                        .requestMatchers("/borrows/shBatch", "/borrows/delete",
+                                "/returns/shBatch", "/returns/delete",
+                                "/renewals/shBatch", "/renewals/delete",
+                                "/penalties/delete")
+                                .hasRole("ADMIN")
+                        // ---- Penalty payment (reader pays own fine) ----
+                        .requestMatchers(HttpMethod.POST, "/penalties/pay")
+                                .hasRole("READER")
                         // ---- Everything else requires authentication ----
                         .anyRequest().authenticated()
                 )
