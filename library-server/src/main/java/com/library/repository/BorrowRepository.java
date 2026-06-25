@@ -17,4 +17,6 @@ public interface BorrowRepository extends JpaRepository<Borrow, Long> {
     List<Borrow> findByBookId(Long bookId);
 
     long countByBookIdIn(List<Long> bookIds);
+
+    boolean existsByReaderIdAndBookIdAndApproved(Long readerId, Long bookId, ApprovalStatus approved);
 }

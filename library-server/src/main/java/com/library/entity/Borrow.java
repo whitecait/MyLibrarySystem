@@ -19,6 +19,9 @@ public class Borrow {
     @Column(name = "book_id", nullable = false)
     private Long bookId;
 
+    @Column(name = "duration_days")
+    private Integer durationDays;    // requested borrow days
+
     @Column(name = "borrow_date")
     private LocalDateTime borrowDate;
 
@@ -26,7 +29,7 @@ public class Borrow {
     private LocalDate dueDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "approved", length = 4)
+    @Column(name = "approved", length = 8)    // 待审核 / 是 / 否
     private ApprovalStatus approved;
 
     @Column(name = "reply", length = 500)
@@ -48,6 +51,8 @@ public class Borrow {
     public void setReaderId(Long readerId) { this.readerId = readerId; }
     public Long getBookId() { return bookId; }
     public void setBookId(Long bookId) { this.bookId = bookId; }
+    public Integer getDurationDays() { return durationDays; }
+    public void setDurationDays(Integer durationDays) { this.durationDays = durationDays; }
     public LocalDateTime getBorrowDate() { return borrowDate; }
     public void setBorrowDate(LocalDateTime borrowDate) { this.borrowDate = borrowDate; }
     public LocalDate getDueDate() { return dueDate; }
