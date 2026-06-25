@@ -45,6 +45,18 @@ springdoc:
     tags-sorter: alpha
     operations-sorter: alpha
 
+# ---- Library business configuration ----
+library:
+  borrow:
+    max-limit: 5
+    default-duration-days: 30
+    auto-approve-duration: 30
+    max-duration-cap: 60
+  fine:
+    rate-per-day: 1.0
+  renewal:
+    auto-approve-count: 1
+
 # ---- JWT ----
 jwt:
   secret: MyLibrarySystem-JWT-Secret-Key-2026-Must-Be-At-Least-256-Bits-Long
