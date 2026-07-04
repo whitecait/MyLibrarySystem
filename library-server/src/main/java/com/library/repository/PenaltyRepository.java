@@ -15,4 +15,6 @@ public interface PenaltyRepository extends JpaRepository<Penalty, Long>,
     @Query("SELECT COUNT(p) FROM Penalty p JOIN Borrow b ON p.borrowId = b.id " +
            "WHERE b.readerId = :readerId AND p.paid = :paid")
     long countByReaderIdAndPaid(@Param("readerId") Long readerId, @Param("paid") PaymentStatus paid);
+
+    long countByFineDate(java.time.LocalDate fineDate);
 }

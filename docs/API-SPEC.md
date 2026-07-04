@@ -1,8 +1,10 @@
 # API-SPEC — REST API Specification
 
 > Bilingual: EN technical terms + CN explanations.
-> **Current state:** Frontend calls old paths (left column). Backend will implement new paths (right column).
-> Path mapping is documented in §10 Appendix.
+> **Current state (2026-06-23):** Backend P3 complete — Auth, Book, Category endpoints are LIVE.
+> Borrow/Return/Renewal/Penalty/News/Message/Upload/Dashboard endpoints are PLANNED (P4-P5).
+> Frontend API modules still use old pinyin paths — migration pending.
+> Path mapping is documented in §15 Appendix.
 
 ## 1. Conventions
 
@@ -38,12 +40,31 @@ Header:  Authorization: Bearer <jwt_token>
 
 ### Pagination
 
-| Param | Type | Default | Description |
-|-------|------|:-------:|-------------|
-| `page` | int | 1 | Page number (1-indexed) |
-| `limit` | int | 10 | Page size |
+| Param   | Type | Default | Description             |
+| ------- | ---- | :-----: | ----------------------- |
+| `page`  | int  |    1    | Page number (1-indexed) |
+| `limit` | int  |   10    | Page size               |
 
 Response includes `list` (array) and `total` (total record count).
+
+### Implementation Status
+
+| Section | API Group     |  Backend  |  Frontend   |
+| :-----: | ------------- | :-------: | :---------: |
+|    2    | Auth (admin)  |  √ Live   |  Old paths  |
+|    3    | Auth (reader) | √ Live\*  |  Old paths  |
+|    4    | Books         |  √ Live   |  Old paths  |
+|    5    | Categories    |  √ Live   |  Old paths  |
+|    6    | Borrows       | ○ Planned |  Old paths  |
+|    7    | Returns       | ○ Planned |  Old paths  |
+|    8    | Renewals      | ○ Planned |  Old paths  |
+|    9    | Penalties     | ○ Planned |  Old paths  |
+|   10    | News          | ○ Planned |  Old paths  |
+|   11    | Messages      | ○ Planned | Not created |
+|   12    | Upload        | ○ Planned |  Old paths  |
+|   13    | Dashboard     | ○ Planned |  Old paths  |
+
+> \* Auth uses unified `/auth/*` endpoints (not `/users/*` / `/readers/*` as documented below). See P2 design spec.
 
 ---
 
@@ -207,8 +228,11 @@ Single book view query by exact fields.
 > Old path: `/tushuleibie`
 
 ### `GET /api/categories/page` 🔒 Admin
+
 ### `GET /api/categories/list` 🔓 Public
+
 ### `GET /api/categories/info/{id}` 🔒 Admin
+
 ### `POST /api/categories/save` 🔒 Admin
 
 ```
@@ -216,6 +240,7 @@ Request:  { tushuleibie: "文学" }
 ```
 
 ### `POST /api/categories/update` 🔒 Admin
+
 ### `POST /api/categories/delete` 🔒 Admin
 
 ---
@@ -235,6 +260,7 @@ Reader applies ──→ Admin reviews ──→ Approved (reader has book)
 ```
 
 ### `GET /api/borrows/page`
+
 Paginated list. Admin sees all; reader sees own records only.
 
 ```
@@ -259,6 +285,7 @@ Request body:    [id1, id2, ...]
 ```
 
 ### `POST /api/borrows/update` 🔒 Admin
+
 ### `POST /api/borrows/delete` 🔒 Admin
 
 ---
@@ -268,7 +295,9 @@ Request body:    [id1, id2, ...]
 > Old path: `/tushuguihai`
 
 ### `GET /api/returns/page`
+
 ### `POST /api/returns/add` 🔒 Reader
+
 Submit return application.
 
 ```
@@ -276,6 +305,7 @@ Request:  { tushubianhao, tushumingcheng, xueshengxuehao, xingming }
 ```
 
 ### `POST /api/returns/shBatch` 🔒 Admin
+
 Batch approve/reject returns. On approval, book stock increments.
 
 ---
@@ -285,6 +315,7 @@ Batch approve/reject returns. On approval, book stock increments.
 > Old path: `/tushuxujie`
 
 ### `GET /api/renewals/page`
+
 ### `POST /api/renewals/add` 🔒 Reader
 
 ```
@@ -300,6 +331,7 @@ Request:  { tushubianhao, tushumingcheng, xueshengxuehao, xingming }
 > Old path: `/chaoqifakuan`
 
 ### `GET /api/penalties/page`
+
 Admin sees all; reader sees own records.
 
 ```
@@ -310,7 +342,9 @@ Fields:   id, fakuanbianhao, tushubianhao, tushumingcheng,
 ```
 
 ### `POST /api/penalties/save` 🔒 Admin
+
 ### `POST /api/penalties/update` 🔒 Admin (e.g., mark as paid)
+
 ### `POST /api/penalties/delete` 🔒 Admin
 
 ---
@@ -320,10 +354,15 @@ Fields:   id, fakuanbianhao, tushubianhao, tushumingcheng,
 > Old path: `/news`
 
 ### `GET /api/news/page` 🔓 Public (list) / 🔒 Admin (page)
+
 ### `GET /api/news/info/{id}`
+
 ### `GET /api/news/detail/{id}` 🔓 Public
+
 ### `POST /api/news/save` 🔒 Admin
+
 ### `POST /api/news/update` 🔒 Admin
+
 ### `POST /api/news/delete` 🔒 Admin
 
 ```
@@ -337,6 +376,7 @@ News fields: id, title, introduction, picture, content, addtime
 > Old path: `/messages`
 
 ### `GET /api/messages/page`
+
 Admin sees all; reader sees own messages only.
 
 ```
@@ -344,9 +384,11 @@ Message fields: id, userid, username, avatarurl, content, cpicture, reply, rpict
 ```
 
 ### `POST /api/messages/add` 🔒 Reader
+
 Submit message / feedback.
 
 ### `POST /api/messages/update` 🔒 Admin
+
 Reply to a message (set `reply` field).
 
 ### `POST /api/messages/delete` 🔒 Admin
@@ -393,33 +435,35 @@ Used for category dropdown / select components in the frontend.
 
 ## 14. Error Codes
 
-| Code | Meaning |
-|:----:|---------|
-| 0 | Success |
-| 1 | Business error (validation, duplicate, not found) |
-| 401 | Unauthorized — missing or invalid JWT (HTTP status) |
-| 403 | Forbidden — valid JWT but wrong role (HTTP status) |
-| 500 | Internal server error (HTTP status) |
+| Code | Meaning                                             |
+| :--: | --------------------------------------------------- |
+|  0   | Success                                             |
+|  1   | Business error (validation, duplicate, not found)   |
+| 401  | Unauthorized — missing or invalid JWT (HTTP status) |
+| 403  | Forbidden — valid JWT but wrong role (HTTP status)  |
+| 500  | Internal server error (HTTP status)                 |
 
 ---
 
 ## 15. Appendix: Old → New Path Mapping
 
-| Old Path (pinyin) | New Path (RESTful) | Module |
-|-------------------|-------------------|--------|
-| `/users/*` | `/api/users/*` | Admin auth & CRUD |
-| `/duzhe/*` | `/api/readers/*` | Reader auth & CRUD |
-| `/tushuxinxi/*` | `/api/books/*` | Book CRUD |
-| `/tushuleibie/*` | `/api/categories/*` | Category CRUD |
-| `/tushujieyue/*` | `/api/borrows/*` | Borrow workflow |
-| `/tushuguihai/*` | `/api/returns/*` | Return workflow |
-| `/tushuxujie/*` | `/api/renewals/*` | Renewal workflow |
-| `/chaoqifakuan/*` | `/api/penalties/*` | Penalty management |
-| `/news/*` | `/api/news/*` | Announcements |
-| `/messages/*` | `/api/messages/*` | Reader messages |
-| `/file/upload` | `/api/upload` | File upload |
-| `/common/*` | `/api/dashboard/*` | Dashboard stats |
-| `/option/*` | `/api/options/*` | Dropdown options |
+| Old Path (pinyin) | New Path (RESTful)  | Module             |
+| ----------------- | ------------------- | ------------------ |
+| `/users/*`        | `/api/users/*`      | Admin auth & CRUD  |
+| `/duzhe/*`        | `/api/readers/*`    | Reader auth & CRUD |
+| `/tushuxinxi/*`   | `/api/books/*`      | Book CRUD          |
+| `/tushuleibie/*`  | `/api/categories/*` | Category CRUD      |
+| `/tushujieyue/*`  | `/api/borrows/*`    | Borrow workflow    |
+| `/tushuguihai/*`  | `/api/returns/*`    | Return workflow    |
+| `/tushuxujie/*`   | `/api/renewals/*`   | Renewal workflow   |
+| `/chaoqifakuan/*` | `/api/penalties/*`  | Penalty management |
+| `/news/*`         | `/api/news/*`       | Announcements      |
+| `/messages/*`     | `/api/messages/*`   | Reader messages    |
+| `/file/upload`    | `/api/upload`       | File upload        |
+| `/common/*`       | `/api/dashboard/*`  | Dashboard stats    |
+| `/option/*`       | `/api/options/*`    | Dropdown options   |
 
-> **Note for Phase 5 (frontend integration):** All 12 frontend API modules currently use old paths.
-> They will be updated to new paths once the backend implements them.
+> **Note for Phase 5 (frontend integration):** All 11 frontend API modules currently use old paths.
+> Auth/Book/Category (3 modules) can be migrated now — backend P3 is live.
+> Borrow/Return/Renewal/Penalty/News/File/Dashboard (7 modules) wait for backend P4-P5.
+> Messages API module not yet created.

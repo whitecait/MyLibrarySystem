@@ -77,19 +77,43 @@ public class ReturnServiceImpl implements ReturnService {
             };
             retPage = returnRepository.findAll(spec, pageable);
         }
-        return retPage.map(this::toResponse);
+
+        // Batch JOIN: avoid N+1 in toResponse
+        List<Long> borrowIds = retPage.map(BorrowReturn::getBorrowId).stream()
+                .distinct().collect(Collectors.toList());
+        Map<Long, Borrow> borrowMap = borrowRepository.findAllById(borrowIds).stream()
+                .collect(Collectors.toMap(Borrow::getId, b -> b));
+        List<Long> readerIds = borrowMap.values().stream()
+                .map(Borrow::getReaderId).distinct().collect(Collectors.toList());
+        List<Long> bookIds = borrowMap.values().stream()
+                .map(Borrow::getBookId).distinct().collect(Collectors.toList());
+        Map<Long, Reader> readerMap = readerRepository.findAllById(readerIds).stream()
+                .collect(Collectors.toMap(Reader::getId, r -> r));
+        Map<Long, Book> bookMap = bookRepository.findAllById(bookIds).stream()
+                .collect(Collectors.toMap(Book::getId, b -> b));
+
+        return retPage.map(r -> toResponse(r, borrowMap, readerMap, bookMap));
     }
 
     @Override
     @Transactional
-    public void apply(ReturnRequest req) {
+    public void apply(ReturnRequest req, User currentUser) {
         Borrow borrow = borrowRepository.findById(req.getBorrowId())
                 .orElseThrow(() -> new ApiException("借阅记录不存在"));
         if (borrow.getApproved() != ApprovalStatus.是) {
             throw new ApiException("该借阅记录未通过审核");
         }
+        // Reader can only return own borrows; admin can return any
+        if (currentUser != null && currentUser.getRole() == com.library.entity.enums.UserRole.READER) {
+            if (!borrow.getReaderId().equals(currentUser.getReaderId())) {
+                throw new ApiException("无权操作他人的借阅记录");
+            }
+        }
         if (returnRepository.existsByBorrowIdAndApproved(req.getBorrowId(), ApprovalStatus.是)) {
             throw new ApiException("该借阅记录已归还");
+        }
+        if (returnRepository.existsByBorrowIdAndApproved(req.getBorrowId(), ApprovalStatus.待审核)) {
+            throw new ApiException("该借阅记录已有归还申请");
         }
         BorrowReturn ret = new BorrowReturn();
         ret.setBorrowId(req.getBorrowId());
@@ -106,6 +130,11 @@ public class ReturnServiceImpl implements ReturnService {
             if (ret == null || ret.getApproved() != ApprovalStatus.待审核) continue;
 
             if (target == ApprovalStatus.是) {
+                if (returnRepository.existsByBorrowIdAndApproved(ret.getBorrowId(), ApprovalStatus.是)) {
+                    ret.setApproved(ApprovalStatus.否);
+                    ret.setReply("该借阅记录已归还");
+                    continue;
+                }
                 ret.setApproved(ApprovalStatus.是);
                 ret.setReturnDate(LocalDateTime.now());
                 Borrow borrow = borrowRepository.findById(ret.getBorrowId()).orElseThrow();
@@ -133,12 +162,14 @@ public class ReturnServiceImpl implements ReturnService {
     }
 
     @Override
+    @Transactional
     public void delete(List<Long> ids) { returnRepository.deleteAllById(ids); }
 
-    private ReturnResponse toResponse(BorrowReturn ret) {
-        Borrow b = borrowRepository.findById(ret.getBorrowId()).orElse(null);
-        Reader r = b != null ? readerRepository.findById(b.getReaderId()).orElse(null) : null;
-        Book bk = b != null ? bookRepository.findById(b.getBookId()).orElse(null) : null;
+    private ReturnResponse toResponse(BorrowReturn ret, Map<Long, Borrow> borrowMap,
+                                       Map<Long, Reader> readerMap, Map<Long, Book> bookMap) {
+        Borrow b = borrowMap.get(ret.getBorrowId());
+        Reader r = b != null ? readerMap.get(b.getReaderId()) : null;
+        Book bk = b != null ? bookMap.get(b.getBookId()) : null;
 
         ReturnResponse resp = new ReturnResponse();
         resp.setId(ret.getId());
@@ -154,7 +185,7 @@ public class ReturnServiceImpl implements ReturnService {
 
     private String generateFineNo() {
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long count = penaltyRepository.count() + 1;
+        long count = penaltyRepository.countByFineDate(LocalDate.now()) + 1;
         return String.format("FN-%s-%03d", date, count);
     }
 }

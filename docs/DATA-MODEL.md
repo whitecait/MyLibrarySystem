@@ -145,14 +145,14 @@ erDiagram
 >
 > **P2 design change:** User now handles ALL authentication (admin + reader). Reader login uses `username = studentId`. A nullable `readerId` FK links to Reader profile.
 
-| Field      | Type   | Constraint             | Description                              |
-| ---------- | ------ | ---------------------- | ---------------------------------------- |
-| `id`       | Long   | PK, auto               | Primary key                              |
+| Field      | Type   | Constraint             | Description                                     |
+| ---------- | ------ | ---------------------- | ----------------------------------------------- |
+| `id`       | Long   | PK, auto               | Primary key                                     |
 | `username` | String | unique, not-null       | Login account (admin="admin", reader=studentId) |
-| `password` | String | not-null               | BCrypt-encoded                           |
-| `role`     | String | not-null               | `ADMIN` / `READER` (enum)                |
-| `readerId` | Long   | FK → readers, nullable | Links to Reader profile (null for admin) |
-| `addtime`  | Date   | auto                   | Record creation time                     |
+| `password` | String | not-null               | BCrypt-encoded                                  |
+| `role`     | String | not-null               | `ADMIN` / `READER` (enum)                       |
+| `readerId` | Long   | FK → readers, nullable | Links to Reader profile (null for admin)        |
+| `addtime`  | Date   | auto                   | Record creation time                            |
 
 ### 2.2 Reader (读者)
 
@@ -160,17 +160,17 @@ erDiagram
 >
 > **P2 design change:** `password` removed — authentication moved to User table. Reader is now pure profile data, linked via User.readerId.
 
-| Field        | Type   | Constraint       | Old Name          | Description               |
-| ------------ | ------ | ---------------- | ----------------- | ------------------------- |
-| `id`         | Long   | PK, auto         | `id`              | Primary key               |
+| Field        | Type   | Constraint       | Old Name          | Description                |
+| ------------ | ------ | ---------------- | ----------------- | -------------------------- |
+| `id`         | Long   | PK, auto         | `id`              | Primary key                |
 | `studentId`  | String | unique, not-null | `xueshengxuehao`  | Student ID (学号, 7-digit) |
-| `name`       | String | not-null         | `xingming`        | Name (姓名)               |
-| `gender`     | String | —                | `xingbie`         | Gender (男/女)            |
-| `department` | String | —                | `yuanxi`          | Department (院系)         |
-| `birthDate`  | String | —                | `chushengnianyue` | Birth date (出生年月)     |
-| `phone`      | String | 11-digit         | `shouji`          | Phone number (手机)       |
-| `avatar`     | String | —                | `touxiang`        | Avatar image filename     |
-| `addtime`    | Date   | auto             | `addtime`         | Record creation time      |
+| `name`       | String | not-null         | `xingming`        | Name (姓名)                |
+| `gender`     | String | —                | `xingbie`         | Gender (男/女)             |
+| `department` | String | —                | `yuanxi`          | Department (院系)          |
+| `birthDate`  | String | —                | `chushengnianyue` | Birth date (出生年月)      |
+| `phone`      | String | 11-digit         | `shouji`          | Phone number (手机)        |
+| `avatar`     | String | —                | `touxiang`        | Avatar image filename      |
+| `addtime`    | Date   | auto             | `addtime`         | Record creation time       |
 
 ### 2.3 Book (图书)
 
@@ -209,16 +209,16 @@ erDiagram
 >
 > **P2 design change:** Removed `readerName`, `studentId`, `bookIsbn`, `bookTitle` — all obtainable via FK JOIN (strict 3NF). Added `dueDate` for overdue calculation.
 
-| Field        | Type   | Constraint   | Old Name         | Description                          |
-| ------------ | ------ | ------------ | ---------------- | ------------------------------------ |
-| `id`         | Long   | PK, auto     | `id`             | Primary key                          |
-| `readerId`   | Long   | FK → readers | —                | Reader reference                     |
-| `bookId`     | Long   | FK → books   | —                | Book reference                       |
-| `borrowDate` | Date   | —            | `jieyueshijian`  | Borrow date (借阅时间)               |
-| `dueDate`    | Date   | —            | —                | **NEW** — due date (预还日期, borrowDate+30d) |
-| `approved`   | String | —            | `sfsh`           | Approved? (是否审核: 是/否)          |
-| `reply`      | String | —            | `shhf`           | Approval reply (审核回复)            |
-| `addtime`    | Date   | auto         | `addtime`        | Record creation time                 |
+| Field        | Type   | Constraint   | Old Name        | Description                                   |
+| ------------ | ------ | ------------ | --------------- | --------------------------------------------- |
+| `id`         | Long   | PK, auto     | `id`            | Primary key                                   |
+| `readerId`   | Long   | FK → readers | —               | Reader reference                              |
+| `bookId`     | Long   | FK → books   | —               | Book reference                                |
+| `borrowDate` | Date   | —            | `jieyueshijian` | Borrow date (借阅时间)                        |
+| `dueDate`    | Date   | —            | —               | **NEW** — due date (预还日期, borrowDate+30d) |
+| `approved`   | String | —            | `sfsh`          | Approved? (是否审核: 是/否)                   |
+| `reply`      | String | —            | `shhf`          | Approval reply (审核回复)                     |
+| `addtime`    | Date   | auto         | `addtime`       | Record creation time                          |
 
 ### 2.6 BorrowReturn (图书归还)
 
@@ -337,42 +337,42 @@ books    * ── 1    categories    (book belongs to category)
 
 ## 4. Field Dictionary (Old → New Quick Reference)
 
-| Old Field (pinyin)             | New Field (English)    | Type       | Meaning          |
-| ------------------------------ | ---------------------- | ---------- | ---------------- |
-| `xueshengxuehao`               | `studentId`            | String     | 学号             |
-| `xingming`                     | `name` / `readerName`  | String     | 姓名             |
-| `mima`                         | `password`             | String     | 密码 (User table only) |
-| `xingbie`                      | `gender`               | String     | 性别             |
-| `yuanxi`                       | `department`           | String     | 院系             |
-| `shouji`                       | `phone`                | String     | 手机             |
-| `touxiang`                     | `avatar` / `avatarUrl` | String     | 头像             |
-| `tushubianhao`                 | `isbn`                 | String     | 图书编号 (Book table) |
-| `tushumingcheng`               | `title`                | String     | 图书名称 (Book table) |
-| `tushuleixing` / `tushuleibie` | `categoryId` / `name`  | FK/String  | 图书类别         |
-| `tushufengmian`                | `coverImage`           | String     | 封面             |
-| `zuozhe`                       | `author`               | String     | 作者             |
-| `chubanshe`                    | `publisher`            | String     | 出版社           |
-| `shuliang`                     | `stock`                | Integer    | 数量             |
-| `tushuxiangqing`               | `description`          | Text       | 详情             |
-| `sfsh`                         | `approved`             | String     | 是否审核 (是/否) |
-| `shhf`                         | `reply`                | String     | 审核回复         |
-| `sfzf`                         | `paid`                 | String     | 是否支付 (是/否) |
-| `fakuanjine`                   | `amount`               | BigDecimal | 罚款金额         |
-| `kahao`                        | `cardNo`               | String     | 卡号             |
+| Old Field (pinyin)             | New Field (English)    | Type       | Meaning                                 |
+| ------------------------------ | ---------------------- | ---------- | --------------------------------------- |
+| `xueshengxuehao`               | `studentId`            | String     | 学号                                    |
+| `xingming`                     | `name` / `readerName`  | String     | 姓名                                    |
+| `mima`                         | `password`             | String     | 密码 (User table only)                  |
+| `xingbie`                      | `gender`               | String     | 性别                                    |
+| `yuanxi`                       | `department`           | String     | 院系                                    |
+| `shouji`                       | `phone`                | String     | 手机                                    |
+| `touxiang`                     | `avatar` / `avatarUrl` | String     | 头像                                    |
+| `tushubianhao`                 | `isbn`                 | String     | 图书编号 (Book table)                   |
+| `tushumingcheng`               | `title`                | String     | 图书名称 (Book table)                   |
+| `tushuleixing` / `tushuleibie` | `categoryId` / `name`  | FK/String  | 图书类别                                |
+| `tushufengmian`                | `coverImage`           | String     | 封面                                    |
+| `zuozhe`                       | `author`               | String     | 作者                                    |
+| `chubanshe`                    | `publisher`            | String     | 出版社                                  |
+| `shuliang`                     | `stock`                | Integer    | 数量                                    |
+| `tushuxiangqing`               | `description`          | Text       | 详情                                    |
+| `sfsh`                         | `approved`             | String     | 是否审核 (是/否)                        |
+| `shhf`                         | `reply`                | String     | 审核回复                                |
+| `sfzf`                         | `paid`                 | String     | 是否支付 (是/否)                        |
+| `fakuanjine`                   | `amount`               | BigDecimal | 罚款金额                                |
+| `kahao`                        | `cardNo`               | String     | 卡号                                    |
 | `jieyueren`                    | `readerName`           | String     | 借阅人 (removed from Borrow — use JOIN) |
-| —                              | `dueDate`              | Date       | 预还日期 (NEW in Borrow) |
-| —                              | `readerId`             | Long FK    | 鉴权关联 (NEW in User) |
+| —                              | `dueDate`              | Date       | 预还日期 (NEW in Borrow)                |
+| —                              | `readerId`             | Long FK    | 鉴权关联 (NEW in User)                  |
 
 ## 5. Enum Values (Java Enums, @Enumerated(STRING))
 
 **P2 implemented** these as Java enums. DB stores string values for frontend compatibility.
 
-| Field              | Enum Class          | Values               | Description     |
-| ------------------ | ------------------- | -------------------- | --------------- |
-| `approved` (sfsh)  | `ApprovalStatus`    | `是` / `否`          | Approval status |
-| `paid` (sfzf)      | `PaymentStatus`     | `是` / `否`          | Payment status  |
-| `gender` (xingbie) | `Gender`            | `男` / `女`          | Gender          |
-| `role`             | `UserRole`          | `ADMIN` / `READER`   | User role       |
+| Field              | Enum Class       | Values             | Description     |
+| ------------------ | ---------------- | ------------------ | --------------- |
+| `approved` (sfsh)  | `ApprovalStatus` | `是` / `否`        | Approval status |
+| `paid` (sfzf)      | `PaymentStatus`  | `是` / `否`        | Payment status  |
+| `gender` (xingbie) | `Gender`         | `男` / `女`        | Gender          |
+| `role`             | `UserRole`       | `ADMIN` / `READER` | User role       |
 
 ## 6. Database Profiles
 

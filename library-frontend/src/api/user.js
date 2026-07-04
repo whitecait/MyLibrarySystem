@@ -1,27 +1,29 @@
-import request from '@/utils/request';
+import request from '@/utils/request'
 
-// 管理员登录
 export function loginAdmin(data) {
-    return request({
-        url: '/users/login',
-        method: 'post',
-        params: data
-    });
+  return request({
+    url: '/auth/login',
+    method: 'post',
+    data: {
+      username: data.username,
+      password: data.password,
+    },
+  })
 }
 
-// 获取当前读者信息 (通过session)
 export function getReaderInfo() {
-    return request({
-        url: '/duzhe/session',
-        method: 'get'
-    })
+  const raw = localStorage.getItem('user')
+  return Promise.resolve({
+    code: 0,
+    msg: 'success',
+    data: raw ? JSON.parse(raw) : null,
+  })
 }
 
-// 更新读者信息
 export function updateReaderInfo(data) {
-    return request({
-        url: '/duzhe/update',
-        method: 'post',
-        data
-    })
+  return request({
+    url: '/readers/update',
+    method: 'post',
+    data,
+  })
 }

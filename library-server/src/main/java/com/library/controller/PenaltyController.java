@@ -39,8 +39,9 @@ public class PenaltyController {
     }
 
     @PostMapping("/pay")
-    public ApiResponse<Void> pay(@Valid @RequestBody PayRequest request) {
-        penaltyService.pay(request);
+    public ApiResponse<Void> pay(@Valid @RequestBody PayRequest request,
+                                  @AuthenticationPrincipal User currentUser) {
+        penaltyService.pay(request, currentUser);
         return ApiResponse.ok();
     }
 

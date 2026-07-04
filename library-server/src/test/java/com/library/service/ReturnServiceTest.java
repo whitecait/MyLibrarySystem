@@ -65,7 +65,7 @@ class ReturnServiceTest {
     void shouldSubmitReturnApplication() {
         ReturnRequest req = new ReturnRequest();
         req.setBorrowId(borrowId);
-        returnService.apply(req);
+        returnService.apply(req, null);
 
         Page<ReturnResponse> page = returnService.queryPage(1, 10, null, null);
         assertThat(page.getTotalElements()).isEqualTo(1);
@@ -80,7 +80,7 @@ class ReturnServiceTest {
 
         ReturnRequest req = new ReturnRequest();
         req.setBorrowId(borrowId);
-        assertThatThrownBy(() -> returnService.apply(req))
+        assertThatThrownBy(() -> returnService.apply(req, null))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("该借阅记录未通过审核");
     }
@@ -89,7 +89,7 @@ class ReturnServiceTest {
     void shouldRejectDuplicateReturn() {
         ReturnRequest req = new ReturnRequest();
         req.setBorrowId(borrowId);
-        returnService.apply(req);
+        returnService.apply(req, null);
         // Approve the first return
         Page<ReturnResponse> page = returnService.queryPage(1, 10, null, null);
         Long retId = page.getContent().get(0).getId();
@@ -99,16 +99,27 @@ class ReturnServiceTest {
         returnService.approveBatch(ba);
 
         // Try to return again
-        assertThatThrownBy(() -> returnService.apply(req))
+        assertThatThrownBy(() -> returnService.apply(req, null))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("该借阅记录已归还");
+    }
+
+    @Test
+    void shouldRejectDuplicatePendingReturn() {
+        ReturnRequest req = new ReturnRequest();
+        req.setBorrowId(borrowId);
+        returnService.apply(req, null);
+
+        assertThatThrownBy(() -> returnService.apply(req, null))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("该借阅记录已有归还申请");
     }
 
     @Test
     void shouldRestoreStockAndGenerateFineOnOverdueReturn() {
         ReturnRequest req = new ReturnRequest();
         req.setBorrowId(borrowId);
-        returnService.apply(req);
+        returnService.apply(req, null);
 
         Page<ReturnResponse> page = returnService.queryPage(1, 10, null, null);
         Long retId = page.getContent().get(0).getId();

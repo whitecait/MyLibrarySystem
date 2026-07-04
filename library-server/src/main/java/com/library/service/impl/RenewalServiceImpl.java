@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -56,32 +57,56 @@ public class RenewalServiceImpl implements RenewalService {
     @Override
     public Page<RenewalResponse> queryPage(int page, int limit, Long readerId, String approved) {
         Pageable pageable = PageRequest.of(page - 1, limit, Sort.by("id").descending());
-        Page<Renewal> renewalPage;
+        List<Long> readerBorrowIds = null;
         if (readerId != null) {
-            List<Long> borrowIds = borrowRepository.findByReaderId(readerId).stream()
+            readerBorrowIds = borrowRepository.findByReaderId(readerId).stream()
                     .map(Borrow::getId).collect(Collectors.toList());
-            if (borrowIds.isEmpty()) return Page.empty(pageable);
-            renewalPage = renewalRepository.findAll(
-                    (Specification<Renewal>) (root, query, cb) -> {
-                        List<Predicate> preds = new ArrayList<>();
-                        preds.add(root.get("borrowId").in(borrowIds));
-                        if (approved != null)
-                            preds.add(cb.equal(root.get("approved"), ApprovalStatus.valueOf(approved)));
-                        return cb.and(preds.toArray(new Predicate[0]));
-                    }, pageable);
-        } else {
-            renewalPage = renewalRepository.findAll(pageable);
+            if (readerBorrowIds.isEmpty()) return Page.empty(pageable);
         }
-        return renewalPage.map(this::toResponse);
+
+        List<Long> finalReaderBorrowIds = readerBorrowIds;
+        Specification<Renewal> spec = (root, query, cb) -> {
+            List<Predicate> preds = new ArrayList<>();
+            if (finalReaderBorrowIds != null) {
+                preds.add(root.get("borrowId").in(finalReaderBorrowIds));
+            }
+            if (approved != null) {
+                preds.add(cb.equal(root.get("approved"), ApprovalStatus.valueOf(approved)));
+            }
+            return cb.and(preds.toArray(new Predicate[0]));
+        };
+        Page<Renewal> renewalPage = renewalRepository.findAll(spec, pageable);
+
+        // Batch JOIN: avoid N+1 in toResponse
+        List<Long> borrowIds = renewalPage.map(Renewal::getBorrowId).stream()
+                .distinct().collect(Collectors.toList());
+        Map<Long, Borrow> borrowMap = borrowRepository.findAllById(borrowIds).stream()
+                .collect(Collectors.toMap(Borrow::getId, b -> b));
+        List<Long> readerIds = borrowMap.values().stream()
+                .map(Borrow::getReaderId).distinct().collect(Collectors.toList());
+        List<Long> bookIds = borrowMap.values().stream()
+                .map(Borrow::getBookId).distinct().collect(Collectors.toList());
+        Map<Long, Reader> readerMap = readerRepository.findAllById(readerIds).stream()
+                .collect(Collectors.toMap(Reader::getId, r -> r));
+        Map<Long, Book> bookMap = bookRepository.findAllById(bookIds).stream()
+                .collect(Collectors.toMap(Book::getId, b -> b));
+
+        return renewalPage.map(r -> toResponse(r, borrowMap, readerMap, bookMap));
     }
 
     @Override
     @Transactional
-    public void apply(RenewalRequest req) {
+    public void apply(RenewalRequest req, User currentUser) {
         Borrow borrow = borrowRepository.findById(req.getBorrowId())
                 .orElseThrow(() -> new ApiException("借阅记录不存在"));
         if (borrow.getApproved() != ApprovalStatus.是) {
             throw new ApiException("该借阅记录未通过审核");
+        }
+        // Reader can only renew own borrows; admin can renew any
+        if (currentUser != null && currentUser.getRole() == com.library.entity.enums.UserRole.READER) {
+            if (!borrow.getReaderId().equals(currentUser.getReaderId())) {
+                throw new ApiException("无权操作他人的借阅记录");
+            }
         }
         if (borrowReturnRepository.existsByBorrowIdAndApproved(req.getBorrowId(), ApprovalStatus.是)) {
             throw new ApiException("该借阅记录已归还，无法续借");
@@ -148,12 +173,14 @@ public class RenewalServiceImpl implements RenewalService {
     }
 
     @Override
+    @Transactional
     public void delete(List<Long> ids) { renewalRepository.deleteAllById(ids); }
 
-    private RenewalResponse toResponse(Renewal r) {
-        Borrow b = borrowRepository.findById(r.getBorrowId()).orElse(null);
-        Reader reader = b != null ? readerRepository.findById(b.getReaderId()).orElse(null) : null;
-        Book bk = b != null ? bookRepository.findById(b.getBookId()).orElse(null) : null;
+    private RenewalResponse toResponse(Renewal r, Map<Long, Borrow> borrowMap,
+                                        Map<Long, Reader> readerMap, Map<Long, Book> bookMap) {
+        Borrow b = borrowMap.get(r.getBorrowId());
+        Reader reader = b != null ? readerMap.get(b.getReaderId()) : null;
+        Book bk = b != null ? bookMap.get(b.getBookId()) : null;
 
         RenewalResponse resp = new RenewalResponse();
         resp.setId(r.getId());

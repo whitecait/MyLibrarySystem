@@ -40,8 +40,9 @@ public class ReturnController {
     }
 
     @PostMapping("/add")
-    public ApiResponse<Void> add(@Valid @RequestBody ReturnRequest request) {
-        returnService.apply(request);
+    public ApiResponse<Void> add(@Valid @RequestBody ReturnRequest request,
+                                  @AuthenticationPrincipal User currentUser) {
+        returnService.apply(request, currentUser);
         return ApiResponse.ok();
     }
 

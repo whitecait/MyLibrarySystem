@@ -79,7 +79,7 @@ class PenaltyServiceTest {
     void shouldPayFine() {
         PayRequest req = new PayRequest();
         req.setId(penaltyId);
-        penaltyService.pay(req);
+        penaltyService.pay(req, null);
 
         Penalty p = penaltyRepository.findById(penaltyId).orElseThrow();
         assertThat(p.getPaid()).isEqualTo(PaymentStatus.是);
@@ -89,9 +89,9 @@ class PenaltyServiceTest {
     void shouldRejectDuplicatePayment() {
         PayRequest req = new PayRequest();
         req.setId(penaltyId);
-        penaltyService.pay(req);
+        penaltyService.pay(req, null);
 
-        assertThatThrownBy(() -> penaltyService.pay(req))
+        assertThatThrownBy(() -> penaltyService.pay(req, null))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("该罚款已支付");
     }

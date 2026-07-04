@@ -63,7 +63,7 @@ class RenewalServiceTest {
         RenewalRequest req = new RenewalRequest();
         req.setBorrowId(borrowId);
 
-        renewalService.apply(req);
+        renewalService.apply(req, null);
 
         Page<RenewalResponse> page = renewalService.queryPage(1, 10, readerId, null);
         assertThat(page.getContent().get(0).getApproved()).isEqualTo("是");
@@ -75,13 +75,26 @@ class RenewalServiceTest {
     void shouldSetPendingForSecondRenewal() {
         RenewalRequest req = new RenewalRequest();
         req.setBorrowId(borrowId);
-        renewalService.apply(req);  // first: auto-approved
-        renewalService.apply(req);  // second: pending
+        renewalService.apply(req, null);  // first: auto-approved
+        renewalService.apply(req, null);  // second: pending
 
         Page<RenewalResponse> page = renewalService.queryPage(1, 10, null, null);
         List<RenewalResponse> content = page.getContent();
         assertThat(content.get(0).getApproved()).isEqualTo("待审核");
         assertThat(content.get(1).getApproved()).isEqualTo("是");
+    }
+
+    @Test
+    void shouldFilterRenewalsByApprovedForAdminQuery() {
+        RenewalRequest req = new RenewalRequest();
+        req.setBorrowId(borrowId);
+        renewalService.apply(req, null);  // first: auto-approved
+        renewalService.apply(req, null);  // second: pending
+
+        Page<RenewalResponse> pending = renewalService.queryPage(1, 10, null, "待审核");
+
+        assertThat(pending.getTotalElements()).isEqualTo(1);
+        assertThat(pending.getContent().get(0).getApproved()).isEqualTo("待审核");
     }
 
     @Test
@@ -92,7 +105,7 @@ class RenewalServiceTest {
 
         RenewalRequest req = new RenewalRequest();
         req.setBorrowId(borrowId);
-        assertThatThrownBy(() -> renewalService.apply(req))
+        assertThatThrownBy(() -> renewalService.apply(req, null))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("该借阅记录未通过审核");
     }
@@ -106,7 +119,7 @@ class RenewalServiceTest {
 
         RenewalRequest req = new RenewalRequest();
         req.setBorrowId(borrowId);
-        assertThatThrownBy(() -> renewalService.apply(req))
+        assertThatThrownBy(() -> renewalService.apply(req, null))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("最长持有期限");
     }
@@ -120,7 +133,7 @@ class RenewalServiceTest {
 
         RenewalRequest req = new RenewalRequest();
         req.setBorrowId(borrowId);
-        assertThatThrownBy(() -> renewalService.apply(req))
+        assertThatThrownBy(() -> renewalService.apply(req, null))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("该借阅记录已归还，无法续借");
     }
@@ -130,7 +143,7 @@ class RenewalServiceTest {
         RenewalRequest req = new RenewalRequest();
         req.setBorrowId(borrowId);
         req.setDurationDays(35);  // > 30 -> pending
-        renewalService.apply(req);
+        renewalService.apply(req, null);
 
         Page<RenewalResponse> page = renewalService.queryPage(1, 10, null, null);
         Long renewalId = page.getContent().get(0).getId();

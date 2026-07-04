@@ -31,17 +31,20 @@ import java.util.stream.Collectors;
 public class BorrowServiceImpl implements BorrowService {
 
     private final BorrowRepository borrowRepository;
+    private final BorrowReturnRepository borrowReturnRepository;
     private final BookRepository bookRepository;
     private final ReaderRepository readerRepository;
     private final PenaltyRepository penaltyRepository;
     private final LibraryProperties props;
 
     public BorrowServiceImpl(BorrowRepository borrowRepository,
+                             BorrowReturnRepository borrowReturnRepository,
                              BookRepository bookRepository,
                              ReaderRepository readerRepository,
                              PenaltyRepository penaltyRepository,
                              LibraryProperties props) {
         this.borrowRepository = borrowRepository;
+        this.borrowReturnRepository = borrowReturnRepository;
         this.bookRepository = bookRepository;
         this.readerRepository = readerRepository;
         this.penaltyRepository = penaltyRepository;
@@ -91,7 +94,7 @@ public class BorrowServiceImpl implements BorrowService {
         Book book = bookRepository.findById(req.getBookId())
                 .orElseThrow(() -> new ApiException("图书不存在"));
         if (book.getStock() <= 0) throw new ApiException("图书库存不足");
-        if (borrowRepository.existsByReaderIdAndBookIdAndApproved(readerId, req.getBookId(), ApprovalStatus.是)) {
+        if (hasActiveBorrowForBook(readerId, req.getBookId())) {
             throw new ApiException("该图书您已有进行中的借阅记录");
         }
 
@@ -100,7 +103,7 @@ public class BorrowServiceImpl implements BorrowService {
                 : props.getBorrow().getDefaultDurationDays();
 
         boolean hasUnpaidFines = penaltyRepository.countByReaderIdAndPaid(readerId, PaymentStatus.否) > 0;
-        boolean atLimit = borrowRepository.countByReaderIdAndApproved(readerId, ApprovalStatus.是) >= props.getBorrow().getMaxLimit();
+        boolean atLimit = countActiveBorrows(readerId) >= props.getBorrow().getMaxLimit();
         boolean overAutoDays = req.getDurationDays() != null && req.getDurationDays() > props.getBorrow().getAutoApproveDuration();
 
         Borrow borrow = new Borrow();
@@ -130,25 +133,47 @@ public class BorrowServiceImpl implements BorrowService {
             if (borrow == null || borrow.getApproved() != ApprovalStatus.待审核) continue;
 
             if (targetStatus == ApprovalStatus.是) {
+                Book book = bookRepository.findById(borrow.getBookId()).orElseThrow();
+                if (book.getStock() <= 0) throw new ApiException("图书库存不足");
                 borrow.setApproved(ApprovalStatus.是);
                 borrow.setBorrowDate(LocalDateTime.now());
                 int actualDays = borrow.getDurationDays() != null
                         ? Math.min(borrow.getDurationDays(), props.getBorrow().getAutoApproveDuration())
                         : props.getBorrow().getDefaultDurationDays();
                 borrow.setDueDate(LocalDate.now().plusDays(actualDays));
-                Book book = bookRepository.findById(borrow.getBookId()).orElseThrow();
                 book.setStock(book.getStock() - 1);
                 bookRepository.save(book);
+                borrowRepository.save(borrow);
             } else {
                 borrow.setApproved(ApprovalStatus.否);
                 borrow.setReply(batch.getReply());
+                borrowRepository.save(borrow);
             }
         }
     }
 
     @Override
+    @Transactional
     public void delete(List<Long> ids) {
         borrowRepository.deleteAllById(ids);
+    }
+
+    private boolean hasActiveBorrowForBook(Long readerId, Long bookId) {
+        return borrowRepository.findByReaderId(readerId).stream()
+                .filter(b -> b.getApproved() == ApprovalStatus.是)
+                .filter(b -> b.getBookId().equals(bookId))
+                .anyMatch(this::isNotReturned);
+    }
+
+    private long countActiveBorrows(Long readerId) {
+        return borrowRepository.findByReaderId(readerId).stream()
+                .filter(b -> b.getApproved() == ApprovalStatus.是)
+                .filter(this::isNotReturned)
+                .count();
+    }
+
+    private boolean isNotReturned(Borrow borrow) {
+        return !borrowReturnRepository.existsByBorrowIdAndApproved(borrow.getId(), ApprovalStatus.是);
     }
 
     private BorrowResponse toResponse(Borrow b, Reader r, Book bk) {

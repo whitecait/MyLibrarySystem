@@ -21,7 +21,7 @@
 
 | Layer    | Technology                            | Role                                 |
 | -------- | ------------------------------------- | ------------------------------------ |
-| Frontend | Vue 3.5 + Vite 7 + Element Plus 2     | SPA with 16 views, 12 API modules    |
+| Frontend | Vue 3.5 + Vite 7 + Element Plus 2     | SPA with 15 views, 11 API modules    |
 | Backend  | Spring Boot 3.5 + Spring Data JPA     | REST API, JWT auth, file upload      |
 | Database | MySQL 8.0 (prod) / H2 (dev)           | Relational storage                   |
 | Auth     | Spring Security + jjwt 0.12           | Stateless JWT Bearer token           |
@@ -33,6 +33,9 @@
 
 ### 2.1 Package Structure (`com.library`)
 
+> **Current status:** Phase 3 complete. Auth, Book, Category controllers/services live.
+> Borrow/Return/Renewal/Penalty/News/Message planned (P4-P5).
+
 ```
 src/main/java/com/library/
 ├── LibraryApplication.java          # @SpringBootApplication entry
@@ -41,20 +44,20 @@ src/main/java/com/library/
 ├── config/
 │   ├── CorsConfig.java              # CORS allow all origins (dev)
 │   ├── OpenApiConfig.java           # Swagger/SpringDoc config
-│   └── SecurityConfig.java          # Spring Security filter chain
-├── entity/                          # JPA @Entity classes
-├── repository/                      # Spring Data JPA repositories
-├── service/                         # Business logic interfaces
-│   └── impl/                        #   implementations
-├── controller/                      # @RestController handlers
-├── dto/                             # Request/Response DTOs
-├── security/                        # JWT provider & auth filter
+│   └── SecurityConfig.java          # Spring Security filter chain (role-based)
+├── entity/                          # 5 JPA @Entity + 4 enums
+├── repository/                      # 5 Spring Data JPA repositories
+├── service/                         # AuthService, BookService, CategoryService
+│   └── impl/                        #   3 implementations
+├── controller/                      # AuthController, BookController, CategoryController
+├── dto/                             # 7 Request/Response DTOs
+├── security/                        # JwtProvider + JwtAuthFilter
 └── exception/
     ├── ApiException.java            # Business exception
     └── GlobalExceptionHandler.java  # @RestControllerAdvice
 ```
 
-### 2.2 Request Flow (Phase 2 — with JWT)
+### 2.2 Request Flow (Phase 3 — JWT + Role-Based Access)
 
 ```
 Client Request
@@ -102,21 +105,22 @@ All endpoints return:
 
 ```
 src/
-├── main.js                  # App bootstrap
+├── main.js                  # App bootstrap (Vue + Element Plus + Router)
 ├── App.vue                  # Root component
-├── api/                     # Axios API modules (12 files)
-│   ├── user.js              #   /api/users/* — admin auth
-│   ├── reader.js            #   /api/readers/* — reader auth & CRUD
-│   ├── book.js              #   /api/books/* — book CRUD & search
-│   ├── category.js          #   /api/categories/* — category CRUD
-│   ├── borrow.js            #   /api/borrows/* — borrow workflow
-│   ├── return.js            #   /api/returns/* — return workflow
-│   ├── renewal.js           #   /api/renewals/* — renewal workflow
-│   ├── penalty.js           #   /api/penalties/* — fines
-│   ├── news.js              #   /api/news/* — announcements
-│   ├── file.js              #   /api/upload/* — file upload
-│   └── home.js              #   /api/dashboard/* — statistics
-├── views/                   # Page components (16 views)
+├── api/                     # Axios API modules (11 files, old pinyin paths)
+│   ├── user.js              #   /users/* — admin auth (old)
+│   ├── reader.js            #   /duzhe/* — reader auth & CRUD (old)
+│   ├── book.js              #   /tushuxinxi/* — book CRUD & search (old)
+│   ├── category.js          #   /tushuleibie/* — category CRUD (old)
+│   ├── borrow.js            #   /tushujieyue/*, /chaoqifakuan/* — borrows + fines (old)
+│   ├── return.js            #   /tushuguihai/* — return workflow (old)
+│   ├── renewal.js           #   /tushuxujie/* — renewal workflow (old)
+│   ├── penalty.js           #   /chaoqifakuan/* — fines (old)
+│   ├── news.js              #   /news/* — announcements (old)
+│   ├── file.js              #   /file/upload — file upload (old)
+│   └── home.js              #   mixed old paths — dashboard stats (old)
+│   # messages.js — NOT YET CREATED (planned P5)
+├── views/                   # Page components (15 views)
 │   ├── LoginView.vue        #   Reader/Admin login & register
 │   ├── HomeView.vue         #   Dashboard
 │   ├── BookManagement.vue   #   Admin: book CRUD
@@ -131,12 +135,11 @@ src/
 │   ├── RenewalApproval.vue  #   Admin: approve renewals
 │   ├── PenaltyManagement.vue#   Admin: manage fines
 │   ├── NewsManagement.vue   #   Admin: announcement CRUD
-│   ├── AboutView.vue
-│   └── ...
+│   └── AboutView.vue
 ├── layouts/MainLayout.vue   # App shell (sidebar + header)
-├── router/index.js          # Vue Router with route guards
+├── router/index.js          # Vue Router (token guard, no role guard)
 └── utils/
-    ├── request.js           # Axios instance with interceptors
+    ├── request.js           # Axios instance (custom `token` header — needs fix)
     └── index.js             # Utility helpers
 ```
 
@@ -146,17 +149,22 @@ src/
 View Component
   │  import { getBookPage } from '@/api/book'
   ▼
-api/book.js          →  calls request.get('/books/page', { params })
-  │
+api/book.js          →  calls request.get('/tushuxinxi/page', { params })
+  │                     (currently OLD pinyin path — pending migration)
   ▼
 utils/request.js     →  Axios instance
-  │  baseURL: '/api' (dev proxy via Vite) or env-configured
-  │  request interceptor: attach JWT from localStorage
+  │  baseURL: VITE_API_BASE_URL (env-configured)
+  │  request interceptor: attach JWT as custom `token` header (NEEDS FIX: should be Bearer)
   │  response interceptor: unwrap ApiResponse, handle 401 → redirect /login
+  │
+  ▼
+Vite Dev Proxy       →  /api -> :8080/springboot8393c (NEEDS FIX: backend uses /api)
   │
   ▼
 Backend :8080/api
 ```
+
+> **Known issues:** (1) JWT sent as `token` custom header — backend expects `Authorization: Bearer`. (2) Vite proxy rewrites `/api` to `/springboot8393c` — old context path no longer used.
 
 ### 3.3 Route Design
 

@@ -40,8 +40,9 @@ public class RenewalController {
     }
 
     @PostMapping("/add")
-    public ApiResponse<Void> add(@Valid @RequestBody RenewalRequest request) {
-        renewalService.apply(request);
+    public ApiResponse<Void> add(@Valid @RequestBody RenewalRequest request,
+                                  @AuthenticationPrincipal User currentUser) {
+        renewalService.apply(request, currentUser);
         return ApiResponse.ok();
     }
 

@@ -3,6 +3,7 @@ package com.library.service;
 import com.library.dto.BorrowRequest;
 import com.library.dto.BorrowResponse;
 import com.library.entity.*;
+import com.library.entity.enums.ApprovalStatus;
 import com.library.entity.enums.Gender;
 import com.library.entity.enums.UserRole;
 import com.library.exception.ApiException;
@@ -27,6 +28,7 @@ class BorrowServiceTest {
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private ReaderRepository readerRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private BorrowReturnRepository borrowReturnRepository;
     @Autowired private TestAuthHelper authHelper;
 
     private Reader reader;
@@ -123,5 +125,30 @@ class BorrowServiceTest {
         assertThatThrownBy(() -> borrowService.apply(req, readerUser))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("该图书您已有进行中的借阅记录");
+    }
+
+    @Test
+    void shouldAllowBorrowSameBookAfterApprovedReturn() {
+        BorrowRequest req = new BorrowRequest();
+        req.setBookId(book.getId());
+        req.setReaderId(reader.getId());
+        borrowService.apply(req, readerUser);
+
+        Long firstBorrowId = borrowService.queryPage(1, 10, reader.getId(), null, null)
+                .getContent().get(0).getId();
+        BorrowReturn ret = new BorrowReturn();
+        ret.setBorrowId(firstBorrowId);
+        ret.setApproved(ApprovalStatus.是);
+        borrowReturnRepository.save(ret);
+
+        Book returnedBook = bookRepository.findById(book.getId()).orElseThrow();
+        returnedBook.setStock(returnedBook.getStock() + 1);
+        bookRepository.save(returnedBook);
+
+        borrowService.apply(req, readerUser);
+
+        Page<BorrowResponse> page = borrowService.queryPage(1, 10, reader.getId(), book.getId(), "是");
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        assertThat(bookRepository.findById(book.getId()).orElseThrow().getStock()).isEqualTo(4);
     }
 }
