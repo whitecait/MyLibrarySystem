@@ -1,52 +1,14 @@
 # ============================================
-# MyLibrarySystem — Unified .gitignore
-# Covers: Spring Boot (Maven) + Vue 3 (Vite) + Docker
+# MyLibrarySystem — Whitelist-mode .gitignore
+# Only library-frontend/ and library-server/ are tracked.
+# Everything else at the repo root is ignored.
 # ============================================
 
-# --- Java / Maven ---
-target/
-!.mvn/wrapper/maven-wrapper.jar
-*.class
-*.jar
-*.war
+# --- Ignore everything at repo root ---
+*
+/*
 
-# --- Node / Vue / Vite ---
-node_modules/
-dist/
-.vite/
-*.local
-
-# --- IDE ---
-.idea/
-*.iml
-.vs/
-*.swp
-*.swo
-*~
-
-# --- OS ---
-.DS_Store
-Thumbs.db
-Desktop.ini
-
-# --- Logs ---
-Logs/*.log
-Logs/*.log.*
-
-# --- Docker ---
-# (keep Dockerfile and docker-compose.yml; ignore runtime data)
-docker-data/
-
-# --- Env & Secrets ---
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-application-local.yml
-
-# --- Misc ---
-*.tmp
-*.bak
-.cache/
-.code-graph/
+# --- Allow only these directories and this file ---
+!.gitignore
+!library-frontend/
+!library-server/
