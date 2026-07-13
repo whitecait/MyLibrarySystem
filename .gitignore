@@ -1,6 +1,6 @@
 # ============================================
 # MyLibrarySystem — Whitelist-mode .gitignore
-# Only library-frontend/ and library-server/ are tracked.
+# Root README, docs, library-frontend, and library-server are tracked.
 # Everything else at the repo root is ignored.
 # ============================================
 
@@ -10,5 +10,8 @@
 
 # --- Allow only these directories and this file ---
 !.gitignore
+!README.md
+!docs/
+!docs/**
 !library-frontend/
 !library-server/
