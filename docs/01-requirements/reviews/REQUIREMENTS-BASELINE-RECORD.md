@@ -4,10 +4,11 @@
 | --- | --- |
 | 文档编号 | `MLS-DOC-REV-0002` |
 | 文档状态 | `Draft` |
-| 文档版本 | `v0.1` |
+| 文档版本 | `v0.2` |
 | 编制日期 | `2026-07-13` |
+| 最近评审日期 | `2026-07-13` |
 | 适用阶段 | 需求分析 |
-| 权威性质 | 评审与批准记录模板；当前未批准 |
+| 权威性质 | 评审与批准记录；当前未批准 |
 
 ## 当前状态
 
@@ -18,22 +19,22 @@
 | 验收执行 | 尚未执行 |
 | 本记录状态 | `Draft` |
 
-阶段设计版本只批准需求分析阶段的组织和工作方式，不等于需求基线。创建本记录不表示完成 G5，也不授权后三阶段开始。
+阶段设计版本只批准需求分析阶段的组织和工作方式，不等于需求基线。本轮完成的静态文档检查不表示产品测试或系统验收已经执行，也不授权后三阶段开始。
 
 ## G0–G5 评审结果
 
-| 门禁 | 结果 | 评审日期 | 证据 | 发现／阻塞 | 结论责任人 |
+| 门禁 | 结果 | 评审日期 | 证据 | 发现／阻塞 | 结论责任角色 |
 | --- | --- | --- | --- | --- | --- |
-| G0 治理就绪 | `Not reviewed` | — | — | — | — |
-| G1 范围评审 | `Not reviewed` | — | — | — | — |
-| G2 业务评审 | `Not reviewed` | — | — | — | — |
-| G3 需求质量评审 | `Not reviewed` | — | — | — | — |
-| G4 验收就绪评审 | `Not reviewed` | — | — | — | — |
-| G5 基线批准 | `Not reviewed` | — | — | — | — |
+| G0 治理就绪 | `Passed` | `2026-07-13` | [`REQUIREMENTS-REVIEW-CHECKLIST.md`](REQUIREMENTS-REVIEW-CHECKLIST.md) 的 `V-01`、`V-02` 与 G0 记录 | 当前权威链、Git 跟踪、状态头、归档头和权威文档链接／ID 检查已有可复现证据 | 配置管理员 |
+| G1 范围评审 | `Passed` | `2026-07-13` | [`VISION-AND-SCOPE.md`](../requirements/VISION-AND-SCOPE.md)、[`STAKEHOLDERS-AND-CONTEXT.md`](../requirements/STAKEHOLDERS-AND-CONTEXT.md)及评审清单 G1 记录 | 首版系统边界、参与者、验收对象和外部系统边界一致；未决定项保持 Open | 业务代表 |
+| G2 业务评审 | `Blocked` | `2026-07-13` | [`OPEN-QUESTIONS.md`](../requirements/OPEN-QUESTIONS.md)、评审清单 G2 记录 | `MLS-OQ-0001` 至 `MLS-OQ-0009` 阻塞完整业务规则和可执行边界；所有派生需求仍需逐条评审 | 业务代表 |
+| G3 需求质量评审 | `Blocked` | `2026-07-13` | [`NONFUNCTIONAL-REQUIREMENTS.md`](../requirements/NONFUNCTIONAL-REQUIREMENTS.md)、评审清单 G3 记录 | `MLS-OQ-0010` 至 `MLS-OQ-0014` 阻塞量化质量指标；需求与验收工件仍为 `Draft` | 需求负责人 |
+| G4 验收就绪评审 | `Blocked` | `2026-07-13` | [`ACCEPTANCE-STRATEGY.md`](../acceptance/ACCEPTANCE-STRATEGY.md)、[`ACCEPTANCE-REPORTS.md`](../acceptance/ACCEPTANCE-REPORTS.md)、评审清单 G4 记录 | 量化质量与验收门禁未批准；验收工件仍为 `Draft`，验收尚未执行 | 验收负责人 |
+| G5 基线批准 | `Blocked` | `2026-07-13` | 本记录 Open、责任与签字区；评审清单 G5 记录 | G2–G4 阻塞；15 项 Open 未关闭或批准延期；无最终批准人、日期和签字 | 需求批准人 |
 
 ## 责任角色
 
-不得预填具体姓名或批准结论。同一人兼任多个角色时仍须分别记录责任。
+同一人兼任多个角色时仍须分别记录责任。角色分离已经建立，但不得预填具体姓名或批准结论。
 
 | 责任 | 角色 | 姓名 | 日期 | 当前状态 |
 | --- | --- | --- | --- | --- |
@@ -46,13 +47,13 @@
 
 ## Open 问题与延期依据
 
-`MLS-OQ-0001` 至 `MLS-OQ-0015` 当前继续以 [`OPEN-QUESTIONS.md`](../requirements/OPEN-QUESTIONS.md) 为唯一登记入口。本记录不推定其关闭，也不预先判断延期可接受。
+`MLS-OQ-0001` 至 `MLS-OQ-0015` 继续以 [`OPEN-QUESTIONS.md`](../requirements/OPEN-QUESTIONS.md) 为唯一登记入口。本记录不推定其关闭，也不预先判断延期可接受。
 
-| Open 问题范围 | 当前状态 | 关闭证据 | 延期依据 | 延期批准人 | 目标日期 |
-| --- | --- | --- | --- | --- | --- |
-| `MLS-OQ-0001`–`MLS-OQ-0009` 业务规则、权限和支付闭环边界 | `Open` | — | `Not reviewed` | — | — |
-| `MLS-OQ-0010`–`MLS-OQ-0014` 容量、质量、兼容和验收准入 | `Open` | — | `Not reviewed` | — | — |
-| `MLS-OQ-0015` 文档与界面语言 | `Open` | — | `Not reviewed` | — | — |
+| Open 问题范围 | 当前状态 | 阻塞影响 | 关闭证据 | 延期依据 | 延期批准人 | 目标日期 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `MLS-OQ-0001`–`MLS-OQ-0009` 业务规则、权限和支付闭环边界 | `Open` | 阻塞完整业务规则、可执行边界和 G2 | — | `Not approved` | — | — |
+| `MLS-OQ-0010`–`MLS-OQ-0014` 容量、质量、兼容和验收准入 | `Open` | 阻塞量化质量要求、验收门禁及 G3–G4 | — | `Not approved` | — | — |
+| `MLS-OQ-0015` 文档与界面语言 | `Open` | 语言与术语一致性决策仍待形成 | — | `Not approved` | — | — |
 
 延期只有在明确记录影响、期限、责任人和需求批准人同意后才有效；未填写不等于默认批准。
 
@@ -62,10 +63,16 @@
 | --- | --- |
 | 候选工件清单 | 待 G5 评审填写 |
 | 排除工件 | 待 G5 评审填写 |
-| 遗留问题处置 | 待 G5 评审填写 |
+| 遗留问题处置 | 15 项 Open 尚未关闭或批准延期 |
 | 基线版本 | `Not established` |
 | 生效日期 | — |
 | 变更控制入口 | [`CHANGE-CONTROL.md`](../../00-governance/CHANGE-CONTROL.md) |
+
+## 后续入口
+
+1. 从 [`OPEN-QUESTIONS.md`](../requirements/OPEN-QUESTIONS.md)逐项形成批准结论，优先关闭 `MLS-OQ-0001` 至 `MLS-OQ-0009`。
+2. 同步更新所有受影响的需求、验收条件和追踪关系，并对每项派生需求开展逐条评审。
+3. 完成量化质量与验收门禁决策后，重新执行 G2–G5；不得直接修改本表伪造通过。
 
 ## 签字区
 

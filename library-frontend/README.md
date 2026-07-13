@@ -1,78 +1,20 @@
 # library-frontend - Vue 3 SPA
 
-Vue 3 frontend for MyLibrarySystem.
+本目录保存 MyLibrarySystem 前端候选实现。项目正在按照 V 模型从需求分析阶段重新建立基线，[`docs/README.md`](../docs/README.md) 是工程文档唯一入口；[`REQUIREMENTS-STAGE-DESIGN.md v1.0`](../docs/01-requirements/REQUIREMENTS-STAGE-DESIGN.md) 只是已批准的阶段组织方案，不是最终需求基线。
 
-## Current Actual State
+当前需求基线为 `Not established`，验收尚未执行。本目录中的工程骨架、页面和交互逻辑只可作为直接复用、重构复用或弃用重写的候选，不能作为新需求来源，也不能被解释为当前需求契约。
 
-CodeGraph verified on 2026-07-04.
+## 当前候选实现的技术与开发说明
 
-- `vite.config.js` proxies `/api` to `http://localhost:8080`; the old backend context-path rewrite is no longer used.
-- `src/utils/request.js` defaults to `VITE_API_BASE_URL || '/api'`.
-- Axios sends JWT as `Authorization: Bearer <token>`.
-- `src/api/user.js` and `src/api/reader.js` call `/auth/login`; `src/api/reader.js` calls `/auth/register`.
-- Auth wrappers are partially migrated, but the UI flow is not fully migrated: `LoginView.vue` still reads old response fields such as `res.token` and `res.user`.
-- Most business API modules still use old pinyin paths and/or old fields: book, category, borrow, return, renewal, penalty, home, and file.
-- `news.js` calls `/news/*`, but the current backend has no P5 news controller.
-- `MyFines.vue` still fetches/pays fines through the old borrow/penalty update flow and old fields instead of `GET /penalties/page` and `POST /penalties/pay`.
-- Frontend build has not been verified in this workspace because `node_modules` is absent and dependencies are not installed.
-
-## Tech Stack
-
-| Concern | Choice |
+| 关注点 | 当前候选实现采用的工具 |
 | --- | --- |
-| Framework | Vue 3 |
-| Build | Vite |
+| 框架 | Vue 3 |
+| 构建 | Vite |
 | UI | Element Plus |
-| HTTP | Axios via `src/utils/request.js` |
-| Router | Vue Router |
+| HTTP | Axios，通过 `src/utils/request.js` 统一处理 |
+| 路由 | Vue Router |
 
-## Current Migration Matrix
-
-| Area | State |
-| --- | --- |
-| Vite proxy | Migrated to `/api -> http://localhost:8080` |
-| JWT header | Migrated to `Authorization: Bearer <token>` |
-| Auth API wrappers | Partially migrated to `/auth/*` |
-| Login/register UI | Not fully migrated; still consumes old response shape |
-| Book/category API modules | Still contain legacy paths/fields |
-| Borrow/return/renewal API modules | Still contain legacy paths/fields |
-| Penalty API and `MyFines.vue` | Not migrated to current `/penalties/pay` flow |
-| News/messages/upload/dashboard | Planned or legacy; backend P5 is not current |
-| Field names | Broad pinyin-to-English migration still pending |
-| Frontend build | Not verified; dependencies are missing |
-
-## Current Backend Contract to Target
-
-| Frontend area | Backend endpoint group |
-| --- | --- |
-| Auth | `/api/auth/*` |
-| Books | `/api/books/*` |
-| Categories | `/api/categories/*` |
-| Borrows | `/api/borrows/*` |
-| Returns | `/api/returns/*` |
-| Renewals | `/api/renewals/*` |
-| Penalties | `/api/penalties/*` |
-
-P5 groups (`/api/news/*`, `/api/messages/*`, `/api/upload/*`, `/api/dashboard/*`) are not current backend contracts.
-
-## Migration Checklist
-
-- [x] Proxy `/api` to `http://localhost:8080`.
-- [x] Send JWT as `Authorization: Bearer <token>`.
-- [x] Point auth wrappers at `/auth/login` and `/auth/register`.
-- [ ] Update `LoginView.vue` to consume `ApiResponse<LoginResponse>` via `res.data`.
-- [ ] Migrate book/category modules to `/books/*` and `/categories/*`.
-- [ ] Migrate borrow/return/renewal modules to `/borrows/*`, `/returns/*`, `/renewals/*`.
-- [ ] Migrate penalty pages to `/penalties/page` and `/penalties/pay`.
-- [ ] Replace pinyin request/response fields with current English DTO fields.
-- [ ] Add role-aware routing/menus if required by product scope.
-- [ ] Install dependencies and verify `npm run build`.
-
-## Password Handling
-
-Current backend contract is raw request password + backend BCrypt. Frontend SHA256 pre-hashing is not required by the current backend and should be treated as a future enhancement only if both frontend and backend documentation are updated together.
-
-## Quick Start
+安装依赖并启动本地开发环境：
 
 ```powershell
 cd library-frontend
@@ -80,13 +22,32 @@ npm install
 npm run dev
 ```
 
-Development URL: `http://localhost:5173`.
+当前候选实现的本地开发地址为 `http://localhost:5173`。构建检查：
 
-## References
+```powershell
+cd library-frontend
+npm run build
+```
 
-| Doc | Purpose |
-| --- | --- |
-| `../docs/API-SPEC.md` | Current REST API contract and legacy migration notes |
-| `../docs/ARCHITECTURE.md` | System and frontend integration status |
-| `../docs/DATA-MODEL.md` | Entity and DTO field alignment |
-| `../docs/test/TEST-CASES.md` | Acceptance planning matrix |
+以上命令只描述现有工程骨架的开发方式，不批准未来技术选型、接口形式或部署方案。
+
+## 历史实现风险
+
+- 多个业务 API 模块和页面仍依赖返工前的旧拼音 API、旧字段或旧响应形态；这些业务层实现原则上弃用重写，不得作为当前需求契约。
+- 认证包装、登录注册界面、罚款流程及返工前扩展功能之间存在不一致，不能以局部迁移状态推定完整系统行为。
+- 代理、令牌传输、页面结构和样式资产均只是复用候选，必须在需求基线和后续设计批准后重新评估。
+- 精确资产、风险与后续验证要求以[代码复用候选台账](../docs/01-requirements/evidence/CODE-REUSE-INVENTORY.md)为证据入口；该台账本身也不构成设计批准。
+
+## 后续开发约束
+
+- 在需求基线建立前，不以旧接口、旧字段或旧页面行为补写需求。
+- 在总体设计、详细设计和模块设计完成相应门禁前，不把候选实现结构固化为新系统设计。
+- 新测试必须归入对应 V 模型验证层级；旧测试或构建结果不能登记为完整系统验收证据。
+
+## 工程文档入口
+
+- [工程文档唯一入口](../docs/README.md)
+- [系统需求主规格](../docs/01-requirements/SYSTEM-REQUIREMENTS.md)
+- [代码复用候选台账](../docs/01-requirements/evidence/CODE-REUSE-INVENTORY.md)
+- [系统验收执行报告登记册](../docs/01-requirements/acceptance/ACCEPTANCE-REPORTS.md)（当前尚未执行）
+- [历史资料归档](../docs/90-archive/README.md)
