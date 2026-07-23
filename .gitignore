@@ -1,6 +1,6 @@
 # ============================================
 # MyLibrarySystem — Whitelist-mode .gitignore
-# Root README, docs, library-frontend, and library-server are tracked.
+# Root README, library-frontend, and library-server are tracked.
 # Everything else at the repo root is ignored.
 # ============================================
 
@@ -11,7 +11,14 @@
 # --- Allow only these directories and this file ---
 !.gitignore
 !README.md
-!docs/
-!docs/**
 !library-frontend/
 !library-server/
+
+# ============================================
+# docs/ — baseline-only tracking
+#
+# docs/ is excluded from automatic tracking. Only files listed in
+# docs/README.md "文档维护基线" are tracked, using `git add -f`.
+# New documents must be added to the baseline BEFORE force-adding.
+# 90-archive/ files are NON-normative and never tracked.
+# ============================================

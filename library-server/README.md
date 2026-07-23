@@ -1,6 +1,6 @@
 # library-server - Spring Boot Backend
 
-本目录保存 MyLibrarySystem 后端候选实现。项目正在按照 V 模型从需求分析阶段重新建立基线，[`docs/README.md`](../docs/README.md) 是工程文档唯一入口；[`REQUIREMENTS-STAGE-DESIGN.md v1.0`](../docs/01-requirements/REQUIREMENTS-STAGE-DESIGN.md) 只是已批准的阶段组织方案，不是最终需求基线。
+本目录保存 MyLibrarySystem 后端候选实现。项目正在按照 V 模型从需求分析阶段重新建立基线，[`docs/README.md`](../docs/README.md) 是工程文档唯一入口；`MLS-DOC-RA-0001.md v1.0` 只是已批准的阶段组织方案，不是最终需求基线。
 
 当前需求基线为 `Not established`，验收尚未执行。本目录中的工程骨架与实现只可作为直接复用、重构复用或弃用重写的候选，不能作为新需求来源，也不能被解释为当前需求契约。
 
@@ -57,12 +57,9 @@ src/main/java/com/library/
 - 现有认证、馆藏、流通和罚款实现可能包含返工前的对象粒度、接口语义、固定业务规则或安全假设，必须在需求基线建立后逐项复核。
 - `arc/` 下的旧拼音 API、旧字段、旧数据库和旧脚手架已归档弃用，不得进入新实现基线。
 - 固定密钥、数据库口令、自动更新表结构和开放式跨域等不安全配置不得继承。
-- 精确资产、风险与后续验证要求以[代码复用候选台账](../docs/01-requirements/evidence/CODE-REUSE-INVENTORY.md)为证据入口；该台账本身也不构成设计批准。
+- 精确资产、风险与后续验证要求记录在工程文档入口所维护的代码复用候选台账中；该台账本身也不构成设计批准。
 
-## 工程文档入口
+## 项目与工程文档入口
 
+- [项目入口](../README.md)
 - [工程文档唯一入口](../docs/README.md)
-- [系统需求主规格](../docs/01-requirements/SYSTEM-REQUIREMENTS.md)
-- [代码复用候选台账](../docs/01-requirements/evidence/CODE-REUSE-INVENTORY.md)
-- [系统验收执行报告登记册](../docs/01-requirements/acceptance/ACCEPTANCE-REPORTS.md)（当前尚未执行）
-- [历史资料归档](../docs/90-archive/README.md)
