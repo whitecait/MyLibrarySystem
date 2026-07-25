@@ -66,18 +66,24 @@
 
 ## 5. 专题工件
 
-| 专题                                         | 当前入口                                                                | 状态说明       |
-| -------------------------------------------- | ----------------------------------------------------------------------- | -------------- |
-| 愿景、目标与范围                             | [MLS-DOC-RA-0004.md](requirements/MLS-DOC-RA-0004.md)                 | Draft          |
-| 参与者与系统语境                             | [MLS-DOC-RA-0005.md](requirements/MLS-DOC-RA-0005.md) | Draft          |
-| 术语                                         | [MLS-DOC-RA-0006.md](requirements/MLS-DOC-RA-0006.md)                                 | Draft          |
-| 未批准问题                                   | [MLS-DOC-RA-0007.md](requirements/MLS-DOC-RA-0007.md)                     | 15 项均为 Open |
-| 业务流程、用例、功能需求、业务规则和概念信息 | `requirements/` 中对应专题工件                                          | Not created    |
-| 非功能需求                                   | `requirements/MLS-DOC-RA-0013.md`                            | Not created    |
-| 验收定义                                     | `acceptance/` 中对应工件                                                | Not created    |
-| 评审与基线                                   | `reviews/` 中对应工件                                                   | Not created    |
+| 专题               | 当前入口                                                                                                 | 状态说明          |
+| ------------------ | -------------------------------------------------------------------------------------------------------- | ----------------- |
+| 愿景、目标与范围   | [MLS-DOC-RA-0004.md](requirements/MLS-DOC-RA-0004.md)                                                    | Draft             |
+| 参与者与系统语境   | [MLS-DOC-RA-0005.md](requirements/MLS-DOC-RA-0005.md)                                                    | Draft             |
+| 术语               | [MLS-DOC-RA-0006.md](requirements/MLS-DOC-RA-0006.md)                                                    | Draft             |
+| 未批准问题         | [MLS-DOC-RA-0007.md](requirements/MLS-DOC-RA-0007.md)                                                    | 15 项均为 Open    |
+| 业务流程           | [MLS-DOC-RA-0008.md](requirements/MLS-DOC-RA-0008.md)                                                    | Draft             |
+| 系统用例           | [MLS-DOC-RA-0009.md](requirements/MLS-DOC-RA-0009.md)                                                    | Draft             |
+| 功能需求           | [MLS-DOC-RA-0010.md](requirements/MLS-DOC-RA-0010.md)                                                    | Draft             |
+| 业务规则           | [MLS-DOC-RA-0011.md](requirements/MLS-DOC-RA-0011.md)                                                    | Draft             |
+| 信息需求           | [MLS-DOC-RA-0012.md](requirements/MLS-DOC-RA-0012.md)                                                    | Draft             |
+| 非功能需求         | [MLS-DOC-RA-0013.md](requirements/MLS-DOC-RA-0013.md)                                                    | Draft             |
+| 验收策略与验收定义 | [MLS-DOC-AT-0001.md](acceptance/MLS-DOC-AT-0001.md)、[MLS-DOC-AT-0002.md](acceptance/MLS-DOC-AT-0002.md) | Draft             |
+| 需求与验收追踪     | [MLS-DOC-RA-0014.md](requirements/MLS-DOC-RA-0014.md)                                                    | Draft             |
+| 验收执行登记       | [MLS-DOC-AT-0003.md](acceptance/MLS-DOC-AT-0003.md)                                                      | Draft；尚未执行   |
+| 评审与基线         | [MLS-DOC-REV-0001.md](reviews/MLS-DOC-REV-0001.md)、[MLS-DOC-REV-0002.md](reviews/MLS-DOC-REV-0002.md)   | Draft；基线未建立 |
 
-本主规格只维护导航与汇总，不复制后续功能需求、业务规则、信息需求、质量要求或验收用例全文。
+本主规格拥有系统级目标 ID、范围摘要、项目约束和当前基线状态；专题工件拥有各自详细事实。本主规格只维护必要汇总与导航，不复制后续功能需求、业务规则、信息需求、质量要求或验收用例全文。专题内容变化时必须同步检查本文件摘要；两者不一致时按[文档权威与冲突处理](../00-governance/MLS-DOC-GOV-0003.md)保持冲突未解决并发起变更评审。
 
 ## 6. 来源与决策依据
 
