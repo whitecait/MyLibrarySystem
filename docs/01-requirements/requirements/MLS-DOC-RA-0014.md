@@ -4,7 +4,7 @@
 | -------- | ----------------- |
 | 文档编号 | `MLS-DOC-RA-0014` |
 | 文档状态 | `Draft`           |
-| 文档版本 | `v0.3`            |
+| 文档版本 | `v0.4`            |
 | 编制日期 | `2026-07-13`      |
 | 适用阶段 | `需求分析`        |
 | 验证对应 | `系统验收测试`    |
@@ -51,6 +51,8 @@
 | MLS-OBJ-0003 | MLS-UC-0013                                          | MLS-BR-0021      | Business rule    | MLS-AC-0012                                          | MLS-AT-0013                                          | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0001 | MLS-UC-0003                                          | MLS-BR-0022      | Business rule    | MLS-AC-0004                                          | MLS-AT-0003                                          | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0001 | MLS-UC-0005                                          | MLS-BR-0023      | Business rule    | MLS-AC-0008                                          | MLS-AT-0005                                          | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0014                                          | MLS-BR-0024      | Business rule    | MLS-AC-0027                                          | MLS-AT-0014                                          | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0004 | MLS-UC-0011                                          | MLS-BR-0025      | Business rule    | MLS-AC-0024                                          | MLS-AT-0011                                          | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0002 | MLS-UC-0015                                          | MLS-IR-0012      | Information      | MLS-AC-0028                                          | MLS-AT-0015                                          | docs/01-requirements/requirements/MLS-DOC-RA-0012.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0002 | MLS-UC-0001                                          | MLS-BR-0001      | Business rule    | MLS-AC-0001                                          | MLS-AT-0001                                          | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0003 | MLS-UC-0006                                          | MLS-BR-0002      | Business rule    | MLS-AC-0010                                          | MLS-AT-0006                                          | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
