@@ -126,6 +126,7 @@
 | `MLS-DOC-RA-0012` | [信息需求](01-requirements/requirements/MLS-DOC-RA-0012.md)               | `Draft` |
 | `MLS-DOC-RA-0013` | [非功能需求](01-requirements/requirements/MLS-DOC-RA-0013.md)             | `Draft` |
 | `MLS-DOC-RA-0014` | [需求与验收双向追踪矩阵](01-requirements/requirements/MLS-DOC-RA-0014.md) | `Draft` |
+| `MLS-DOC-RA-0015` | [P1 质量与验收政策草案](01-requirements/requirements/MLS-DOC-RA-0015.md) | `Draft` |
 
 #### 需求分析阶段 (01-requirements/reviews/) ── 评审
 

@@ -4,7 +4,7 @@
 | -------- | ----------------- |
 | 文档编号 | `MLS-DOC-RA-0014` |
 | 文档状态 | `Draft`           |
-| 文档版本 | `v0.4`            |
+| 文档版本 | `v0.5`            |
 | 编制日期 | `2026-07-13`      |
 | 适用阶段 | `需求分析`        |
 | 验证对应 | `系统验收测试`    |
@@ -86,9 +86,9 @@
 | MLS-OBJ-0004 | MLS-UC-0010                                          | MLS-NFR-REL-0001 | Nonfunctional    | MLS-AC-0022                                          | MLS-AT-0010                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0004 | MLS-UC-0010                                          | MLS-NFR-USE-0001 | Nonfunctional    | MLS-AC-0026                                          | MLS-AT-0010                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0003 | MLS-UC-0013                                          | MLS-NFR-AUD-0001 | Nonfunctional    | MLS-AC-0012                                          | MLS-AT-0013                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
-| MLS-OBJ-0002 | Not assigned: blocked by MLS-OQ-0010 and MLS-OQ-0011 | MLS-NFR-PER-0001 | Nonfunctional    | Not assigned: blocked by MLS-OQ-0010 and MLS-OQ-0011 | Not assigned: blocked by MLS-OQ-0010 and MLS-OQ-0011 | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
-| MLS-OBJ-0001 | Not assigned: blocked by MLS-OQ-0012                 | MLS-NFR-AVL-0001 | Nonfunctional    | Not assigned: blocked by MLS-OQ-0012                 | Not assigned: blocked by MLS-OQ-0012                 | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
-| MLS-OBJ-0002 | MLS-UC-0001                                          | MLS-NFR-CMP-0001 | Nonfunctional    | Not assigned: blocked by MLS-OQ-0013                 | MLS-AT-0001                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0002 | MLS-UC-0006                                          | MLS-NFR-PER-0001 | Nonfunctional    | Not assigned: condition defined in MLS-NFR-PER-0001  | MLS-AT-0016                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0001 | MLS-UC-0006                                          | MLS-NFR-AVL-0001 | Nonfunctional    | Not assigned: condition defined in MLS-NFR-AVL-0001  | MLS-AT-0018                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0002 | MLS-UC-0001                                          | MLS-NFR-CMP-0001 | Nonfunctional    | Not assigned: condition defined in MLS-NFR-CMP-0001  | MLS-AT-0017                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 
 ## 双向检查规则
 

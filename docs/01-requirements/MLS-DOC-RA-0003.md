@@ -80,6 +80,7 @@
 | 非功能需求         | [MLS-DOC-RA-0013.md](requirements/MLS-DOC-RA-0013.md)                                                    | Draft             |
 | 验收策略与验收定义 | [MLS-DOC-AT-0001.md](acceptance/MLS-DOC-AT-0001.md)、[MLS-DOC-AT-0002.md](acceptance/MLS-DOC-AT-0002.md) | Draft             |
 | 需求与验收追踪     | [MLS-DOC-RA-0014.md](requirements/MLS-DOC-RA-0014.md)                                                    | Draft             |
+| P1 质量与验收政策草案 | [MLS-DOC-RA-0015.md](requirements/MLS-DOC-RA-0015.md)                                                  | Draft；不构成批准基线 |
 | 验收执行登记       | [MLS-DOC-AT-0003.md](acceptance/MLS-DOC-AT-0003.md)                                                      | Draft；尚未执行   |
 | 评审与基线         | [MLS-DOC-REV-0001.md](reviews/MLS-DOC-REV-0001.md)、[MLS-DOC-REV-0002.md](reviews/MLS-DOC-REV-0002.md)   | Draft；基线未建立 |
 
