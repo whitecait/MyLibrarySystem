@@ -4,13 +4,14 @@
 | -------- | ----------------- |
 | 文档编号 | `MLS-DOC-RA-0014` |
 | 文档状态 | `Draft`           |
-| 文档版本 | `v0.5`            |
+| 文档版本 | `v0.6`            |
 | 编制日期 | `2026-07-13`      |
+| 最近更新 | `2026-08-20`      |
 | 适用阶段 | `需求分析`        |
 | 验证对应 | `系统验收测试`    |
 | 权威性质 | `规范性`          |
 
-本矩阵以“一行表示一个明确的需求到验收关系”为原则。`MLS-FR-0011` 来源于两个用例，因此保留两行关系；功能需求唯一项仍为 28 项。业务规则、信息需求和已形成验收关系的非功能需求各选择一个直接验收关系作为主追踪入口，其他实际覆盖关系保留在验收用例正文中；受 Open 问题阻塞且尚未形成语义完整关系的 NFR 明确标记为 `Not assigned`，不填入候选 AT。后续 V 模型工件尚未建立，六个后续设计／测试列统一如实标记为 `Not created`。
+本矩阵以“一行表示一个明确的需求到验收关系”为原则。`MLS-FR-0011` 来源于两个用例，因此保留两行关系；功能需求唯一项仍为 28 项。业务规则、信息需求和已形成验收关系的非功能需求各选择一个直接验收关系作为主追踪入口，其他实际覆盖关系保留在验收用例正文中；验收条件定义于来源条目且指标已量化的 NFR（`MLS-OQ-0010` 至 `MLS-OQ-0015` 已关闭）在验收条件列标记为「定义于来源条目（MLS-NFR-xxx）」，不再使用 `Not assigned`。后续 V 模型工件尚未建立，六个后续设计／测试列统一如实标记为 `Not created`。
 
 | Objective ID | Use Case ID                                          | Requirement ID   | Requirement Type | Acceptance Condition ID                              | Acceptance Test ID                                   | Source Document                                      | Requirement Status | Overall Design ID | System Test ID | Detailed Design ID | Integration Test ID | Module Design ID | Unit Test ID |
 | ------------ | ---------------------------------------------------- | ---------------- | ---------------- | ---------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------- | ------------------ | ----------------- | -------------- | ------------------ | ------------------- | ---------------- | ------------ |
@@ -81,18 +82,29 @@
 | MLS-OBJ-0003 | MLS-UC-0013                                          | MLS-IR-0010      | Information      | MLS-AC-0012                                          | MLS-AT-0013                                          | docs/01-requirements/requirements/MLS-DOC-RA-0012.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0003 | MLS-UC-0014                                          | MLS-IR-0011      | Information      | MLS-AC-0027                                          | MLS-AT-0014                                          | docs/01-requirements/requirements/MLS-DOC-RA-0012.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0004 | MLS-UC-0010                                          | MLS-NFR-SEC-0001 | Nonfunctional    | MLS-AC-0020                                          | MLS-AT-0010                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
-| MLS-OBJ-0004 | MLS-UC-0010                                          | MLS-NFR-SEC-0002 | Nonfunctional    | Not assigned: condition defined in MLS-NFR-SEC-0002  | MLS-AT-0010                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0004 | MLS-UC-0010                                          | MLS-NFR-SEC-0002 | Nonfunctional    | 定义于来源条目（MLS-NFR-SEC-0002）                  | MLS-AT-0010                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0001 | MLS-UC-0003                                          | MLS-NFR-SEC-0003 | Nonfunctional    | MLS-AC-0003                                          | MLS-AT-0003                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0004 | MLS-UC-0010                                          | MLS-NFR-REL-0001 | Nonfunctional    | MLS-AC-0022                                          | MLS-AT-0010                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0004 | MLS-UC-0010                                          | MLS-NFR-USE-0001 | Nonfunctional    | MLS-AC-0026                                          | MLS-AT-0010                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0003 | MLS-UC-0013                                          | MLS-NFR-AUD-0001 | Nonfunctional    | MLS-AC-0012                                          | MLS-AT-0013                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
-| MLS-OBJ-0002 | MLS-UC-0006                                          | MLS-NFR-PER-0001 | Nonfunctional    | Not assigned: condition defined in MLS-NFR-PER-0001  | MLS-AT-0016                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
-| MLS-OBJ-0001 | MLS-UC-0006                                          | MLS-NFR-AVL-0001 | Nonfunctional    | Not assigned: condition defined in MLS-NFR-AVL-0001  | MLS-AT-0018                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
-| MLS-OBJ-0002 | MLS-UC-0001                                          | MLS-NFR-CMP-0001 | Nonfunctional    | Not assigned: condition defined in MLS-NFR-CMP-0001  | MLS-AT-0017                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0002 | MLS-UC-0006                                          | MLS-NFR-PER-0001 | Nonfunctional    | 定义于来源条目（MLS-NFR-PER-0001）                  | MLS-AT-0016                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0001 | MLS-UC-0006                                          | MLS-NFR-AVL-0001 | Nonfunctional    | 定义于来源条目（MLS-NFR-AVL-0001）                  | MLS-AT-0018                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0002 | MLS-UC-0001                                          | MLS-NFR-CMP-0001 | Nonfunctional    | 定义于来源条目（MLS-NFR-CMP-0001）                  | MLS-AT-0017                                          | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 
 ## 双向检查规则
 
-- 正向检查：每个已形成可执行边界的需求至少能到达一个明确验收关系；范围约束和受 Open 问题阻塞的 NFR 必须明确标记为 `Not applicable` 或 `Not assigned`，不得伪造验收关系。
+- 正向检查：每个已形成可执行边界的需求至少能到达一个明确验收关系；范围约束明确标记为 `Not applicable`，不得伪造验收关系。
 - 反向检查：每个验收条件只能回到同号功能需求；每个已分配验收用例的关系必须能从验收用例正文反向找到相同目标、用例和需求。
-- NFR 的验收条件直接定义在 NFR 来源条目中，不借用语义不相符的 FR 专属 AC；未量化 NFR 在 Open 问题关闭前不分配虚构验收条件或候选验收用例，其 `Draft` 状态和阻塞问题显式保留为 `Not assigned`。
+- NFR 的验收条件直接定义在 NFR 来源条目中，不借用语义不相符的 FR 专属 AC；`MLS-OQ-0010` 至 `MLS-OQ-0015` 已关闭且指标已量化，矩阵中以「定义于来源条目（MLS-NFR-xxx）」标记，不再使用 `Not assigned`。
 - 后续总体设计、系统测试、详细设计、集成测试、模块设计和单元测试关系只在相应阶段建立后更新。
+
+## 变更记录
+
+| 日期       | 版本 | 变更内容                                                                                                 |
+| ---------- | ---- | -------------------------------------------------------------------------------------------------------- |
+| 2026-07-23 | v0.1 | 初稿（git: ec2d259）                                                                                     |
+| 2026-08-10 | v0.2 | 同步借阅与续借政策簇关闭 `MLS-OQ-0001`~`0004`（git: cc783c7）                                           |
+| 2026-08-14 | v0.3 | 同步管理规则簇关闭 `MLS-OQ-0005`~`0007`（git: d564553）                                                 |
+| 2026-08-14 | v0.4 | 同步数据留存与支付闭环簇关闭 `MLS-OQ-0008`~`0009`（git: d238268）                                       |
+| 2026-08-20 | v0.5 | 同步 P1 关闭与验收用例扩展 `MLS-AT-0015`~`0018`（git: 37ea94d）                                         |
+| 2026-08-20 | v0.6 | NFR 指标已量化（OQ-0010~0015 关闭）：四行 NFR 的 `Not assigned` 标记改为「定义于来源条目（MLS-NFR-xxx）」 |

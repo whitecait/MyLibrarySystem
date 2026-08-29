@@ -4,8 +4,9 @@
 | -------- | ------------------------------------------------------------ |
 | 文档编号 | `MLS-DOC-RA-0003`                                            |
 | 文档状态 | `Draft`                                                      |
-| 文档版本 | `v0.1`                                                       |
+| 文档版本 | `v0.2`                                                       |
 | 编制日期 | `2026-07-13`                                                 |
+| 最近更新 | `2026-08-20`                                                 |
 | 适用阶段 | 需求分析                                                     |
 | 验证对应 | 系统验收测试                                                 |
 | 权威性质 | 需求目标、范围、约束和专题工件的受控汇总；当前不是已批准基线 |
@@ -71,7 +72,7 @@
 | 愿景、目标与范围   | [MLS-DOC-RA-0004.md](requirements/MLS-DOC-RA-0004.md)                                                    | Draft             |
 | 参与者与系统语境   | [MLS-DOC-RA-0005.md](requirements/MLS-DOC-RA-0005.md)                                                    | Draft             |
 | 术语               | [MLS-DOC-RA-0006.md](requirements/MLS-DOC-RA-0006.md)                                                    | Draft             |
-| 未批准问题         | [MLS-DOC-RA-0007.md](requirements/MLS-DOC-RA-0007.md)                                                    | 15 项均为 Open    |
+| 未批准问题         | [MLS-DOC-RA-0007.md](requirements/MLS-DOC-RA-0007.md)                                                    | 15 项均已关闭（2026-08-09/14/20） |
 | 业务流程           | [MLS-DOC-RA-0008.md](requirements/MLS-DOC-RA-0008.md)                                                    | Draft             |
 | 系统用例           | [MLS-DOC-RA-0009.md](requirements/MLS-DOC-RA-0009.md)                                                    | Draft             |
 | 功能需求           | [MLS-DOC-RA-0010.md](requirements/MLS-DOC-RA-0010.md)                                                    | Draft             |
@@ -92,3 +93,10 @@
 - [MLS-DEC-0001 至 MLS-DEC-0006](../00-governance/MLS-DOC-GOV-0005.md)
 - [文档权威与冲突处理](../00-governance/MLS-DOC-GOV-0003.md)
 - [文档与需求变更控制](../00-governance/MLS-DOC-GOV-0004.md)
+
+## 7. 变更记录
+
+| 日期       | 版本 | 变更内容                                                                   |
+| ---------- | ---- | -------------------------------------------------------------------------- |
+| 2026-07-13 | v0.1 | 初稿                                                                       |
+| 2026-08-20 | v0.2 | 同步 OQ 关闭事实：专题工件表中「未批准问题」状态由 Open 更新为已关闭       |

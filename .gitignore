@@ -10,6 +10,7 @@
 
 # --- Allow only these directories and this file ---
 !.gitignore
+!.gitattributes
 !README.md
 !library-frontend/
 !library-server/
