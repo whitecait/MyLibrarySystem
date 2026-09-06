@@ -4,32 +4,39 @@
 | -------- | ------------------------------------------------ |
 | 文档编号 | `MLS-DOC-GOV-0000`                               |
 | 文档状态 | `Draft`                                          |
-| 文档版本 | `v0.3`                                           |
+| 文档版本 | `v0.6`                                           |
 | 编制日期 | `2026-07-13`                                     |
 | 最近更新 | `2026-09-05`                                     |
 | 适用阶段 | 需求分析                                         |
 | 验证对应 | 验收测试                                         |
 | 权威性质 | 工程文档唯一入口；经批准的规范性工件由本入口导航 |
 
+> 引用文档：
+>
+> - 治理规则：[MLS-DOC-GOV-0001](00-governance/MLS-DOC-GOV-0001.md) 至 [MLS-DOC-GOV-0006](00-governance/MLS-DOC-GOV-0006.md)
+> - 需求分析阶段：[MLS-DOC-RA-0001](01-requirements/requirements/MLS-DOC-RA-0001.md)、[MLS-DOC-RA-0002](01-requirements/requirements/MLS-DOC-RA-0002.md)、[MLS-DOC-RA-0003](01-requirements/requirements/MLS-DOC-RA-0003.md) 及 [01-requirements/](01-requirements/) 下的 acceptance/、evidence/、requirements/、reviews/ 工件
+> - 后续阶段入口：[MLS-DOC-OD-0001](02-overall-design/MLS-DOC-OD-0001.md)、[MLS-DOC-DD-0001](03-detailed-design/MLS-DOC-DD-0001.md)、[MLS-DOC-MD-0001](04-module-design/MLS-DOC-MD-0001.md)
+> - 项目级引导：[根 README](../README.md)、[后端项目说明](../library-server/README.md)、[前端项目说明](../library-frontend/README.md)
+
 ## 唯一入口声明
 
 本文件是 MyLibrarySystem 工程文档的唯一入口。项目根 `./README.md` 和各子项目 `./library-frontend/README.md` / `./library-server/README.md` 只提供项目级引导，不重复维护需求、设计、测试或验收事实。
 
 **当前阶段:**
-为**需求分析**。当前状态为**需求工件编制中，需求基线未建立**。这表示需求、验收定义和评审记录仍在形成，不表示任何需求基线已经批准，也不表示任何验收已经执行。
+为**需求分析**。当前状态为**需求工件编制中，需求基线未建立**。需求、验收定义和评审记录均为 Draft 工件；需求基线未建立，验收未执行。
 
 ## 分层权威模型
 
 当前文档按“入口与导航、治理规则、阶段控制、规范内容、控制与批准、支持材料”分层。层级表示职责和阅读依赖，不表示编号越大权威越高，也不允许 Draft 工件覆盖 Approved 工件。
 
-| 层级          | 职责                                                 | 当前工件                                                                                                                                                                                                                                          | 权威边界                                                           |
-| ------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| L0 入口与导航 | 声明当前阶段、维护清单和阅读入口                     | 本文件 `MLS-DOC-GOV-0000`                                                                                                                                                                                                                         | 只导航和汇总，不单独产生需求事实                                   |
-| L1 治理规则   | 分别定义编号、生命周期与门禁、权威与冲突、变更、决策和全局开发计划                                                   | [`MLS-DOC-GOV-0001`](00-governance/MLS-DOC-GOV-0001.md) 至 [`MLS-DOC-GOV-0006`](00-governance/MLS-DOC-GOV-0006.md)                                                                                                                                | 各文件只在其声明的治理主题内拥有内容所有权                         |
-| L2 阶段控制   | 定义需求分析阶段的组织基线和阶段导航                 | [`MLS-DOC-RA-0001`](01-requirements/MLS-DOC-RA-0001.md)、[`MLS-DOC-RA-0002`](01-requirements/MLS-DOC-RA-0002.md)                                                                                                                                  | RA-0001 是当前唯一 Approved 的阶段组织与工作基线；不是最终需求基线 |
-| L3 规范内容   | 定义需求主规格、专题需求和验收定义                   | [`MLS-DOC-RA-0003`](01-requirements/MLS-DOC-RA-0003.md)、[`requirements/`](01-requirements/requirements/)、[`MLS-DOC-AT-0001`](01-requirements/acceptance/MLS-DOC-AT-0001.md)、[`MLS-DOC-AT-0002`](01-requirements/acceptance/MLS-DOC-AT-0002.md) | 只有被基线记录按明确版本批准的内容才成为正式需求基线               |
-| L4 控制与批准 | 维护派生追踪、评审检查、基线范围和批准证据           | [`MLS-DOC-RA-0014`](01-requirements/requirements/MLS-DOC-RA-0014.md)、[`reviews/`](01-requirements/reviews/)                                                                                                                                      | 不产生新的需求事实；`MLS-DOC-REV-0002` 负责记录被激活的基线集合    |
-| 支持材料      | 保存执行证据、分析证据和历史资料                     | [`MLS-DOC-AT-0003`](01-requirements/acceptance/MLS-DOC-AT-0003.md)、[`evidence/`](01-requirements/evidence/)、[`90-archive/`](90-archive/README.md)                                                                                               | 非规范性或仅在实际执行后形成证据，不得覆盖规范内容                 |
+| 层级          | 职责                                                               | 当前工件                                                                                                                                                                                                                                                       | 权威边界                                                           |
+| ------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| L0 入口与导航 | 声明当前阶段、维护清单和阅读入口                                   | 本文件 `MLS-DOC-GOV-0000`                                                                                                                                                                                                                                      | 只导航和汇总，不单独产生需求事实                                   |
+| L1 治理规则   | 分别定义编号、生命周期与门禁、权威与冲突、变更、决策和全局开发计划 | [`MLS-DOC-GOV-0001`](00-governance/MLS-DOC-GOV-0001.md) 至 [`MLS-DOC-GOV-0006`](00-governance/MLS-DOC-GOV-0006.md)                                                                                                                                             | 各文件只在其声明的治理主题内拥有内容所有权                         |
+| L2 阶段控制   | 定义需求分析阶段的组织基线和阶段导航                               | [`MLS-DOC-RA-0001`](01-requirements/requirements/MLS-DOC-RA-0001.md)、[`MLS-DOC-RA-0002`](01-requirements/requirements/MLS-DOC-RA-0002.md)                                                                                                                     | RA-0001 是当前唯一 Approved 的阶段组织与工作基线；不是最终需求基线 |
+| L3 规范内容   | 定义需求主规格、专题需求和验收定义                                 | [`MLS-DOC-RA-0003`](01-requirements/requirements/MLS-DOC-RA-0003.md)、[`requirements/`](01-requirements/requirements/)、[`MLS-DOC-AT-0001`](01-requirements/acceptance/MLS-DOC-AT-0001.md)、[`MLS-DOC-AT-0002`](01-requirements/acceptance/MLS-DOC-AT-0002.md) | 只有被基线记录按明确版本批准的内容才成为正式需求基线               |
+| L4 控制与批准 | 维护派生追踪、评审检查、基线范围和批准证据                         | [`MLS-DOC-RA-0014`](01-requirements/requirements/MLS-DOC-RA-0014.md)、[`reviews/`](01-requirements/reviews/)                                                                                                                                                   | 不产生新的需求事实；`MLS-DOC-REV-0002` 负责记录被激活的基线集合    |
+| 支持材料      | 保存执行证据、分析证据和历史资料                                   | [`MLS-DOC-AT-0003`](01-requirements/acceptance/MLS-DOC-AT-0003.md)、[`evidence/`](01-requirements/evidence/)                                                                                                                                                   | 非规范性或仅在实际执行后形成证据，不得覆盖规范内容                 |
 
 ### 内容所有权与生效规则
 
@@ -46,6 +53,10 @@
 - G3 至 G5 仍为 `Blocked`，G2 已于 2026-08-14 通过；系统验收尚未执行，后三个设计阶段尚未开始。
 - `MLS-DOC-RA-0001 v1.0` 中的旧目标目录和箭头式权威关系仍属于上次批准内容。G0 治理重评审已于 2026-07-24 通过，分层模型作为当前维护与评审导航；但不得宣称已经覆盖或静默改写该批准版本。
 - 全局开发计划已按 M0 正式化为 `MLS-DOC-GOV-0006`（2026-09-05）：G3/G4 复审与 G5 基线批准（对应计划里程碑 M2）是进入设计阶段的唯一路径；全量重写策略已登记为 `MLS-DEC-0007`。
+- `MLS-DOC-RA-0001` 至 `MLS-DOC-RA-0003` 现位于 `01-requirements/requirements/`。
+- 项目定位调整（图书信息管理系统 + AI 助手综合系统）已登记为 `MLS-DEC-0010`（2026-09-05）。
+- AI 助手需求已按 `MLS-DEC-0010`/`MLS-DEC-0011` 传导：`MLS-DOC-RA-0003` 修订约束 `MLS-CON-0003` 并新增 `MLS-OBJ-0005`，`MLS-DOC-RA-0004` 至 `MLS-DOC-RA-0013` 增补 AI 专题内容，`MLS-DOC-AT-0001`/`0002` 增补 AI 验收口径与用例；`MLS-DOC-RA-0007` 登记 `MLS-OQ-0016`~`0019`（Open，2026-09-05）。
+- `MLS-DOC-RA-0001 v1.0`（Approved）中的外部系统范围约束行仍为"除本地支付模拟器外不接入其他外部系统"的旧口径，与修订后的 `MLS-CON-0003`（允许 AI 模型服务端点）存在口径差异；该批准版本未被改写，差异在此显式登记，随 G3 复审按变更控制同步处置。
 
 ## 推荐阅读顺序
 
@@ -55,7 +66,7 @@
 4. 规范内容：`MLS-DOC-RA-0003` → `MLS-DOC-RA-0004` 至 `MLS-DOC-RA-0007` → `MLS-DOC-RA-0008` 至 `MLS-DOC-RA-0013`。
 5. 验收与追踪：`MLS-DOC-AT-0001` → `MLS-DOC-AT-0002` → `MLS-DOC-RA-0014` → `MLS-DOC-AT-0003`。
 6. 评审与基线：`MLS-DOC-REV-0001` → `MLS-DOC-REV-0002`。
-7. `evidence/` 按需读取；`02-overall-design/`、`03-detailed-design/`、`04-module-design/` 当前只用于确认未来准入；`90-archive/` 最后且仅用于历史追溯。
+7. `evidence/` 按需读取；`02-overall-design/`、`03-detailed-design/`、`04-module-design/` 当前仅包含阶段入口文档。
 
 ## V 模型四阶段导航
 
@@ -76,7 +87,7 @@
 
 ## 文档维护基线
 
-以下清单中列出了 `docs/` 下所有已写入的文档（`docs/90-archive/` 除外）。
+以下清单中列出了 `docs/` 下所有已写入的文档。
 该清单是 `MLS-DOC-GOV-0000` 的规范性内容——不在清单中的文档视为未提交或已排除。
 
 ### 治理框架 (00-governance)
@@ -93,11 +104,11 @@
 
 ### 需求分析阶段 (01-requirements) ── 阶段入口
 
-| 文档编号          | 标题                                                                         | 状态       |
-| ----------------- | ---------------------------------------------------------------------------- | ---------- |
-| `MLS-DOC-RA-0001` | [MyLibrarySystem 需求分析阶段工程化设计](01-requirements/MLS-DOC-RA-0001.md) | `Approved` |
-| `MLS-DOC-RA-0002` | [需求分析文档入口](01-requirements/MLS-DOC-RA-0002.md)                       | `Draft`    |
-| `MLS-DOC-RA-0003` | [MyLibrarySystem 系统需求主规格](01-requirements/MLS-DOC-RA-0003.md)         | `Draft`    |
+| 文档编号          | 标题                                                                                      | 状态       |
+| ----------------- | ----------------------------------------------------------------------------------------- | ---------- |
+| `MLS-DOC-RA-0001` | [MyLibrarySystem 需求分析阶段工程化设计](01-requirements/requirements/MLS-DOC-RA-0001.md) | `Approved` |
+| `MLS-DOC-RA-0002` | [需求分析文档入口](01-requirements/requirements/MLS-DOC-RA-0002.md)                       | `Draft`    |
+| `MLS-DOC-RA-0003` | [MyLibrarySystem 系统需求主规格](01-requirements/requirements/MLS-DOC-RA-0003.md)         | `Draft`    |
 
 #### 需求分析阶段 (01-requirements/acceptance/) ── 验收
 
@@ -129,7 +140,7 @@
 | `MLS-DOC-RA-0012` | [信息需求](01-requirements/requirements/MLS-DOC-RA-0012.md)               | `Draft` |
 | `MLS-DOC-RA-0013` | [非功能需求](01-requirements/requirements/MLS-DOC-RA-0013.md)             | `Draft` |
 | `MLS-DOC-RA-0014` | [需求与验收双向追踪矩阵](01-requirements/requirements/MLS-DOC-RA-0014.md) | `Draft` |
-| `MLS-DOC-RA-0015` | [P1 质量与验收政策草案](01-requirements/requirements/MLS-DOC-RA-0015.md) | `Draft` |
+| `MLS-DOC-RA-0015` | [P1 质量与验收政策草案](01-requirements/requirements/MLS-DOC-RA-0015.md)  | `Draft` |
 
 #### 需求分析阶段 (01-requirements/reviews/) ── 评审
 
@@ -156,14 +167,26 @@
 | ----------------- | ------------------------------------------------------- | ------- |
 | `MLS-DOC-MD-0001` | [模块设计阶段入口](04-module-design/MLS-DOC-MD-0001.md) | `Draft` |
 
-## 归档入口
-
-[历史资料归档索引](90-archive/README.md)仅用于追溯。`docs/90-archive/` 中的资料均为非规范性资料，不构成当前需求、设计、实现或验收依据。
-
 ## 变更记录
 
-| 日期       | 版本 | 变更内容                                                                                                     |
-| ---------- | ---- | ------------------------------------------------------------------------------------------------------------ |
-| 2026-07-13 | v0.1 | 初稿                                                                                                         |
-| 2026-08-20 | v0.2 | 当前有效状态补充 G0 已通过（2026-07-24）事实，明确分层模型为当前维护与评审导航                              |
-| 2026-09-05 | v0.3 | 维护基线登记 `MLS-DOC-GOV-0006`（全局开发计划，M0 计划落盘）；当前有效状态补充 G3/G4/G5 路径与 `MLS-DEC-0007` |
+| 日期       | 版本 | 变更内容                                                                                                                                                                                                                                          |
+| ---------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-13 | v0.1 | 初稿                                                                                                                                                                                                                                              |
+| 2026-08-20 | v0.2 | 当前有效状态补充 G0 已通过（2026-07-24）事实，明确分层模型为当前维护与评审导航                                                                                                                                                                    |
+| 2026-09-05 | v0.3 | 维护基线登记 `MLS-DOC-GOV-0006`（全局开发计划，M0 计划落盘）；当前有效状态补充 G3/G4/G5 路径与 `MLS-DEC-0007`                                                                                                                                     |
+| 2026-09-05 | v0.4 | 按文档规范补充开头引用文档列表与结尾被引用文档列表；同步 `MLS-DOC-RA-0001` 至 `MLS-DOC-RA-0003` 移入 `requirements/` 后的链接路径；将过程性表述改为当前状态表述                                                                                   |
+| 2026-09-05 | v0.5 | 修复分层权威模型表中 RA-0003 链接残留旧路径；移除对 `docs/90-archive/` 的引用（该目录不存在，`MLS-DOC-ARC-0001` 已退役）；当前有效状态补充 RA-0001 至 RA-0003 现位置与 `MLS-DEC-0010`                                                             |
+| 2026-09-05 | v0.6 | 当前有效状态补充 AI 需求传导事实：`MLS-CON-0003` 修订、`MLS-OBJ-0005` 登记、RA-0004~0013 与 AT-0001/0002 增补 AI 内容、`MLS-OQ-0016`~`0019` 登记（Open）；显式登记 `MLS-DOC-RA-0001` 外部集成约束行与 `MLS-CON-0003` 的口径差异（待 G3 复审处置） |
+
+---
+
+> 被引用文档：
+>
+> - [编号规范](00-governance/MLS-DOC-GOV-0001.md)
+> - [文档权威与冲突处理](00-governance/MLS-DOC-GOV-0003.md)
+> - [全局开发计划](00-governance/MLS-DOC-GOV-0006.md)
+> - [需求分析阶段工程化设计](01-requirements/requirements/MLS-DOC-RA-0001.md)
+> - [需求评审清单](01-requirements/reviews/MLS-DOC-REV-0001.md)
+> - [根 README](../README.md)
+> - [后端项目说明](../library-server/README.md)
+> - [前端项目说明](../library-frontend/README.md)

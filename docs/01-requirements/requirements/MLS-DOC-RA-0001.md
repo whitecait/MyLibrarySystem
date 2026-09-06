@@ -42,36 +42,25 @@
 docs/
 ├─ README.md
 ├─ 00-governance/
-│  ├─ MLS-DOC-GOV-0002.md
-│  ├─ MLS-DOC-GOV-0003.md
-│  ├─ MLS-DOC-GOV-0004.md
-│  └─ MLS-DOC-GOV-0005.md
 ├─ 01-requirements/
-│  ├─ README.md
-│  ├─ MLS-DOC-RA-0001.md
-│  ├─ MLS-DOC-RA-0003.md
 │  ├─ requirements/
 │  ├─ acceptance/
 │  ├─ evidence/
 │  └─ reviews/
 ├─ 02-overall-design/
-│  ├─ README.md
 │  ├─ design/
 │  ├─ system-tests/
 │  └─ reviews/
 ├─ 03-detailed-design/
-│  ├─ README.md
 │  ├─ design/
 │  ├─ integration-tests/
 │  └─ reviews/
 ├─ 04-module-design/
-│  ├─ README.md
 │  ├─ backend/
 │  ├─ frontend/
 │  ├─ unit-tests/
 │  └─ reviews/
 └─ 90-archive/
-   ├─ README.md
    ├─ legacy-docs/
    ├─ historical-plans/
    └─ audit-reports/
@@ -95,12 +84,12 @@ docs/
 
 需求分析阶段的权威关系如下：
 
-- [`docs/README.md`](../README.md)
-  → [`docs/00-governance/MLS-DOC-GOV-0003.md`](../00-governance/MLS-DOC-GOV-0003.md)
-  → [`docs/01-requirements/MLS-DOC-RA-0003.md`](MLS-DOC-RA-0003.md)
-  → [`requirements/`](requirements/) 专题登记册
-  → [`acceptance/`](acceptance/) 验收定义
-  → [`reviews/`](reviews/) 评审与基线记录
+- [`docs/README.md`](../../README.md)
+  → [`docs/00-governance/MLS-DOC-GOV-0003.md`](../../00-governance/MLS-DOC-GOV-0003.md)
+  → [`docs/01-requirements/requirements/MLS-DOC-RA-0003.md`](MLS-DOC-RA-0003.md)
+  → [`requirements/`](../requirements/) 专题登记册
+  → [`acceptance/`](../acceptance/) 验收定义
+  → [`reviews/`](../reviews/) 评审与基线记录
 
 `evidence/` 与 `90-archive/` 提供证据，但不具有规范性；当其内容与已批准需求冲突时，以已批准需求为准。
 
@@ -112,20 +101,6 @@ docs/
 
 ```text
 01-requirements/
-├─ README.md
-├─ MLS-DOC-RA-0001.md
-├─ MLS-DOC-RA-0003.md
-├─ requirements/
-│  ├─ MLS-DOC-RA-0004.md
-│  ├─ MLS-DOC-RA-0005.md
-│  ├─ MLS-DOC-RA-0008.md
-│  ├─ MLS-DOC-RA-0009.md
-│  ├─ MLS-DOC-RA-0010.md
-│  ├─ MLS-DOC-RA-0011.md
-│  ├─ MLS-DOC-RA-0012.md
-│  ├─ MLS-DOC-RA-0013.md
-│  ├─ MLS-DOC-RA-0006.md
-│  └─ MLS-DOC-RA-0007.md
 ├─ acceptance/
 │  ├─ MLS-DOC-AT-0001.md
 │  ├─ MLS-DOC-AT-0002.md
@@ -133,6 +108,22 @@ docs/
 ├─ evidence/
 │  ├─ MLS-DOC-EVD-0001.md
 │  └─ MLS-DOC-EVD-0002.md
+├─ requirements/
+│  ├─ MLS-DOC-RA-0001.md
+│  ├─ MLS-DOC-RA-0002.md
+│  ├─ MLS-DOC-RA-0003.md
+│  ├─ MLS-DOC-RA-0004.md
+│  ├─ MLS-DOC-RA-0005.md
+│  ├─ MLS-DOC-RA-0006.md
+│  ├─ MLS-DOC-RA-0007.md
+│  ├─ MLS-DOC-RA-0008.md
+│  ├─ MLS-DOC-RA-0009.md
+│  ├─ MLS-DOC-RA-0010.md
+│  ├─ MLS-DOC-RA-0011.md
+│  ├─ MLS-DOC-RA-0012.md
+│  ├─ MLS-DOC-RA-0013.md
+│  ├─ MLS-DOC-RA-0014.md
+│  └─ MLS-DOC-RA-0015.md
 └─ reviews/
    ├─ MLS-DOC-REV-0001.md
    └─ MLS-DOC-REV-0002.md
@@ -142,22 +133,22 @@ docs/
 
 | 工件                  | 职责                                                                                   |
 | --------------------- | -------------------------------------------------------------------------------------- |
+| `MLS-DOC-AT-0001.md`  | 定义完整系统的验收范围、环境、数据原则、准入和退出规则                                 |
+| `MLS-DOC-AT-0002.md`  | 将需求转化为用户可观察、可重复、可判定的验收场景                                       |
+| `MLS-DOC-AT-0003.md`  | 只登记实际执行结果、证据和缺陷；初始状态为“尚未执行”                                   |
+| `MLS-DOC-EVD-0001.md` | 记录旧资料来源、可信度、冲突和可参考内容，不产生新需求                                 |
+| `MLS-DOC-EVD-0002.md` | 记录已有资产的直接复用、重构复用、弃用重写判断及依据                                   |
 | `MLS-DOC-RA-0003.md`  | 需求基线主入口，汇总系统目标、范围、约束、批准状态和专题登记册链接，不复制专题事实     |
 | `MLS-DOC-RA-0004.md`  | 定义单一图书馆、核心流通版、范围内外能力和成功指标                                     |
 | `MLS-DOC-RA-0005.md`  | 定义访客、读者、馆员、系统管理员、本地支付模拟器和系统边界                             |
+| `MLS-DOC-RA-0006.md`  | 建立新系统术语，明确废弃旧拼音 API 和旧字段术语                                        |
+| `MLS-DOC-RA-0007.md`  | 维护尚未批准的业务数值、策略和质量指标，并记录责任人、状态和关闭依据                   |
 | `MLS-DOC-RA-0008.md`  | 描述注册、检索、借阅、归还、续借、罚款、模拟支付和人工例外流程                         |
 | `MLS-DOC-RA-0009.md`  | 描述参与者目标、前置条件、主流程、替代流程、异常流程和后置条件                         |
 | `MLS-DOC-RA-0010.md`  | 维护原子化、可验证的“系统应……”规范性陈述                                               |
 | `MLS-DOC-RA-0011.md`  | 独立维护全馆统一流通政策、自动判定、人工例外和模拟支付规则                             |
 | `MLS-DOC-RA-0012.md`  | 定义书目、实体副本、账户、流通记录、罚款、支付和审计等概念信息及生命周期，不定义物理表 |
 | `MLS-DOC-RA-0013.md`  | 定义安全、性能、可靠性、隐私、可用性、可维护性等可衡量目标                             |
-| `MLS-DOC-RA-0006.md`  | 建立新系统术语，明确废弃旧拼音 API 和旧字段术语                                        |
-| `MLS-DOC-RA-0007.md`  | 维护尚未批准的业务数值、策略和质量指标，并记录责任人、状态和关闭依据                   |
-| `MLS-DOC-AT-0001.md`  | 定义完整系统的验收范围、环境、数据原则、准入和退出规则                                 |
-| `MLS-DOC-AT-0002.md`  | 将需求转化为用户可观察、可重复、可判定的验收场景                                       |
-| `MLS-DOC-AT-0003.md`  | 只登记实际执行结果、证据和缺陷；初始状态为“尚未执行”                                   |
-| `MLS-DOC-EVD-0001.md` | 记录旧资料来源、可信度、冲突和可参考内容，不产生新需求                                 |
-| `MLS-DOC-EVD-0002.md` | 记录已有资产的直接复用、重构复用、弃用重写判断及依据                                   |
 | `MLS-DOC-REV-0001.md` | 保存完整性、一致性、可验证性和设计泄漏检查                                             |
 | `MLS-DOC-REV-0002.md` | 保存基线版本、范围、评审结论、批准人和遗留 Open 项                                     |
 
@@ -292,14 +283,14 @@ ID 一经分配永久保留。废弃项改为 `Retired` 并保留变更原因，
 
 ### 6.4 角色与责任
 
-| 角色                   | 责任                                                     |
-| ---------------------- | -------------------------------------------------------- |
-| 项目负责人／需求批准人 | 批准系统范围、业务规则和最终需求基线                     |
-| 需求负责人             | 维护需求工件、Open 问题和追踪关系                        |
-| 业务代表               | 从单一图书馆业务角度确认流程、规则和术语                 |
-| 验收负责人             | 检查需求是否能转化为完整系统的验收场景                   |
-| 架构与开发角色         | 提供可行性、风险和代码复用意见，不在需求阶段替代业务决策 |
-| 配置管理员             | 维护文档版本、状态、变更记录和基线标签                   |
+| 角色                  | 责任                                                     |
+| --------------------- | -------------------------------------------------------- |
+| 项目负责人/需求批准人 | 批准系统范围、业务规则和最终需求基线                     |
+| 需求负责人            | 维护需求工件、Open 问题和追踪关系                        |
+| 业务代表              | 从单一图书馆业务角度确认流程、规则和术语                 |
+| 验收负责人            | 检查需求是否能转化为完整系统的验收场景                   |
+| 架构与开发角色        | 提供可行性、风险和代码复用意见，不在需求阶段替代业务决策 |
+| 配置管理员            | 维护文档版本、状态、变更记录和基线标签                   |
 
 本项目为工程学习项目，同一人可以兼任多个角色，但每次评审必须分别记录编写、评审、批准责任，以保留工程过程证据。
 
@@ -375,7 +366,7 @@ ID 一经分配永久保留。废弃项改为 `Retired` 并保留变更原因，
 | 旧测试                                                         | 只作为历史业务示例或特征测试参考，不作为新系统验收证据 |
 | 固定 JWT 密钥、数据库口令、开放式 CORS、自动更新生产表结构配置 | 必须废弃，不得继承到新基线                             |
 
-具体复用结论必须记录在 `evidence/MLS-DOC-EVD-0002.md`，并关联对应的新需求、风险和验证方式。
+具体复用结论必须记录在 `../evidence/MLS-DOC-EVD-0002.md`，并关联对应的新需求、风险和验证方式。
 
 ### 7.5 Open 需求问题清单
 
@@ -416,3 +407,10 @@ Open 问题关闭时必须记录决策人、依据、日期、受影响需求和
 ## 9. 当前评审结论
 
 评审已确认，可以按照设计方案进行初步的需求分析任务。
+
+## 变更记录
+
+| 日期       | 版本 | 变更内容                                                                                                                                 |
+| ---------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-13 | v1.0 | 首版批准（评审结论见 §9）                                                                                                                |
+| 2026-09-05 | v1.0 | 编辑性同步：文件迁入 `01-requirements/requirements/`，§3.3 权威链与 §4.1 工件结构的相对路径随之调整。无需求事实变化，状态保持 `Approved` |
