@@ -1,25 +1,56 @@
 # ============================================
-# MyLibrarySystem — Whitelist-mode .gitignore
-# Root README, library-frontend, and library-server are tracked.
-# Everything else at the repo root is ignored.
+# MyLibrarySystem — hybrid tracking policy
+#
+# Root level: whitelist mode — everything at the repo root is
+# ignored except the explicitly allowed entries below.
+# Sub-paths: blacklist mode — library-frontend/ and library-server/
+# are tracked by default except for the excluded patterns below.
+#
+# Tracked scope: key source code only.
+# Never tracked: secrets / environment config, build artifacts,
+# demo or throwaway prototypes, runtime data.
+#
+# docs/ remains baseline-only tracking: register the file in the
+# docs/README.md maintenance baseline table, then `git add -f`.
+# 90-archive/ files are NON-normative and never tracked.
 # ============================================
 
-# --- Ignore everything at repo root ---
+# --- Root level: whitelist ---
 *
 /*
-
-# --- Allow only these directories and this file ---
 !.gitignore
 !.gitattributes
 !README.md
 !library-frontend/
 !library-server/
 
-# ============================================
-# docs/ — baseline-only tracking
-#
-# docs/ is excluded from automatic tracking. Only files listed in
-# docs/README.md "文档维护基线" are tracked, using `git add -f`.
-# New documents must be added to the baseline BEFORE force-adding.
-# 90-archive/ files are NON-normative and never tracked.
-# ============================================
+# --- library-frontend/ : blacklist (track by default) ---
+!library-frontend/**
+# Dependencies and build artifacts
+library-frontend/node_modules/
+library-frontend/dist/
+library-frontend/.vite/
+library-frontend/coverage/
+# Demo / throwaway prototypes
+library-frontend/prototypes/
+# Environment config (only *.example templates stay trackable)
+library-frontend/.env
+library-frontend/.env.*
+!library-frontend/.env.example
+library-frontend/*.local
+
+# --- library-server/ : blacklist (track by default) ---
+!library-server/**
+# Legacy implementation archive (behavior reference only;
+# superseded by the full-rewrite strategy, recoverable from history)
+library-server/arc/
+# Build artifacts
+library-server/target/
+# Runtime data
+library-server/uploads/
+library-server/logs/
+library-server/**/*.log
+# Environment config carrying credentials (profile variants included;
+# only *.example templates stay trackable)
+library-server/src/main/resources/application.yml
+library-server/src/main/resources/application-*.yml
