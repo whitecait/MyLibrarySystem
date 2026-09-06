@@ -4,14 +4,14 @@
 | -------- | ----------------- |
 | 文档编号 | `MLS-DOC-RA-0014` |
 | 文档状态 | `Draft`           |
-| 文档版本 | `v0.7`            |
+| 文档版本 | `v0.8`            |
 | 编制日期 | `2026-07-13`      |
 | 最近更新 | `2026-09-05`      |
 | 适用阶段 | `需求分析`        |
 | 验证对应 | `系统验收测试`    |
 | 权威性质 | `规范性`          |
 
-本矩阵以“一行表示一个明确的需求到验收关系”为原则。`MLS-FR-0011` 来源于两个用例，因此保留两行关系；功能需求唯一项仍为 34 项（`MLS-FR-0029`~`0034` 为 2026-09-05 AI 需求传导新增，`MLS-DEC-0010`/`MLS-DEC-0011`）。业务规则、信息需求和已形成验收关系的非功能需求各选择一个直接验收关系作为主追踪入口，其他实际覆盖关系保留在验收用例正文中；验收条件定义于来源条目且指标已量化的 NFR（`MLS-OQ-0010` 至 `MLS-OQ-0015` 已关闭）在验收条件列标记为「定义于来源条目（MLS-NFR-xxx）」，不再使用 `Not assigned`；AI 相关行（`MLS-FR-0029`~`0034`、`MLS-BR-0026`~`0029`、`MLS-IR-0013`/`0014`、`MLS-NFR-AI-0001`~`0005`、`MLS-AT-0019`/`0020`）的执行边界受 `MLS-OQ-0016`~`0019` 约束；AI 相关 NFR 的验收条件同样定义于来源条目（`MLS-DOC-RA-0013` §10），在指标随 `MLS-OQ-0016`~`0019` 关闭而量化前沿用「定义于来源条目」标记。后续 V 模型工件尚未建立，六个后续设计／测试列统一如实标记为 `Not created`。
+本矩阵以“一行表示一个明确的需求到验收关系”为原则。`MLS-FR-0011` 来源于两个用例，因此保留两行关系；功能需求唯一项为 35 项（`MLS-FR-0029`~`0035` 为 AI 需求传导新增，`MLS-DEC-0010`/`0011`/`0012`）。业务规则、信息需求和已形成验收关系的非功能需求各选择一个直接验收关系作为主追踪入口，其他实际覆盖关系保留在验收用例正文中；验收条件定义于来源条目且指标已量化的 NFR（`MLS-OQ-0010` 至 `MLS-OQ-0015` 已关闭）在验收条件列标记为「定义于来源条目（MLS-NFR-xxx）」，不再使用 `Not assigned`；AI 相关行（`MLS-FR-0029`~`0035`、`MLS-BR-0026`~`0031`、`MLS-IR-0013`~`0015`、`MLS-NFR-AI-0001`~`0006`、`MLS-AT-0019`/`0020`）的关闭依据为 `MLS-DEC-0012`（`MLS-OQ-0016`~`0020` 已于 2026-09-06 关闭）；AI 相关 NFR 的验收条件定义于来源条目（`MLS-DOC-RA-0013` §10），以「定义于来源条目」标记。后续 V 模型工件尚未建立，六个后续设计／测试列统一如实标记为 `Not created`。
 
 | Objective ID | Use Case ID                      | Requirement ID   | Requirement Type | Acceptance Condition ID            | Acceptance Test ID               | Source Document                                      | Requirement Status | Overall Design ID | System Test ID | Detailed Design ID | Integration Test ID | Module Design ID | Unit Test ID |
 | ------------ | -------------------------------- | ---------------- | ---------------- | ---------------------------------- | -------------------------------- | ---------------------------------------------------- | ------------------ | ----------------- | -------------- | ------------------ | ------------------- | ---------------- | ------------ |
@@ -107,6 +107,11 @@
 | MLS-OBJ-0005 | MLS-UC-0016                      | MLS-NFR-AI-0003  | Nonfunctional    | 定义于来源条目（MLS-NFR-AI-0003）  | MLS-AT-0019                      | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0005 | MLS-UC-0017                      | MLS-NFR-AI-0004  | Nonfunctional    | 定义于来源条目（MLS-NFR-AI-0004）  | MLS-AT-0020                      | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0005 | MLS-UC-0016                      | MLS-NFR-AI-0005  | Nonfunctional    | 定义于来源条目（MLS-NFR-AI-0005）  | MLS-AT-0019                      | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0005 | MLS-UC-0016                      | MLS-NFR-AI-0006  | Nonfunctional    | 定义于来源条目（MLS-NFR-AI-0006）  | MLS-AT-0019                      | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0005 | MLS-UC-0016                      | MLS-FR-0035      | Functional       | MLS-AC-0035                        | MLS-AT-0019                      | docs/01-requirements/requirements/MLS-DOC-RA-0010.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0005 | MLS-UC-0016                      | MLS-BR-0030      | Business rule    | MLS-AC-0031                        | MLS-AT-0020                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0005 | MLS-UC-0003                      | MLS-BR-0031      | Business rule    | MLS-AC-0003                        | MLS-AT-0003                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0005 | MLS-UC-0016                      | MLS-IR-0015      | Information      | MLS-AC-0035                        | MLS-AT-0019                      | docs/01-requirements/requirements/MLS-DOC-RA-0012.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 
 ## 双向检查规则
 
@@ -125,4 +130,5 @@
 | 2026-08-14 | v0.4 | 同步数据留存与支付闭环簇关闭 `MLS-OQ-0008`~`0009`（git: d238268）                                                                                                                                                                                                                           |
 | 2026-08-20 | v0.5 | 同步 P1 关闭与验收用例扩展 `MLS-AT-0015`~`0018`（git: 37ea94d）                                                                                                                                                                                                                             |
 | 2026-08-20 | v0.6 | NFR 指标已量化（OQ-0010~0015 关闭）：四行 NFR 的 `Not assigned` 标记改为「定义于来源条目（MLS-NFR-xxx）」                                                                                                                                                                                   |
+| 2026-09-06 | v0.8 | `MLS-OQ-0016`~`0020` 关闭结论传导（`MLS-DEC-0012`）：新增 `MLS-FR-0035`、`MLS-BR-0030`/`0031`、`MLS-IR-0015`、`MLS-NFR-AI-0006` 共 6 行追踪关系；功能需求唯一项更新为 35 项；说明段同步关闭依据与行范围 |
 | 2026-09-05 | v0.7 | AI 能力传导（`MLS-DEC-0010`/`MLS-DEC-0011`）：新增 `MLS-FR-0029`~`0034`、`MLS-BR-0026`~`0029`、`MLS-IR-0013`/`0014`、`MLS-NFR-AI-0001`~`0005` 共 17 行追踪关系，指向 `MLS-AC-0029`~`0034` 与 `MLS-AT-0019`/`0020`；功能需求唯一项更新为 34 项；说明段同步 AI 行受 `MLS-OQ-0016`~`0019` 约束 |
