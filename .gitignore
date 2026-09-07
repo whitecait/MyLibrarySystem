@@ -13,6 +13,9 @@
 # docs/ remains baseline-only tracking: register the file in the
 # docs/README.md maintenance baseline table, then `git add -f`.
 # 90-archive/ files are NON-normative and never tracked.
+# docs/agents/ and root AGENTS.md are intentionally untracked local
+# agent-operating docs (user decision 2026-09-07); the exclusion is
+# declared in the docs/README.md maintenance baseline.
 # ============================================
 
 # --- Root level: whitelist ---
