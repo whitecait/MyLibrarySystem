@@ -8,6 +8,9 @@
   },
   "scripts": {
     "dev": "vite",
+    "demo:overlays": "vite --open /prototypes/overlay-demo/",
+    "demo:ai": "vite --config prototypes/ai-assistant-demo/vite.config.js --open /prototypes/ai-assistant-demo/reader",
+    "demo:agent-loop": "vite --open /prototypes/agent-loop-demo/",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --fix --cache",
