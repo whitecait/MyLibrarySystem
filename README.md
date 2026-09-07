@@ -56,7 +56,7 @@ MyLibrarySystem 是一个面向单一图书馆的工程学习项目，形态为*
 ### 参与需求评审
 
 1. 从[系统需求主规格](docs/01-requirements/requirements/MLS-DOC-RA-0003.md)进入当前需求工件。
-2. 在[Open 问题登记册](docs/01-requirements/requirements/MLS-DOC-RA-0007.md)核对已关闭问题（`MLS-OQ-0001`~`0015`）的关闭依据与决策人；`MLS-OQ-0016`~`0019` 为 AI 相关未决问题，尚未批准的边界不得作为需求值。
+2. 在[Open 问题登记册](docs/01-requirements/requirements/MLS-DOC-RA-0007.md)核对已关闭问题（`MLS-OQ-0001`~`0020`）的关闭依据与决策人；`MLS-OQ-0021`~`0027`（2026-09-07 登记）为当前 Open 问题，尚未批准的边界不得作为需求值。
 3. 使用[需求评审清单](docs/01-requirements/reviews/MLS-DOC-REV-0001.md)记录可复现证据与评审发现。
 4. 只有[需求基线记录](docs/01-requirements/reviews/MLS-DOC-REV-0002.md)完成正式批准后，需求工件才可成为下一阶段输入；变更按[变更控制](docs/00-governance/MLS-DOC-GOV-0004.md)处理。
 
