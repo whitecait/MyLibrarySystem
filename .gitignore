@@ -16,6 +16,9 @@
 # docs/agents/ and root AGENTS.md are intentionally untracked local
 # agent-operating docs (user decision 2026-09-07); the exclusion is
 # declared in the docs/README.md maintenance baseline.
+# HANDOFF.md and TODO.md are tracked development-process docs at the
+# repo root (user decision 2026-09-07); they live outside the docs/
+# library and its governance.
 # ============================================
 
 # --- Root level: whitelist ---
@@ -24,6 +27,8 @@
 !.gitignore
 !.gitattributes
 !README.md
+!HANDOFF*.md
+!TODO.md
 !library-frontend/
 !library-server/
 
