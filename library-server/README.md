@@ -47,6 +47,11 @@ src/main/java/com/library/
 |-- exception/
 |-- repository/
 |-- security/
+
+> 引用文档：
+>
+> - [工程文档唯一入口](../docs/README.md)
+> - [根 README](../README.md)
 `-- service/
 ```
 
@@ -63,3 +68,9 @@ src/main/java/com/library/
 
 - [项目入口](../README.md)
 - [工程文档唯一入口](../docs/README.md)
+
+---
+
+> 被引用文档：
+>
+> - [根 README](../README.md)

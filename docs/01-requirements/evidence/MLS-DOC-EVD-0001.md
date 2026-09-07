@@ -9,9 +9,28 @@
 | 适用阶段 | 需求分析           |
 | 权威性质 | `证据性`           |
 
+> 引用文档：
+>
+> - [工程生命周期与门禁](../../00-governance/MLS-DOC-GOV-0002.md)
+> - [MyLibrarySystem 需求分析阶段工程化设计](../requirements/MLS-DOC-RA-0001.md)
+> - [MyLibrarySystem 系统需求主规格](../requirements/MLS-DOC-RA-0003.md)
+> - [愿景与范围](../requirements/MLS-DOC-RA-0004.md)
+> - [术语表](../requirements/MLS-DOC-RA-0006.md)
+> - [Open 问题登记册](../requirements/MLS-DOC-RA-0007.md)
+> - [功能需求](../requirements/MLS-DOC-RA-0010.md)
+> - [业务规则](../requirements/MLS-DOC-RA-0011.md)
+> - [信息需求](../requirements/MLS-DOC-RA-0012.md)
+> - [需求与验收双向追踪矩阵](../requirements/MLS-DOC-RA-0014.md)
+> - [系统验收策略](../acceptance/MLS-DOC-AT-0001.md)
+> - [系统验收条件与验收用例](../acceptance/MLS-DOC-AT-0002.md)
+> - [系统验收执行报告登记册](../acceptance/MLS-DOC-AT-0003.md)
+> - [代码复用候选台账](MLS-DOC-EVD-0002.md)
+> - [需求评审清单](../reviews/MLS-DOC-REV-0001.md)
+> - [总体设计阶段入口](../../02-overall-design/MLS-DOC-OD-0001.md)
+
 ## 使用边界
 
-本评估逐项承接 [`docs/90-archive/README.md`](../../90-archive/README.md) 的八个来源类别。所有旧文档均为 `Historical Reference`，只能帮助识别历史意图、冲突和复核线索，不能产生或批准新需求，也不能恢复旧 API、旧字段、旧数据库或历史计划的契约地位。新需求只由当前治理链中的规范性需求工件及其正式批准记录确定。
+本评估逐项承接已退役的 `MLS-DOC-ARC-0001`（历史资料归档索引，原 `docs/90-archive/`）的八个来源类别。所有旧文档均为 `Historical Reference`，只能帮助识别历史意图、冲突和复核线索，不能产生或批准新需求，也不能恢复旧 API、旧字段、旧数据库或历史计划的契约地位。新需求只由当前治理链中的规范性需求工件及其正式批准记录确定。
 
 ## 来源评估
 
@@ -26,6 +45,8 @@
 | `docs/superpowers/specs/`   | `docs/90-archive/historical-plans/superpowers-specs/` | 保存已关闭阶段的历史设计规格             | 识别曾采用的假设、范围和实现风险       | 已关闭规格不是当前需求或设计输入，且可能含旧对象、字段和技术方案                       | 低；只作决策考古               | 是；仅复核遗留实现痕迹                     | [`MLS-DOC-RA-0004.md`](../requirements/MLS-DOC-RA-0004.md)、[`MLS-DOC-RA-0010.md`](../requirements/MLS-DOC-RA-0010.md)、[`MLS-DOC-RA-0007.md`](../requirements/MLS-DOC-RA-0007.md)                                 |
 | `docs/superpowers/plans/`   | `docs/90-archive/historical-plans/superpowers-plans/` | 保存已关闭阶段的历史执行计划             | 识别过去的实施顺序和未决风险           | 历史计划不批准需求、不证明实施完成，也不构成当前阶段门禁证据                           | 低；计划不证明结果             | 是；如需判断完成情况必须核对当前代码和证据 | [`MLS-DOC-GOV-0002.md`](../../00-governance/MLS-DOC-GOV-0002.md)、[`MLS-DOC-REV-0001.md`](../reviews/MLS-DOC-REV-0001.md)                                                                                          |
 
+上表「归档路径」列为评估时点（2026-07）的事实记录；归档区已于 2026-09-05 退役（`MLS-DOC-GOV-0001` §7.1：`MLS-DOC-ARC-0001`，归档区不建库），`docs/90-archive/` 目录已不存在。
+
 ## 固定结论
 
 - 八类资料的统一分类为 `Historical Reference`。
@@ -35,6 +56,13 @@
 
 ## 变更记录
 
-| 日期       | 版本 | 变更内容                                                                     |
-| ---------- | ---- | ---------------------------------------------------------------------------- |
-| 2026-09-05 | 不变 | 纯链接修复：RA-0001、RA-0003 迁入 `requirements/` 后更新相对路径；内容无变化 |
+| 日期       | 版本 | 变更内容                                                                                                                                                                                                                              |
+| ---------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-07 | 不变 | 纯链接修复：§2 承接对象改指已退役 `MLS-DOC-ARC-0001` 并补退役时点说明（表格归档路径列为评估时点事实，保留并注明）；按文档规范补引用/被引用列表。补录说明：初稿（2026-07-13）与本表最早记录之间的历史未随规范建立，以 git 提交历史为准 |
+| 2026-09-05 | 不变 | 纯链接修复：RA-0001、RA-0003 迁入 `requirements/` 后更新相对路径；内容无变化                                                                                                                                                          |
+
+---
+
+> 被引用文档：
+>
+> - [工程文档唯一入口](../../README.md)

@@ -14,6 +14,11 @@
 | HTTP   | Axios，通过 `src/utils/request.js` 统一处理 |
 | 路由   | Vue Router                                  |
 
+> 引用文档：
+>
+> - [工程文档唯一入口](../docs/README.md)
+> - [根 README](../README.md)
+
 安装依赖并启动本地开发环境：
 
 ```powershell
@@ -48,3 +53,9 @@ npm run build
 
 - [项目入口](../README.md)
 - [工程文档唯一入口](../docs/README.md)
+
+---
+
+> 被引用文档：
+>
+> - [根 README](../README.md)
