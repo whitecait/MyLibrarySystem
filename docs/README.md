@@ -4,16 +4,16 @@
 | -------- | ------------------------------------------------ |
 | 文档编号 | `MLS-DOC-GOV-0000`                               |
 | 文档状态 | `Draft`                                          |
-| 文档版本 | `v0.7`                                           |
+| 文档版本 | `v0.8`                                           |
 | 编制日期 | `2026-07-13`                                     |
-| 最近更新 | `2026-09-05`                                     |
+| 最近更新 | `2026-09-06`                                     |
 | 适用阶段 | 需求分析                                         |
 | 验证对应 | 验收测试                                         |
 | 权威性质 | 工程文档唯一入口；经批准的规范性工件由本入口导航 |
 
 > 引用文档：
 >
-> - 治理规则：[MLS-DOC-GOV-0001](00-governance/MLS-DOC-GOV-0001.md) 至 [MLS-DOC-GOV-0006](00-governance/MLS-DOC-GOV-0006.md)
+> - 治理规则：[MLS-DOC-GOV-0001](00-governance/MLS-DOC-GOV-0001.md) 至 [MLS-DOC-GOV-0007](00-governance/MLS-DOC-GOV-0007.md)
 > - 需求分析阶段：[MLS-DOC-RA-0001](01-requirements/requirements/MLS-DOC-RA-0001.md)、[MLS-DOC-RA-0002](01-requirements/requirements/MLS-DOC-RA-0002.md)、[MLS-DOC-RA-0003](01-requirements/requirements/MLS-DOC-RA-0003.md) 及 [01-requirements/](01-requirements/) 下的 acceptance/、evidence/、requirements/、reviews/ 工件
 > - 后续阶段入口：[MLS-DOC-OD-0001](02-overall-design/MLS-DOC-OD-0001.md)、[MLS-DOC-DD-0001](03-detailed-design/MLS-DOC-DD-0001.md)、[MLS-DOC-MD-0001](04-module-design/MLS-DOC-MD-0001.md)
 > - 项目级引导：[根 README](../README.md)、[后端项目说明](../library-server/README.md)、[前端项目说明](../library-frontend/README.md)
@@ -32,7 +32,7 @@
 | 层级          | 职责                                                               | 当前工件                                                                                                                                                                                                                                                       | 权威边界                                                           |
 | ------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | L0 入口与导航 | 声明当前阶段、维护清单和阅读入口                                   | 本文件 `MLS-DOC-GOV-0000`                                                                                                                                                                                                                                      | 只导航和汇总，不单独产生需求事实                                   |
-| L1 治理规则   | 分别定义编号、生命周期与门禁、权威与冲突、变更、决策和全局开发计划 | [`MLS-DOC-GOV-0001`](00-governance/MLS-DOC-GOV-0001.md) 至 [`MLS-DOC-GOV-0006`](00-governance/MLS-DOC-GOV-0006.md)                                                                                                                                             | 各文件只在其声明的治理主题内拥有内容所有权                         |
+| L1 治理规则   | 分别定义编号、生命周期与门禁、权威与冲突、变更、决策、全局开发计划和风险登记 | [`MLS-DOC-GOV-0001`](00-governance/MLS-DOC-GOV-0001.md) 至 [`MLS-DOC-GOV-0007`](00-governance/MLS-DOC-GOV-0007.md)                                                                                                                                           | 各文件只在其声明的治理主题内拥有内容所有权                         |
 | L2 阶段控制   | 定义需求分析阶段的组织基线和阶段导航                               | [`MLS-DOC-RA-0001`](01-requirements/requirements/MLS-DOC-RA-0001.md)、[`MLS-DOC-RA-0002`](01-requirements/requirements/MLS-DOC-RA-0002.md)                                                                                                                     | RA-0001 是当前唯一 Approved 的阶段组织与工作基线；不是最终需求基线 |
 | L3 规范内容   | 定义需求主规格、专题需求和验收定义                                 | [`MLS-DOC-RA-0003`](01-requirements/requirements/MLS-DOC-RA-0003.md)、[`requirements/`](01-requirements/requirements/)、[`MLS-DOC-AT-0001`](01-requirements/acceptance/MLS-DOC-AT-0001.md)、[`MLS-DOC-AT-0002`](01-requirements/acceptance/MLS-DOC-AT-0002.md) | 只有被基线记录按明确版本批准的内容才成为正式需求基线               |
 | L4 控制与批准 | 维护派生追踪、评审检查、基线范围和批准证据                         | [`MLS-DOC-RA-0014`](01-requirements/requirements/MLS-DOC-RA-0014.md)、[`reviews/`](01-requirements/reviews/)                                                                                                                                                   | 不产生新的需求事实；`MLS-DOC-REV-0002` 负责记录被激活的基线集合    |
@@ -61,7 +61,7 @@
 ## 推荐阅读顺序
 
 1. 本文件：确认当前阶段、分层权威模型和维护清单。
-2. 治理规则：`MLS-DOC-GOV-0003` → `MLS-DOC-GOV-0001` → `MLS-DOC-GOV-0002` → `MLS-DOC-GOV-0004` → `MLS-DOC-GOV-0005` → `MLS-DOC-GOV-0006`。
+2. 治理规则：`MLS-DOC-GOV-0003` → `MLS-DOC-GOV-0001` → `MLS-DOC-GOV-0002` → `MLS-DOC-GOV-0004` → `MLS-DOC-GOV-0005` → `MLS-DOC-GOV-0006`；`MLS-DOC-GOV-0007`（风险登记册）按需查阅。
 3. 阶段控制：`MLS-DOC-RA-0002` → `MLS-DOC-RA-0001`。
 4. 规范内容：`MLS-DOC-RA-0003` → `MLS-DOC-RA-0004` 至 `MLS-DOC-RA-0007` → `MLS-DOC-RA-0008` 至 `MLS-DOC-RA-0013`。
 5. 验收与追踪：`MLS-DOC-AT-0001` → `MLS-DOC-AT-0002` → `MLS-DOC-RA-0014` → `MLS-DOC-AT-0003`。
@@ -101,6 +101,7 @@
 | `MLS-DOC-GOV-0004` | [文档与需求变更控制](00-governance/MLS-DOC-GOV-0004.md) | `Draft` |
 | `MLS-DOC-GOV-0005` | [工程决策日志](00-governance/MLS-DOC-GOV-0005.md)       | `Draft` |
 | `MLS-DOC-GOV-0006` | [全局开发计划](00-governance/MLS-DOC-GOV-0006.md)       | `Draft` |
+| `MLS-DOC-GOV-0007` | [风险登记册](00-governance/MLS-DOC-GOV-0007.md)         | `Draft` |
 
 ### 需求分析阶段 (01-requirements) ── 阶段入口
 
@@ -171,6 +172,7 @@
 
 | 日期       | 版本 | 变更内容                                                                                                                                                                                                                                          |
 | ---------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-06 | v0.8 | 维护基线登记 `MLS-DOC-GOV-0007`（风险登记册）：登记需求基线签署前识别的风险 `MLS-RISK-0001`~`0011`，仅含风险描述与判断来源依据；治理引用范围与 L1 治理规则行同步至 GOV-0007 |
 | 2026-07-13 | v0.1 | 初稿                                                                                                                                                                                                                                              |
 | 2026-08-20 | v0.2 | 当前有效状态补充 G0 已通过（2026-07-24）事实，明确分层模型为当前维护与评审导航                                                                                                                                                                    |
 | 2026-09-05 | v0.3 | 维护基线登记 `MLS-DOC-GOV-0006`（全局开发计划，M0 计划落盘）；当前有效状态补充 G3/G4/G5 路径与 `MLS-DEC-0007`                                                                                                                                     |
@@ -186,6 +188,7 @@
 > - [编号规范](00-governance/MLS-DOC-GOV-0001.md)
 > - [文档权威与冲突处理](00-governance/MLS-DOC-GOV-0003.md)
 > - [全局开发计划](00-governance/MLS-DOC-GOV-0006.md)
+> - [风险登记册](00-governance/MLS-DOC-GOV-0007.md)
 > - [需求分析阶段工程化设计](01-requirements/requirements/MLS-DOC-RA-0001.md)
 > - [需求评审清单](01-requirements/reviews/MLS-DOC-REV-0001.md)
 > - [根 README](../README.md)
