@@ -46,6 +46,12 @@ sql() { dc exec -T database psql -U library -d library -v ON_ERROR_STOP=1 -Atc "
 check() {
   phase="$1"
   dc ps --format json > "$evidence/$phase-services.json"
+  dc images --format json > "$evidence/$phase-images.json"
+  for container_id in $(dc ps -q); do
+    docker inspect --format '{{.Name}} {{.Image}} {{.Config.Image}}' "$container_id"
+    image_ref="$(docker inspect --format '{{.Config.Image}}' "$container_id")"
+    docker image inspect --format '{{json .RepoDigests}} {{.Id}}' "$image_ref"
+  done > "$evidence/$phase-image-digests.txt"
   for service in database backend frontend; do
     container_id="$(dc ps -q "$service")"
     test "$(docker inspect --format '{{.State.Health.Status}}' "$container_id")" = healthy
@@ -74,14 +80,7 @@ check retained-volume
 cmp "$evidence/first-empty-history.txt" "$evidence/retained-volume-history.txt"
 project="$project_b"
 dc config --quiet
-dc build
-dc up -d --wait --wait-timeout 180
+# Use the very same built images for the second empty database.
+dc up --no-build -d --wait --wait-timeout 180
 check second-empty
-for project in "$project_a" "$project_b"; do
-  dc images --format json > "$evidence/$project-images.json"
-  for container_id in $(dc ps -q); do
-    image_id="$(docker inspect --format '{{.Image}}' "$container_id")"
-    docker image inspect --format '{{json .RepoDigests}} {{.Id}}' "$image_id"
-  done > "$evidence/$project-image-digests.txt"
-done
 printf 'Compose verification passed. Evidence: %s\n' "$evidence"
