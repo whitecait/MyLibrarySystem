@@ -5,7 +5,7 @@
 > - [开发任务规划](TODO.md)（B1-A、B1-B 与本轮范围补充）
 > - [工程基础运行与验证](ENGINEERING.md)
 >
-> 状态：2026-09-09 已完成 P0 现场保存与清理边界核定、P1 WSL/Docker 链路验证、P2 最小前后端重建；P3 真实 PostgreSQL/Flyway 与 Testcontainers 验收已通过；P4 首轮三阶段验收通过，P5 干净检出发现数据库健康检查竞态，已修复并待完整复验；远端 CI 待验收。执行者为用户或执行代理。本计划属于开发过程记录，不代表业务设计批准或 B1 整体完成。
+> 状态：2026-09-10 P0～P5 已完成；B1-A/B1-B 已取得同一提交的本地干净检出与远端三作业全通过证据。当前验收提交为 `6fd8a8a0ffbe4404adc0dfb9e057059385496990`，详见 §7C。下方失败与待验收表述均为分轮历史记录。B1-C、业务验收与需求门禁不在本次完成范围。
 
 ## 1. 目标与范围
 
@@ -249,6 +249,18 @@ P4 通过。运行入口及环境边界见 [ENGINEERING.md](ENGINEERING.md)。P5
 
 提交 `48090dd2fcd5147e39fc07fb361494db9e0131a5` 的干净检出执行 `bash scripts/verify.sh` 完整通过，退出码 0；本地证据已持久复制至仓库 `artifacts/p5-local/success-compose/` 与 `success-verify.log`。同一提交推送后触发 [CI run 34438144192](https://github.com/whitecait/Mylibrary/actions/runs/34438144192)。前端作业通过；后端停在 setup-java，尚未执行测试，错误为目录无法匹配 `21.0.8+9`，可用目录实际列出 `21.0.8+9.0.LTS`。已按安装器返回的完整标识修正，JDK 发行版、补丁和构建号不变；最终运行结果另行登记。
 
+## 7C. P5 最终验收通过（2026-09-10）
+
+- 分支：`codex/b1-engineering-foundation`，已推送；验收提交：`6fd8a8a0ffbe4404adc0dfb9e057059385496990`。本轮提交只包含前后端骨架、容器、CI、验证脚本及相关工程说明；既有需求/治理文档修改仍保留在原工作区，未混入工程提交。未合并 main，未修改分支保护。
+- 本地干净检出：`/tmp/mls-b1-clean`，源码工作区 `git status --porcelain` 为空，无原型、`.env` 或个人配置。执行 `bash scripts/verify.sh` 退出码 0；Node 22.23.2 / npm 10.9.8 / Temurin 21.0.12.1 / Maven Wrapper 3.9.9 / Docker 29.5.3 / Compose 5.1.4。
+- 前端 `npm ci`、`lint:check`、Vitest 1/1 和 build 通过；后端 clean verify 5/5，零失败、零错误、零跳过，含真实 PostgreSQL/Flyway 与 checksum 负例。
+- Compose 健康条件回归通过；`first-empty`、`retained-volume`、`second-empty` 三阶段的页面、代理 HTTP、SQL、迁移历史与镜像证据均通过。保留卷重启前后完整迁移历史一致；第二空卷复用同一批构建镜像。每库恰有一条成功占位迁移，checksum `78787420`。两个专用项目均完成容器与卷清理，最终 `result.txt` 为 `exit_code=0`。
+- [最终 GitHub Actions run 34438399630](https://github.com/whitecait/Mylibrary/actions/runs/34438399630) 的 `headSha` 与上述提交完全一致；`frontend`、`backend`、`compose` 均为 `success`，整体 `success`。CI 使用 Ubuntu 24.04、Node 22.23.2、npm 10.9.8、Temurin 21.0.8+9（安装目录标识 `21.0.8+9.0.LTS`）；PostgreSQL 与所有容器基础镜像摘要与本地一致。
+- 本地成功材料：`artifacts/p5-local/final/`（完整命令日志、Surefire XML、Compose 证据与 27 文件原型校验）。远端成功材料：`artifacts/p5-remote/final-run/` 与 `final-run-metadata.json`；首轮远端失败及前两次本地失败材料也已保存。以上为被忽略的可重建证据，不入库；远端工作流产物保留 14 天，关键结论在本节持久登记。
+- 本轮结束前原型文件再次与 P2 持久清单比较：27/27 SHA-256 一致，无文件增删；未修改原型。P2 的入口交互证据继续适用于这些未变文件。
+
+P4/P5 与本计划覆盖的 B1-A/B1-B 完成。B1-C 未执行，因此 B1 整体不登记完成；业务验收、G3/G4/G5 与需求基线仍沿用各自状态。复现命令为仓库根目录 `bash scripts/verify.sh`，详细运行说明见 [ENGINEERING.md](ENGINEERING.md)。
+
 ## 8. 最终验收清单
 
 | 验收项 | 必须提供的证据 |
@@ -267,6 +279,7 @@ P4 通过。运行入口及环境边界见 [ENGINEERING.md](ENGINEERING.md)。P5
 
 | 日期 | 内容 |
 | --- | --- |
+| 2026-09-10 | P4/P5 收尾：修复数据库初始化期 socket 健康误报、镜像证据采集和 CI Temurin 完整版本标识；提交 `6fd8a8a` 在本地干净检出及远端三个作业全部通过，登记 B1-A/B1-B 完成并保留 B1-C/业务验收/需求门禁原状态。 |
 | 2026-09-09 | P4 三阶段 Compose 验收通过，新增容器、代理、隔离验收脚本和复现说明；P5 配置完成，干净检出与远端 CI 待验证。 |
 | 2026-09-09 | P3 恢复执行通过：固定 PostgreSQL 17.6 镜像摘要，Testcontainers 覆盖为 1.21.4 适配 Docker 29，排除闲置 Mockito；最终 clean verify 5/5 通过，零失败、零错误、零跳过，记录迁移/校验和/HTTP 与打包清理证据。P4/P5 未执行。 |
 | 2026-09-09 | P3 新增占位迁移、Testcontainers 集成测试与 checksum 测试夹具；编译通过，verify 因当前 Docker WSL 集成不可用失败，零跳过。镜像摘要与真实数据库验收未完成，P3 不登记通过。 |

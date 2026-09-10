@@ -27,7 +27,7 @@
 
 `verify` 自动发现 MVC 测试和 `PostgresInfrastructureTest`。后者要求当前环境可访问 Linux Docker 引擎，首次运行需要网络下载依赖和镜像；无 Docker 时直接失败。测试使用独立容器和随机端口，不连接默认开发库，覆盖真实 PostgreSQL、Flyway 历史与重复执行、隔离库 checksum 负例及应用 HTTP 健康接口。
 
-当前验证状态：2026-09-09 的 `./mvnw -B -ntp clean verify` 通过，4 项 PostgreSQL 集成测试与 1 项 MVC 测试，零失败、零错误、零跳过。报告位于 `target/surefire-reports/`。P3 已通过，Compose 与 CI 尚未验收。
+当前验证状态：2026-09-09 的 `./mvnw -B -ntp clean verify` 通过，4 项 PostgreSQL 集成测试与 1 项 MVC 测试，零失败、零错误、零跳过。报告位于 `target/surefire-reports/`。P3 已通过；2026-09-10 P4/P5 亦已通过，本地干净检出与远端 CI 对应同一提交 `6fd8a8a`，完整证据见行动计划 §7C。
 
 测试固定官方 PostgreSQL `17.6-bookworm` 的摘要：`postgres@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3`。Testcontainers 使用 1.21.4，覆盖 Boot BOM 的 1.21.0 以兼容 Docker 29；Flyway 11.7.2 仍由 Boot BOM 管理。测试不使用 Mockito，已排除相关依赖。checksum 的 V1 夹具仅在测试资源与隔离测试库中使用，不打入应用 jar。
 
@@ -50,6 +50,7 @@ DB_PASSWORD=library \
 
 | 日期 | 内容 |
 | --- | --- |
+| 2026-09-10 | 登记 P4/P5 完成与同提交本地/远端验收证据。 |
 | 2026-09-09 | 增加容器与完整验证入口，关联 P4/P5 配置和证据说明。 |
 | 2026-09-09 | P3 验收通过：记录固定镜像摘要、Testcontainers 兼容版本、5/5 测试结果与测试夹具隔离；移除闲置 Mockito 依赖。 |
 | 2026-09-09 | P3 新增迁移、Testcontainers 与隔离 checksum 夹具；记录 Docker 阻塞及尚未通过的验收状态。 |

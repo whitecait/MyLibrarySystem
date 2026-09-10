@@ -10,6 +10,7 @@
 > - [需求基线记录](docs/01-requirements/reviews/MLS-DOC-REV-0002.md)
 > - [文档与需求变更控制](docs/00-governance/MLS-DOC-GOV-0004.md)
 > - [后端项目说明](library-server/README.md)
+> - [工程基础运行与验证](ENGINEERING.md)
 > - [前端项目说明](library-frontend/README.md)
 
 MyLibrarySystem 是一个面向单一图书馆的工程学习项目，形态为**图书信息管理系统 + AI 助手**的综合系统：图书信息管理系统承载借阅、归还、逾期罚款等核心流通业务；对话式 AI 助手与业务系统一体运行，实现业务系统与 AI 能力的有机融合。项目以完整系统为验收对象，按照 V 模型依次开展需求分析、总体设计、详细设计和模块设计，并分别对应验收测试、系统测试、集成测试和单元测试。
@@ -35,6 +36,7 @@ MyLibrarySystem 是一个面向单一图书馆的工程学习项目，形态为*
 ## 项目入口
 
 - [工程文档唯一入口](docs/README.md)
+- [工程基础运行与验证](ENGINEERING.md)
 - [后端项目与开发说明](library-server/README.md)
 - [前端项目与开发说明](library-frontend/README.md)
 
@@ -42,13 +44,14 @@ MyLibrarySystem 是一个面向单一图书馆的工程学习项目，形态为*
 
 ### 当前工程状态
 
-| 项目             | 状态                                                         |
-| ---------------- | ------------------------------------------------------------ |
-| 当前阶段         | 需求分析                                                     |
-| 工程文档唯一入口 | [docs/README.md](docs/README.md)                             |
-| 需求基线         | `Not established`                                            |
-| 验收执行         | 尚未执行                                                     |
-| 当前代码地位     | 代码复用候选：可直接复用、重构复用或弃用重写；不是新需求来源 |
+| 项目             | 状态                             |
+| ---------------- | -------------------------------- |
+| 当前阶段         | 需求分析                         |
+| 工程文档唯一入口 | [docs/README.md](docs/README.md) |
+| 需求基线         | `Not established`                |
+| 验收执行         | 尚未执行                         |
+| 当前代码地位     | 已重建最小工程骨架，业务功能尚未实现 |
+| 工程基础         | B1-A/B1-B 已通过本地与 CI 验证；B1-C 未执行 |
 
 需求分析阶段工程化设计（`MLS-DOC-RA-0001`）的 `v1.0 Approved` 只表示阶段组织方案已经批准，不表示最终需求基线 `v1.0` 已建立。
 旧契约、旧计划和旧审计为非规范性历史参考。
@@ -56,9 +59,15 @@ MyLibrarySystem 是一个面向单一图书馆的工程学习项目，形态为*
 ### 参与需求评审
 
 1. 从[系统需求主规格](docs/01-requirements/requirements/MLS-DOC-RA-0003.md)进入当前需求工件。
-2. 在[Open 问题登记册](docs/01-requirements/requirements/MLS-DOC-RA-0007.md)核对已关闭问题（`MLS-OQ-0001`~`0020`）的关闭依据与决策人；`MLS-OQ-0021`~`0027`（2026-09-07 登记）为当前 Open 问题，尚未批准的边界不得作为需求值。
+2. 在[Open 问题登记册](docs/01-requirements/requirements/MLS-DOC-RA-0007.md)核对已关闭问题（`MLS-OQ-0001`~`0026`、`MLS-OQ-0028`）的关闭依据与决策人；`MLS-OQ-0027` 为当前唯一 Open 问题（属详细设计机制，需求层外部行为口径已登记 `MLS-BR-0035`），尚未批准的边界不得作为需求值。
 3. 使用[需求评审清单](docs/01-requirements/reviews/MLS-DOC-REV-0001.md)记录可复现证据与评审发现。
 4. 只有[需求基线记录](docs/01-requirements/reviews/MLS-DOC-REV-0002.md)完成正式批准后，需求工件才可成为下一阶段输入；变更按[变更控制](docs/00-governance/MLS-DOC-GOV-0004.md)处理。
+
+## 修订记录
+
+| 日期 | 内容 |
+| --- | --- |
+| 2026-09-10 | 同步最小骨架和 B1-A/B1-B 完成状态，新增工程运行与验证入口；业务验收及需求基线状态不变。 |
 
 ---
 

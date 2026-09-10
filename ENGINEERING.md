@@ -71,11 +71,13 @@ docker compose -p mls-dev down
 
 | 日期 | 内容 |
 | --- | --- |
+| 2026-09-10 | 项目入口已链接本文，补齐反向引用登记。 |
 | 2026-09-09 | 干净检出发现数据库初始化期 socket 健康误报；检查改为 TCP 并加入直接执行 Compose 健康命令的回归测试。 |
 | 2026-09-09 | 新增工程基础命令、容器环境、验收隔离与证据说明、CI 触发及报告约定。 |
 
 > 被引用文档：
 >
+> - [项目入口](README.md)
 > - [前端工程说明](library-frontend/README.md)
 > - [后端工程说明](library-server/README.md)
 > - [工程基础行动计划](HANDOFF-B1-PLAN.md)
