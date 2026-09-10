@@ -245,6 +245,10 @@ P4 通过。运行入口及环境边界见 [ENGINEERING.md](ENGINEERING.md)。P5
 
 修复提交 `57c48d5` 的干净检出中，前端 1/1、后端 5/5、健康条件负例及 Compose 三阶段启动/HTTP/SQL/迁移断言均通过；脚本最终因按旧容器镜像 ID 查询摘要时出现 `No such image` 而退出 1，未登记整体通过。证据保存在 `compose-20260910025612-18149`。已将镜像信息改为每阶段即时记录容器 Image 值、配置引用和镜像 RepoDigests；第二空库直接复用首轮构建镜像，不再重新构建相同标签。修订后仍需完整复验。
 
+### P5 首轮远端 CI
+
+提交 `48090dd2fcd5147e39fc07fb361494db9e0131a5` 的干净检出执行 `bash scripts/verify.sh` 完整通过，退出码 0；本地证据已持久复制至仓库 `artifacts/p5-local/success-compose/` 与 `success-verify.log`。同一提交推送后触发 [CI run 34438144192](https://github.com/whitecait/Mylibrary/actions/runs/34438144192)。前端作业通过；后端停在 setup-java，尚未执行测试，错误为目录无法匹配 `21.0.8+9`，可用目录实际列出 `21.0.8+9.0.LTS`。已按安装器返回的完整标识修正，JDK 发行版、补丁和构建号不变；最终运行结果另行登记。
+
 ## 8. 最终验收清单
 
 | 验收项 | 必须提供的证据 |

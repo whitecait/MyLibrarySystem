@@ -13,7 +13,7 @@
 在 Linux 或启用 Docker Desktop 集成的 WSL 中运行。需要 Bash、Git、Python 3、curl、Docker Linux 引擎及支持 `up --wait` 的 Compose v2 或 v5；后端测试必须可连接 Docker，不能跳过数据库测试。
 
 - 本机：Temurin JDK 21（已有环境 21.0.12.1）、Node.js 22.23.2、npm 10.9.8。
-- CI 和后端容器：Temurin 21.0.8+9；与本机保持 Java 21 编译目标，补丁版本有差异。
+- CI 和后端容器：Temurin 21.0.8+9（setup-java 目录中的完整标识为 `21.0.8+9.0.LTS`）；与本机保持 Java 21 编译目标，补丁版本有差异。
 - Maven：仓库 Wrapper 3.9.9，无需系统 Maven。
 - 前端容器：Node 22.23.2 / npm 10.9.8，静态服务 Nginx 1.28.0。
 - 数据库：PostgreSQL 17.6-bookworm，Compose 与 Testcontainers 共用 `sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3`。
