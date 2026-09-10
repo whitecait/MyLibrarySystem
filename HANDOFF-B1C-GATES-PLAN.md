@@ -120,10 +120,80 @@ C2 的现有阈值整理、C3 的延期候选和 C4 的差异盘点可以在等�
 
 完成判据：C1 可复现；C2 所需口径获得具体签署；C3 取得有效处置；C4 无未说明状态冲突；G3/G4/G5 由责任人据实完成。未满足最终批准条件时，仅交付候选包，不宣称需求基线建立。
 
+## 10. C0 执行记录（2026-09-10，已完成）
+
+### 10.1 执行范围与现场状态
+
+- 执行时点状态：分支 `codex/b1-engineering-foundation`，HEAD `c1848c0a5b017830f96ec9c4366c12748fdc9c28`，工作区干净（`git status --porcelain` 为空，无未提交修改）。
+- B1 验收提交 `6fd8a8a` 之后仅有两个文档提交（`7a0259c` 文档库登记与传导、`c1848c0` 过程文档同步与本计划出版），无工程代码变更。
+- 计划 §3 所述「未提交修改」风险已消除：原工作区全部修改已按主题分两笔提交，经推送远端并开 [PR #1](https://github.com/whitecait/Mylibrary/pull/1) 走 CI（frontend/backend/compose 六个作业全绿）后合并 main（merge commit `2d3dca1`）；本地 main 已同步。合并方式为用户 2026-09-10 拍板（开 PR 走 GitHub 流程）。
+- 本轮超出原 C0 范围的登记勘误见 §10.4。
+
+### 10.2 输入快照（拟评审工件清单）
+
+绑定方式：以下工件全部已提交，统一绑定提交 `c1848c0`（等价于合并提交 `2d3dca1` 所含对应树），满足 §3「Git 提交或文件 SHA-256」二选一要求；后续 C1~C4、G3~G5 各包以其实际输入提交另行登记，不沿用本快照。
+
+| 工件 | 版本 | 定位 |
+| --- | --- | --- |
+| `docs/00-governance/MLS-DOC-GOV-0001.md` | v0.5 | 编号规范 |
+| `docs/00-governance/MLS-DOC-GOV-0002.md` | v0.2 | 工程生命周期与门禁 |
+| `docs/00-governance/MLS-DOC-GOV-0003.md` | v0.4 | 文档权威与冲突处理 |
+| `docs/00-governance/MLS-DOC-GOV-0004.md` | v0.3 | 文档与需求变更控制 |
+| `docs/00-governance/MLS-DOC-GOV-0005.md` | v0.17 | 工程决策日志（含 §10.4 勘误） |
+| `docs/00-governance/MLS-DOC-GOV-0006.md` | v0.4 | 全局开发计划 |
+| `docs/00-governance/MLS-DOC-GOV-0007.md` | v0.6 | 风险登记册 |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0001.md` | v1.0 | 需求分析阶段工程化设计 |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0002.md` | v0.3 | 需求分析文档入口 |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0003.md` | v0.12 | 系统需求主规格（含勘误） |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0004.md` | v0.6 | 愿景与范围 |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0005.md` | v0.7 | 参与者与系统语境 |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0006.md` | v0.10 | 术语表 |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0007.md` | v0.22 | Open 问题登记册（当前 Open 仅 `MLS-OQ-0027`） |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0008.md` | v0.16 | 业务流程（含勘误；§13~§15 三张状态机图） |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0009.md` | v0.15 | 系统用例（含勘误） |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0010.md` | v0.15 | 功能需求（含勘误） |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0011.md` | v0.14 | 业务规则 |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0012.md` | v0.14 | 信息需求（含勘误） |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0013.md` | v0.7 | 非功能需求（C2 主对象） |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0014.md` | v0.13 | 需求与验收双向追踪矩阵（C2/C4 对象） |
+| `docs/01-requirements/requirements/MLS-DOC-RA-0015.md` | v0.2 | P1 质量与验收政策草案 |
+| `docs/01-requirements/acceptance/MLS-DOC-AT-0001.md` | v0.16 | 系统验收策略（含勘误） |
+| `docs/01-requirements/acceptance/MLS-DOC-AT-0002.md` | v0.19 | 系统验收条件与验收用例（含勘误；C2 主对象） |
+| `docs/01-requirements/acceptance/MLS-DOC-AT-0003.md` | v0.1 | 系统验收执行报告登记册 |
+| `docs/01-requirements/evidence/MLS-DOC-EVD-0001.md` | v0.1 | 旧文档证据评估 |
+| `docs/01-requirements/evidence/MLS-DOC-EVD-0002.md` | v0.3 | 代码复用候选台账 |
+| `docs/01-requirements/reviews/MLS-DOC-REV-0001.md` | v0.4 | 需求评审清单（正式旧快照，C4 追加本轮记录） |
+| `docs/01-requirements/reviews/MLS-DOC-REV-0002.md` | v0.11 | 需求基线记录（正式旧快照，C4/G5 使用） |
+| `docs/02-overall-design/MLS-DOC-OD-0001.md` | v0.1 | 总体设计阶段入口 |
+| `docs/03-detailed-design/MLS-DOC-DD-0001.md` | v0.1 | 详细设计阶段入口 |
+| `docs/04-module-design/MLS-DOC-MD-0001.md` | v0.1 | 模块设计阶段入口 |
+| `docs/README.md` | v0.18 | 工程文档入口（含勘误） |
+
+根目录开发过程文档（无版本元数据，同样绑定 `c1848c0`）：`README.md`、`ENGINEERING.md`、`TODO.md`、`HANDOFF-20260906.md`、`HANDOFF-B1-PLAN.md`（B1 证据入口 §7C）、本计划。
+
+### 10.3 B1 证据登记
+
+- 验收提交 `6fd8a8a0ffbe4404adc0dfb9e057059385496990`：本地干净检出与远端 [run 34438399630](https://github.com/whitecait/Mylibrary/actions/runs/34438399630) 三作业全部成功，完整结论见 [B1 行动计划 §7C](HANDOFF-B1-PLAN.md)。
+- 远端产物（14 天保留）：`compose-evidence`（92,611 B）、`backend-reports`（9,878 B）、`frontend-reports`（400 B），核验时未过期，**到期时间 2026-09-24T04:47Z**。
+- 持久副本（git 忽略、可重建）：`artifacts/p5-local/final/`（本地成功材料）与 `artifacts/p5-remote/final-run/`＋`final-run-metadata.json`（远端成功材料下载件）。已核对可读，元数据 `headSha` 与验收提交一致、`conclusion=success`；首轮失败材料 `first-run/`、`first-backend-failure.log` 同在。远端产物到期后以本地副本与 §7C 登记为准。
+- 复核结论：证据可读、绑定一致，无需重新下载。
+
+### 10.4 本轮登记勘误（超出原 C0 范围，待用户核阅）
+
+输入快照核对发现 9 份文档头部「文档版本」滞后于其修订记录最新行（对应 2026-09-09 审计返修轮仅追加修订行、头部未同步）：`GOV-0005`（v0.16→v0.17）、`AT-0001`（v0.15→v0.16）、`AT-0002`（v0.17→v0.19，滞后两轮）、`RA-0003`（v0.11→v0.12）、`RA-0008`（v0.15→v0.16）、`RA-0009`（v0.14→v0.15）、`RA-0010`（v0.14→v0.15）、`RA-0012`（v0.13→v0.14）、`docs/README`（v0.17→v0.18）。已全部对齐并逐份登记「不变」勘误行；内容无变化，随本轮 C0 提交交用户核阅。勘误后全库扫描（元数据 vs 修订记录最新行）一致。
+
+### 10.5 旧快照与本轮候选的区分
+
+- 正式旧快照：`REV-0001` v0.4、`REV-0002` v0.11 中「27 项 FR」「0021~0027 全部 Open」等为历史评审事实，C4 按计划追加本轮记录，不改写。
+- 本轮候选：自提交 `7a0259c`/`c1848c0`（含 §10.4 勘误）起的工件版本，以 §10.2 清单为准；C1 产生的测量数值均属「脚手架验证」类，不并入验收达标口径（§5 三分法）。
+
+出口核对：执行范围（§10.1）、输入快照（§10.2）、B1 证据入口（§10.3）明确，新旧快照可区分（§10.5）——**C0 完成**。
+
 ## 修订记录
 
 | 日期 | 内容 |
 | --- | --- |
+| 2026-09-10 | 执行 C0：登记现场状态、33 份 docs/ 工件与 6 份根目录过程文档的输入快照（绑定提交 `c1848c0`）、B1 证据入口与远端产物到期时间；另发现并勘误 9 份文档头部版本滞后（§10.4，待用户核阅）。原工作区修改已经 PR #1 合并 main。C1~C4 与 G3~G5 仍未执行。 |
 | 2026-09-10 | 出版下一轮执行计划；核对 B1-A/B1-B 完成记录、OQ-0027 现行关闭条件及评审快照差异，列出测量、签署、延期和门禁顺序。未实施工程变更或登记审批通过。 |
 
 > 被引用文档：
