@@ -40,6 +40,16 @@ bash scripts/verify-compose.sh
 
 正常结束和失败退出均保存脱敏日志，并清理这两个验收项目的容器、网络和卷；不清理开发项目。日志默认保存在被 Git 忽略的 `artifacts/compose-<运行号>/`，可用 `EVIDENCE_DIR` 改变位置。退出码记录在 `result.txt`。强制终止进程或 Docker 引擎失联可能使自动清理无法执行；此时按该次证据目录中的项目名执行 `docker compose -p <项目名> down --volumes`，不得清理其他项目。
 
+## 观测验证入口（C1 测量脚手架）
+
+```bash
+bash scripts/verify-observability.sh
+```
+
+该脚本使用基础文件加观测 overlay（`compose.observability.yaml`）启动专用 Compose 项目：在既有 database/backend/frontend 之上接入 Prometheus、Grafana 与 OTel Collector（镜像标签与摘要固定在 overlay 中），backend 仅在该 overlay 下经 `MANAGEMENT_OTLP_TRACING_ENDPOINT` 向 Collector 导出 trace；不带 overlay 的启动行为不变。脚本验证七项内容：全链路启动后 Prometheus target UP 且真实请求使计数增长、Grafana 数据源与面板查询返回非空数据、真实请求的 Trace ID 出现在 Collector 导出、固定窗口内 k6/nginx 访问日志/应用指标三方差额可解释、错误分类口径（成功、预期 4xx、非预期 5xx、超时）与隔离夹具证明、确定性阈值失败返回非零且恢复后通过、停止观测组件后健康请求仍完成且恢复后采集恢复。指标标签基数与敏感信息扫描随后执行，最后重跑 `scripts/verify.sh`（CI 中由同提交的兄弟作业覆盖，可用 `SKIP_EXISTING_GATES=1` 跳过）。
+
+k6 负载参数为脚手架验证参数，不构成已批准业务负载；Grafana 验证走 API，不代表浏览器交互通过。观测栈的 Collector 导出终点为 Collector 自身日志（debug），无可查询存储、重启即失，正式链路存储平台不在本轮范围。证据保存在被 Git 忽略的 `artifacts/c1-<运行号>/`，可用 `EVIDENCE_DIR` 改变位置。
+
 ## 启动开发环境
 
 ```bash
@@ -63,7 +73,7 @@ docker compose -p mls-dev down
 
 ## GitHub Actions
 
-`.github/workflows/ci.yml` 覆盖面向 main 的 PR、main 和 `codex/**` 分支 push，以及手动触发。三个独立作业 `frontend`、`backend`、`compose` 必须全部成功；runner 为 Ubuntu 24.04，Actions 使用提交摘要。前端与后端保留测试报告，Compose 保留脱敏日志、HTTP/SQL 断言材料、镜像和环境信息，保留期 14 天。各作业有超时，失败不被忽略。
+`.github/workflows/ci.yml` 覆盖面向 main 的 PR、main 和 `codex/**` 分支 push，以及手动触发。四个独立作业 `frontend`、`backend`、`compose`、`observability` 必须全部成功；runner 为 Ubuntu 24.04，Actions 使用提交摘要。前端与后端保留测试报告，Compose 保留脱敏日志、HTTP/SQL 断言材料、镜像和环境信息，观测作业保留 C1 验证证据，保留期 14 天。各作业有超时，失败不被忽略。
 
 原型仍为本地资产，不进入 CI、镜像或干净检出的测试输入。远端通过证据及对应提交记录在行动计划中；工作流存在不代表运行通过，也不代表已配置 GitHub 分支保护。
 
@@ -71,6 +81,7 @@ docker compose -p mls-dev down
 
 | 日期 | 内容 |
 | --- | --- |
+| 2026-09-10 | 新增 C1 观测验证入口：观测 overlay、固定摘要镜像、Micrometer/OTel 后端接线与 `verify-observability.sh` 七项验证；CI 增加 observability 作业（保留原三作业）。 |
 | 2026-09-10 | 项目入口已链接本文，补齐反向引用登记。 |
 | 2026-09-09 | 干净检出发现数据库初始化期 socket 健康误报；检查改为 TCP 并加入直接执行 Compose 健康命令的回归测试。 |
 | 2026-09-09 | 新增工程基础命令、容器环境、验收隔离与证据说明、CI 触发及报告约定。 |

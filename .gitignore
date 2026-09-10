@@ -64,10 +64,15 @@ library-server/src/main/resources/application-*.yml
 
 # Reproducible infrastructure; secrets and generated evidence remain ignored.
 !compose.yaml
+!compose.observability.yaml
+!observability/
+!observability/**
 !.env.example
 !scripts/
 !scripts/verify.sh
 !scripts/verify-compose.sh
+!scripts/k6-health.js
+!scripts/verify-observability.sh
 !.github/
 !.github/workflows/
 !.github/workflows/ci.yml

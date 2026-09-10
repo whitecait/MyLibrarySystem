@@ -71,3 +71,19 @@ jobs:
           name: compose-evidence
           path: artifacts/compose/
           retention-days: 14
+  observability:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Run C1 measurement scaffold verification
+        run: bash scripts/verify-observability.sh
+        env:
+          EVIDENCE_DIR: artifacts/c1
+          SKIP_EXISTING_GATES: '1'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: c1-observability-evidence
+          path: artifacts/c1/
+          retention-days: 14

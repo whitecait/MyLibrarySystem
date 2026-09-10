@@ -1,0 +1,25 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  batch:
+    # Bounded queue + timeout: a stopped downstream must not grow memory without limit.
+    timeout: 2s
+    send_batch_size: 512
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+exporters:
+  # C1 scaffold endpoint: traces are exported to the collector's own log (debug).
+  # Limitation: log-only sink, no queryable storage, history lost on restart.
+  # A real trace backend (storage platform) is out of scope for this round.
+  debug:
+    verbosity: detailed
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

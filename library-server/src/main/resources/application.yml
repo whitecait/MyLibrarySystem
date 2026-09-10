@@ -10,3 +10,23 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    distribution:
+      # C1 scaffold buckets: enable p95/p99 computation instead of name-only charts.
+      slo:
+        http.server.requests: 10ms,25ms,50ms,100ms,200ms,500ms,1s,2s
+  tracing:
+    # Trace export only activates when MANAGEMENT_OTLP_TRACING_ENDPOINT is provided
+    # (observability environment); otherwise spans stay in-process and nothing is sent.
+    enabled: ${TRACING_ENABLED:true}
+
+logging:
+  pattern:
+    # Correlate application log lines with OTel traces via MDC traceId/spanId.
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}] %m%n"
