@@ -5,7 +5,7 @@
 > - [开发任务规划](TODO.md)（B1-A、B1-B 与本轮范围补充）
 > - [工程基础运行与验证](ENGINEERING.md)
 >
-> 状态：2026-09-09 已完成 P0 现场保存与清理边界核定、P1 WSL/Docker 链路验证、P2 最小前后端重建；P3 真实 PostgreSQL/Flyway 与 Testcontainers 验收已通过；P4 三阶段 Compose 验收已通过；P5 配置已建立，干净检出与远端 CI 待验收。执行者为用户或执行代理。本计划属于开发过程记录，不代表业务设计批准或 B1 整体完成。
+> 状态：2026-09-09 已完成 P0 现场保存与清理边界核定、P1 WSL/Docker 链路验证、P2 最小前后端重建；P3 真实 PostgreSQL/Flyway 与 Testcontainers 验收已通过；P4 首轮三阶段验收通过，P5 干净检出发现数据库健康检查竞态，已修复并待完整复验；远端 CI 待验收。执行者为用户或执行代理。本计划属于开发过程记录，不代表业务设计批准或 B1 整体完成。
 
 ## 1. 目标与范围
 
@@ -233,6 +233,13 @@ P3 通过。P4 Compose、P5 CI、B1-C 及业务验收未执行；B1-A/B1-B 不�
 - 首轮验收后将本地构建镜像显式标为 `mls-backend:foundation`、`mls-frontend:foundation`，并补充 HTTP 超时与镜像摘要记录；最终文件随 P5 干净检出再次验证。
 
 P4 通过。运行入口及环境边界见 [ENGINEERING.md](ENGINEERING.md)。P5 已新增三个 CI 作业和根验证脚本，远端结果尚未取得，不登记 B1-A/B1-B 整体完成。
+
+## 7B. P5 干净检出发现与修复
+
+- 工程文件单独提交为 `c9759d4`，分支 `codex/b1-engineering-foundation`；既有需求、治理、根入口及过程文档修改未纳入该提交。干净检出 `/tmp/mls-b1-clean` 中前端 1/1、后端 5/5（零跳过）通过，但首次 Compose 启动失败，根验证脚本退出码 1，未推送该状态。
+- 失败材料位于 `artifacts/compose-20260910024828-12017/`（原始位置在干净检出中）。后端报 `Connection to database:5432 refused`；数据库当时的初始化临时服务只接受 Unix socket。旧 `pg_isready -U library -d library` 已报告健康，后端因此被过早启动。这是健康条件不足造成的时序竞态，不是干净检出缺文件。
+- 独立 socket-only PostgreSQL 探针稳定显示 socket 接受连接而 TCP 无响应；新增回归脚本直接读取并运行 Compose 中的健康命令，旧配置以明确误报退出码 1 失败。健康命令改为 `pg_isready -h 127.0.0.1 -U library -d library`，使其等待正式 TCP 服务；回归测试进入 Compose 验收入口。
+- 首轮成功记录保留为历史结果，不作为该竞态已消除的证据；修复后的干净检出与远端 CI 结果另行追加。
 
 ## 8. 最终验收清单
 

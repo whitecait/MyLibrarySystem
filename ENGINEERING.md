@@ -36,7 +36,7 @@ bash scripts/verify.sh
 bash scripts/verify-compose.sh
 ```
 
-该脚本不读取本地 `.env`，自行生成一次性数据库口令、随机宿主端口及两个唯一 Compose 项目名。验证次序为新空卷启动、保留该卷并重建容器、另一新空卷启动。每次检查三个服务健康、首页及页面 JS 内容、前端代理 `/api/health` 的精确 JSON、`SELECT 1` 与唯一成功迁移；保留卷重启前后比较完整迁移历史。
+该脚本首先执行 `test-database-readiness.sh`，验证实际配置的健康命令会拒绝仅监听 Unix socket 的 PostgreSQL 服务，然后执行完整启动链。它不读取本地 `.env`，自行生成一次性数据库口令、随机宿主端口及两个唯一 Compose 项目名。验证次序为新空卷启动、保留该卷并重建容器、另一新空卷启动。每次检查三个服务健康、首页及页面 JS 内容、前端代理 `/api/health` 的精确 JSON、`SELECT 1` 与唯一成功迁移；保留卷重启前后比较完整迁移历史。
 
 正常结束和失败退出均保存脱敏日志，并清理这两个验收项目的容器、网络和卷；不清理开发项目。日志默认保存在被 Git 忽略的 `artifacts/compose-<运行号>/`，可用 `EVIDENCE_DIR` 改变位置。退出码记录在 `result.txt`。强制终止进程或 Docker 引擎失联可能使自动清理无法执行；此时按该次证据目录中的项目名执行 `docker compose -p <项目名> down --volumes`，不得清理其他项目。
 
@@ -51,7 +51,7 @@ curl --fail http://localhost:8088/api/health
 
 打开 `http://localhost:8088` 查看状态页。只有前端端口发布到宿主机，且仅绑定 `127.0.0.1`；数据库与后端通过 Compose 内部服务名连接。`FRONTEND_PORT` 可修改前端宿主端口。Nginx 将 `/api/` 请求转发到 `backend:8080`，保留前缀，因此 `/api/health` 到达后端仍是 `/api/health`。
 
-数据库使用 `pg_isready`；后端在数据库健康后启动并执行 `db/infra-migration` 的 repeatable 占位脚本，健康检查为 `/api/health`；前端在后端健康后启动。占位脚本不创建业务表，也不占用正式 V1。镜像构建只编译打包，Testcontainers 测试由独立验证命令和 CI 后端作业执行。
+数据库使用 `pg_isready -h 127.0.0.1` 检查 TCP，避免将首次初始化期间仅监听 Unix socket 的临时服务误判为可供后端连接；后端在数据库健康后启动并执行 `db/infra-migration` 的 repeatable 占位脚本，健康检查为 `/api/health`；前端在后端健康后启动。占位脚本不创建业务表，也不占用正式 V1。镜像构建只编译打包，Testcontainers 测试由独立验证命令和 CI 后端作业执行。
 
 停止开发环境并保留数据：
 
@@ -71,6 +71,7 @@ docker compose -p mls-dev down
 
 | 日期 | 内容 |
 | --- | --- |
+| 2026-09-09 | 干净检出发现数据库初始化期 socket 健康误报；检查改为 TCP 并加入直接执行 Compose 健康命令的回归测试。 |
 | 2026-09-09 | 新增工程基础命令、容器环境、验收隔离与证据说明、CI 触发及报告约定。 |
 
 > 被引用文档：

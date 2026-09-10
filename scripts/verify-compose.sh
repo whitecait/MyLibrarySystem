@@ -40,6 +40,7 @@ trap 'exit 143' TERM
   docker compose version
 } > "$evidence/environment.txt"
 dc config --quiet
+bash scripts/test-database-readiness.sh > "$evidence/readiness-regression.txt" 2>&1
 dc build --pull
 sql() { dc exec -T database psql -U library -d library -v ON_ERROR_STOP=1 -Atc "$1"; }
 check() {
