@@ -1,0 +1,9 @@
+**
+!.mvn/
+!.mvn/**
+!mvnw
+!pom.xml
+!src/
+!src/main/
+!src/main/**
+src/main/resources/application-*.yml

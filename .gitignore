@@ -58,7 +58,18 @@ library-server/target/
 library-server/uploads/
 library-server/logs/
 library-server/**/*.log
-# Environment config carrying credentials (profile variants included;
-# only *.example templates stay trackable)
-library-server/src/main/resources/application.yml
+# Local environment overrides carrying credentials (default
+# application.yml stays trackable and contains no secrets)
 library-server/src/main/resources/application-*.yml
+
+# Reproducible infrastructure; secrets and generated evidence remain ignored.
+!compose.yaml
+!.env.example
+!scripts/
+!scripts/verify.sh
+!scripts/verify-compose.sh
+!.github/
+!.github/workflows/
+!.github/workflows/ci.yml
+library-frontend/reports/
+!ENGINEERING.md

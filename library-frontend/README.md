@@ -1,61 +1,70 @@
-# library-frontend - Vue 3 SPA
-
-本目录保存 MyLibrarySystem 前端候选实现。项目正在按照 V 模型从需求分析阶段重新建立基线，[`docs/README.md`](../docs/README.md) 是工程文档唯一入口；`MLS-DOC-RA-0001.md v1.0` 只是已批准的阶段组织方案，不是最终需求基线。
-
-当前需求基线为 `Not established`，验收尚未执行。本目录中的工程骨架、页面和交互逻辑只可作为直接复用、重构复用或弃用重写的候选，不能作为新需求来源，也不能被解释为当前需求契约。
-
-## 当前候选实现的技术与开发说明
-
-| 关注点 | 当前候选实现采用的工具                      |
-| ------ | ------------------------------------------- |
-| 框架   | Vue 3                                       |
-| 构建   | Vite                                        |
-| UI     | Element Plus                                |
-| HTTP   | Axios，通过 `src/utils/request.js` 统一处理 |
-| 路由   | Vue Router                                  |
+# library-frontend — Vue 3 工程骨架
 
 > 引用文档：
 >
+> - [项目入口](../README.md)
+> - [工程基础运行与验证](../ENGINEERING.md)
 > - [工程文档唯一入口](../docs/README.md)
-> - [根 README](../README.md)
+> - [B1-A/B1-B 工程基础行动计划](../HANDOFF-B1-PLAN.md)
 
-安装依赖并启动本地开发环境：
+本目录当前只包含 Vue 3、Vite 和 Vitest 的最小工程状态页。旧业务页面、路由和 API 已从构建输入中移除；业务功能尚未实现，当前构建和测试通过不表示需求验收通过。
 
-```powershell
-cd library-frontend
-npm install
-npm run dev
-```
+## 工具版本
 
-当前候选实现的本地开发地址为 `http://localhost:5173`。构建检查：
+- Node.js `>=22.12.0 <23`；下限来自当前 Vite/Vitest 的运行要求，本地验证版本为 22.23.2。
+- npm 10.9.8，由 `packageManager` 字段固定。
+- 依赖版本由 `package-lock.json` 固定，首次安装使用 `npm ci`。
 
-```powershell
-cd library-frontend
+## 正式工程检查
+
+在本目录执行：
+
+```bash
+npm ci
+npm run lint:check
+npm run test:ci
 npm run build
 ```
 
-以上命令只描述现有工程骨架的开发方式，不批准未来技术选型、接口形式或部署方案。
+`lint:check` 不修改文件、不写 ESLint 缓存；`test:ci` 只发现 `src/**/*.test.js`，不会把本地原型当作正式 CI 输入。开发服务器使用：
 
-## 历史实现风险
+```bash
+npm run dev
+```
 
-- 多个业务 API 模块和页面仍依赖返工前的旧拼音 API、旧字段或旧响应形态；这些业务层实现原则上弃用重写，不得作为当前需求契约。
-- 认证包装、登录注册界面、罚款流程及返工前扩展功能之间存在不一致，不能以局部迁移状态推定完整系统行为。
-- 代理、令牌传输、页面结构和样式资产均只是复用候选，必须在需求基线和后续设计批准后重新评估。
-- 精确资产、风险与后续验证要求记录在工程文档入口所维护的代码复用候选台账中；该台账本身也不构成设计批准。
+默认入口为 `http://localhost:5173`。
 
-## 后续开发约束
+## 本地原型
 
-- 在需求基线建立前，不以旧接口、旧字段或旧页面行为补写需求。
-- 在总体设计、详细设计和模块设计完成相应门禁前，不把候选实现结构固化为新系统设计。
-- 新测试必须归入对应 V 模型验证层级；旧测试或构建结果不能登记为完整系统验收证据。
+`prototypes/` 是被 Git 忽略的本地演示资产，不是正式设计或 CI 输入。它们继续复用 Vue Router、Element Plus 和图标库等依赖：
 
-## 项目与工程文档入口
+```bash
+npm run demo:ai
+npm run demo:agent-loop
+npm run demo:overlays
+npx vitest run --config prototypes/tech-verification/vitest.config.js prototypes/tech-verification/click-check.test.mjs
+node prototypes/tech-verification/agent-sim.mjs
+```
 
-- [项目入口](../README.md)
-- [工程文档唯一入口](../docs/README.md)
+`npm run dev` 只启动正式工程状态页；AI 原型的 history 路由必须通过 `npm run demo:ai` 的专用 Vite 配置启动。Agent Loop 与 Overlay 使用各自列出的普通原型入口。
+
+## 容器与完整验证
+
+容器启动、前端 `/api` 代理、两轮空库与保留卷验收、CI 和证据位置见[工程基础运行与验证](../ENGINEERING.md)。
+
+## 修订记录
+
+| 日期 | 内容 |
+| --- | --- |
+| 2026-09-09 | 增加容器与完整验证入口，关联 P4/P5 配置和证据说明。 |
+| 2026-09-09 | P2 遗漏修订：Node 支持范围由过宽的 `22.x` 收紧为 `>=22.12.0 <23`；补充 AI 原型必须使用专用启动命令的入口边界。 |
+| 2026-09-09 | P2 将正式工程收敛为单一状态页，新增非修改式 lint、Vitest DOM 挂载测试和明确的正式测试发现范围；旧业务页面/API/路由移除，原型保持独立。 |
+| 2026-09-09 | AI Demo 审计返修及点击级验证完成；具体原型证据保留在 `prototypes/tech-verification/`。 |
+| 2026-09-07 | 登记 AI 助手 Demo 启动入口。 |
 
 ---
 
 > 被引用文档：
 >
-> - [根 README](../README.md)
+> - [项目入口](../README.md)
+> - [工程基础运行与验证](../ENGINEERING.md)

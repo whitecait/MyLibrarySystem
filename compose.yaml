@@ -1,0 +1,46 @@
+services:
+  database:
+    # PostgreSQL 17.6-bookworm, shared with PostgresInfrastructureTest.
+    image: postgres:17.6-bookworm@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3
+    environment:
+      POSTGRES_DB: library
+      POSTGRES_USER: library
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env or the environment}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U library -d library']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  backend:
+    image: mls-backend:foundation
+    build: ./library-server
+    environment:
+      DB_URL: jdbc:postgresql://database:5432/library
+      DB_USERNAME: library
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env or the environment}
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, 'curl --fail --silent http://localhost:8080/api/health | grep -q UP']
+      interval: 3s
+      timeout: 3s
+      retries: 40
+      start_period: 15s
+  frontend:
+    image: mls-frontend:foundation
+    build: ./library-frontend
+    ports:
+      - '127.0.0.1:${FRONTEND_PORT:-8088}:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, 'wget -q -O /dev/null http://127.0.0.1/']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  database:

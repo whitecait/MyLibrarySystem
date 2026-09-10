@@ -1,76 +1,63 @@
-# library-server - Spring Boot Backend
-
-本目录保存 MyLibrarySystem 后端候选实现。项目正在按照 V 模型从需求分析阶段重新建立基线，[`docs/README.md`](../docs/README.md) 是工程文档唯一入口；`MLS-DOC-RA-0001.md v1.0` 只是已批准的阶段组织方案，不是最终需求基线。
-
-当前需求基线为 `Not established`，验收尚未执行。本目录中的工程骨架与实现只可作为直接复用、重构复用或弃用重写的候选，不能作为新需求来源，也不能被解释为当前需求契约。
-
-## 当前候选实现的开发说明
-
-开发环境启动：
-
-```powershell
-cd library-server
-.\mvnw.cmd spring-boot:run
-```
-
-当前候选实现提供以下本地开发入口；它们不是新系统已批准的外部接口或部署要求：
-
-- Swagger UI：`http://localhost:8080/api/swagger-ui.html`
-- H2 console：`http://localhost:8080/api/h2-console`
-
-使用现有 `prod` 配置进行本地检查：
-
-```powershell
-cd library-server
-.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=prod
-```
-
-运行现有自动化测试：
-
-```powershell
-cd library-server
-.\mvnw.cmd test
-```
-
-现有测试只可作为历史行为和特征测试参考。其通过结果不能替代新需求的分层测试，也不能登记为完整系统验收结果。
-
-## 当前代码结构
-
-```text
-src/main/java/com/library/
-|-- LibraryApplication.java
-|-- common/
-|-- config/
-|-- controller/
-|-- dto/
-|-- entity/
-|-- exception/
-|-- repository/
-|-- security/
+# library-server — Spring Boot 工程骨架
 
 > 引用文档：
 >
+> - [项目入口](../README.md)
+> - [工程基础运行与验证](../ENGINEERING.md)
 > - [工程文档唯一入口](../docs/README.md)
-> - [根 README](../README.md)
-`-- service/
+> - [B1-A/B1-B 工程基础行动计划](../HANDOFF-B1-PLAN.md)
+
+本目录当前只包含 Java 21、Spring Boot Web/JDBC、PostgreSQL JDBC 与 Flyway 的最小后端骨架。唯一应用接口是工程健康探针 `GET /api/health`；旧认证、馆藏、流通和罚款实现已从构建输入中移除。该接口属于工程验证入口，不表示业务 API 已设计或批准。
+
+## 工具和配置
+
+- Eclipse Temurin JDK 21；本地验证版本为 21.0.12.1 LTS。
+- Maven Wrapper 3.9.9。
+- Spring Boot 3.5.0。
+- `application.yml` 不包含真实凭据，通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 和 `SERVER_PORT` 覆盖本地默认值。
+- Flyway location 固定为 `classpath:db/infra-migration`；已包含 `R__infrastructure_probe.sql`（`SELECT 1;`），不占用正式 V1。
+
+## 构建与测试
+
+在本目录执行：
+
+```bash
+./mvnw -B -ntp verify
 ```
 
-结构清单仅用于定位现有候选资产，不批准未来的子系统、构件、模块、接口或数据设计。
+`verify` 自动发现 MVC 测试和 `PostgresInfrastructureTest`。后者要求当前环境可访问 Linux Docker 引擎，首次运行需要网络下载依赖和镜像；无 Docker 时直接失败。测试使用独立容器和随机端口，不连接默认开发库，覆盖真实 PostgreSQL、Flyway 历史与重复执行、隔离库 checksum 负例及应用 HTTP 健康接口。
 
-## 历史实现风险
+当前验证状态：2026-09-09 的 `./mvnw -B -ntp clean verify` 通过，4 项 PostgreSQL 集成测试与 1 项 MVC 测试，零失败、零错误、零跳过。报告位于 `target/surefire-reports/`。P3 已通过，Compose 与 CI 尚未验收。
 
-- 现有认证、馆藏、流通和罚款实现可能包含返工前的对象粒度、接口语义、固定业务规则或安全假设，必须在需求基线建立后逐项复核。
-- `arc/` 下的旧拼音 API、旧字段、旧数据库和旧脚手架已归档弃用，不得进入新实现基线。
-- 固定密钥、数据库口令、自动更新表结构和开放式跨域等不安全配置不得继承。
-- 精确资产、风险与后续验证要求记录在工程文档入口所维护的代码复用候选台账中；该台账本身也不构成设计批准。
+测试固定官方 PostgreSQL `17.6-bookworm` 的摘要：`postgres@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3`。Testcontainers 使用 1.21.4，覆盖 Boot BOM 的 1.21.0 以兼容 Docker 29；Flyway 11.7.2 仍由 Boot BOM 管理。测试不使用 Mockito，已排除相关依赖。checksum 的 V1 夹具仅在测试资源与隔离测试库中使用，不打入应用 jar。
 
-## 项目与工程文档入口
+连接可用 PostgreSQL 后启动：
 
-- [项目入口](../README.md)
-- [工程文档唯一入口](../docs/README.md)
+```bash
+DB_URL=jdbc:postgresql://localhost:5432/library \
+DB_USERNAME=library \
+DB_PASSWORD=library \
+./mvnw spring-boot:run
+```
+
+默认健康地址为 `http://localhost:8080/api/health`。
+
+## 容器与完整验证
+
+容器启动、前端 `/api` 代理、两轮空库与保留卷验收、CI 和证据位置见[工程基础运行与验证](../ENGINEERING.md)。
+
+## 修订记录
+
+| 日期 | 内容 |
+| --- | --- |
+| 2026-09-09 | 增加容器与完整验证入口，关联 P4/P5 配置和证据说明。 |
+| 2026-09-09 | P3 验收通过：记录固定镜像摘要、Testcontainers 兼容版本、5/5 测试结果与测试夹具隔离；移除闲置 Mockito 依赖。 |
+| 2026-09-09 | P3 新增迁移、Testcontainers 与隔离 checksum 夹具；记录 Docker 阻塞及尚未通过的验收状态。 |
+| 2026-09-09 | P2 删除旧业务实现和旧业务测试，编译目标统一为 Java 21，建立 Web/JDBC/PostgreSQL/Flyway 骨架与健康接口 MVC 测试。 |
 
 ---
 
 > 被引用文档：
 >
-> - [根 README](../README.md)
+> - [项目入口](../README.md)
+> - [工程基础运行与验证](../ENGINEERING.md)
