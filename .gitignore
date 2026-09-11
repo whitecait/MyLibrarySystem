@@ -79,3 +79,5 @@ library-server/src/main/resources/application-*.yml
 library-frontend/reports/
 !ENGINEERING.md
 !scripts/test-database-readiness.sh
+!scripts/check-review-docs.py
+!scripts/audit-g34-review.py

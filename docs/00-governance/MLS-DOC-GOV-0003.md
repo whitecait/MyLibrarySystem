@@ -101,7 +101,11 @@ Draft、In Review 或仅已提交的内容不得覆盖最后批准的规范性�
 
 ---
 
+修订补记（2026-09-11，不变）：原因：G3/G4 复审引用登记；提出人/检查人：Codex；影响需求/验收：无；批准人：未新增批准；结论：仅补 REV-0001 被引用关系。
+
 > 被引用文档：
+>
+> - [需求评审清单](../01-requirements/reviews/MLS-DOC-REV-0001.md)
 >
 > - [工程文档唯一入口](../README.md)
 > - [需求分析阶段工程化设计](../01-requirements/requirements/MLS-DOC-RA-0001.md)

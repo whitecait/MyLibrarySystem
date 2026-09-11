@@ -4,9 +4,9 @@
 | -------- | ----------------- |
 | 文档编号 | `MLS-DOC-RA-0014` |
 | 文档状态 | `Draft`           |
-| 文档版本 | `v0.13`           |
+| 文档版本 | `v0.16`           |
 | 编制日期 | `2026-07-13`      |
-| 最近更新 | `2026-09-08`      |
+| 最近更新 | `2026-09-11`      |
 | 适用阶段 | `需求分析`        |
 | 验证对应 | `系统验收测试`    |
 | 权威性质 | `规范性`          |
@@ -22,7 +22,7 @@
 > - [非功能需求](MLS-DOC-RA-0013.md)
 > - [系统验收条件与验收用例](../acceptance/MLS-DOC-AT-0002.md)
 
-本矩阵以“一行表示一个明确的需求到验收关系”为原则。`MLS-FR-0011` 来源于两个用例，因此保留两行关系；功能需求唯一项为 46 项（`MLS-FR-0029`~`0035` 为 AI 需求传导新增，`MLS-DEC-0010`/`0011`/`0012`；`MLS-FR-0036`~`0038` 为三线状态机传导新增，`MLS-DEC-0018`；`MLS-FR-0039` 为到馆统计口径传导新增，`MLS-DEC-0019`；`MLS-FR-0040`~`0046` 为读者页业务口径传导新增，`MLS-DEC-0016`）。业务规则、信息需求和已形成验收关系的非功能需求各选择一个直接验收关系作为主追踪入口，其他实际覆盖关系保留在验收用例正文中；验收条件定义于来源条目且指标已量化的 NFR（`MLS-OQ-0010` 至 `MLS-OQ-0015` 已关闭）在验收条件列标记为「定义于来源条目（MLS-NFR-xxx）」，不再使用 `Not assigned`；AI 相关行（`MLS-FR-0029`~`0035`、`MLS-BR-0026`~`0031`、`MLS-IR-0013`~`0015`、`MLS-NFR-AI-0001`~`0006`、`MLS-AT-0019`/`0020`）的关闭依据为 `MLS-DEC-0012`（`MLS-OQ-0016`~`0020` 已于 2026-09-06 关闭），其中呈现形态、额度计数与日志粒度相关行的现行口径另依 `MLS-DEC-0021`（2026-09-09，`MLS-OQ-0021`/`0023`/`0024` 关闭传导修订条目值，追踪关系行不变）；三线状态机相关行（`MLS-FR-0036`~`0038`、`MLS-BR-0032`~`0035`、`MLS-IR-0016`、`MLS-AT-0021`~`0023`）的批准依据为 `MLS-DEC-0018`（2026-09-08）；首页到馆统计相关行（`MLS-FR-0039`、`MLS-BR-0036`、`MLS-IR-0017`、`MLS-AT-0024`）的批准依据为 `MLS-DEC-0015`/`MLS-DEC-0019`（2026-09-08）；读者门户相关行（`MLS-FR-0040`~`0046`、`MLS-BR-0037`/`0038`）的批准依据为 `MLS-DEC-0016`（2026-09-07），其中 `MLS-FR-0044` 的排序口径另依 `MLS-DEC-0020`（2026-09-08）；AI 相关 NFR 的验收条件定义于来源条目（`MLS-DOC-RA-0013` §10），以「定义于来源条目」标记。后续 V 模型工件尚未建立，六个后续设计／测试列统一如实标记为 `Not created`。
+本矩阵以“一行表示一个明确的需求到验收关系”为原则。`MLS-FR-0011` 来源于两个用例，因此保留两行关系；功能需求唯一项为 46 项（`MLS-FR-0029`~`0035` 为 AI 需求传导新增，`MLS-DEC-0010`/`0011`/`0012`；`MLS-FR-0036`~`0038` 为三线状态机传导新增，`MLS-DEC-0018`；`MLS-FR-0039` 为到馆统计口径传导新增，`MLS-DEC-0019`；`MLS-FR-0040`~`0046` 为读者页业务口径传导新增，`MLS-DEC-0016`）。业务规则、信息需求和已形成验收关系的非功能需求各选择一个直接验收关系作为主追踪入口，其他实际覆盖关系保留在验收用例正文中；验收条件定义于来源条目且指标已量化的 NFR（`MLS-OQ-0010` 至 `MLS-OQ-0015` 已关闭）在验收条件列标记为「定义于来源条目（MLS-NFR-xxx）」，不再使用 `Not assigned`；AI 相关行（`MLS-FR-0029`~`0035`、`MLS-BR-0026`~`0031`、`MLS-IR-0013`~`0015`、`MLS-NFR-AI-0001`~`0006`、`MLS-AT-0019`/`0020`）的关闭依据为 `MLS-DEC-0012`（`MLS-OQ-0016`~`0020` 已于 2026-09-06 关闭），其中呈现形态、额度计数与日志粒度相关行的现行口径另依 `MLS-DEC-0021`（2026-09-09，`MLS-OQ-0021`/`0023`/`0024` 关闭传导修订条目值，追踪关系行不变）；三线状态机相关行（`MLS-FR-0036`~`0038`、`MLS-BR-0032`~`0035`、`MLS-IR-0016`、`MLS-AT-0021`~`0023`）的批准依据为 `MLS-DEC-0018`（2026-09-08）；首页到馆统计相关行（`MLS-FR-0039`、`MLS-BR-0036`、`MLS-IR-0017`、`MLS-AT-0024`）的批准依据为 `MLS-DEC-0015`/`MLS-DEC-0019`（2026-09-08）；读者门户相关行（`MLS-FR-0040`~`0046`、`MLS-BR-0037`/`0038`）的批准依据为 `MLS-DEC-0016`（2026-09-07），其中 `MLS-FR-0044` 的排序口径另依 `MLS-DEC-0020`（2026-09-08）；AI 相关 NFR 的验收条件定义于来源条目（`MLS-DOC-RA-0013` §10），以「定义于来源条目」标记。后续 V 模型工件尚未建立，六个后续设计／测试列统一如实标记为 `Not created`。质量签署候选相关行（`MLS-NFR-PER-0002`~`0004`、`MLS-NFR-REL-0002`、`MLS-BR-0039`~`0045`、`MLS-AC-0047`~`0049`、`MLS-AT-0029`/`0030`）的批准依据为 `MLS-DEC-0023`（2026-09-10，B1-C C2 质量签署候选确认），其中 `MLS-NFR-PER-0002` 的验收条件定义于来源条目，其余三项分别显式连接 `MLS-AC-0047`、`0048`、`0049`。
 
 | Objective ID | Use Case ID                      | Requirement ID   | Requirement Type | Acceptance Condition ID            | Acceptance Test ID               | Source Document                                      | Requirement Status | Overall Design ID | System Test ID | Detailed Design ID | Integration Test ID | Module Design ID | Unit Test ID |
 | ------------ | -------------------------------- | ---------------- | ---------------- | ---------------------------------- | -------------------------------- | ---------------------------------------------------- | ------------------ | ----------------- | -------------- | ------------------ | ------------------- | ---------------- | ------------ |
@@ -143,6 +143,17 @@
 | MLS-OBJ-0002 | MLS-UC-0015                      | MLS-FR-0046      | Functional       | MLS-AC-0046                        | MLS-AT-0015                      | docs/01-requirements/requirements/MLS-DOC-RA-0010.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0002 | MLS-UC-0001                      | MLS-BR-0037      | Business rule    | MLS-AC-0041                        | MLS-AT-0001                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0002 | MLS-UC-0015                      | MLS-BR-0038      | Business rule    | MLS-AC-0046                        | MLS-AT-0015                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0002 | MLS-UC-0006                      | MLS-NFR-PER-0002 | Nonfunctional    | 定义于来源条目（MLS-NFR-PER-0002） | MLS-AT-0016                      | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0002 | MLS-UC-0001                      | MLS-NFR-PER-0003 | Nonfunctional    | MLS-AC-0047 | MLS-AT-0029                      | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0002 | MLS-UC-0001                      | MLS-NFR-PER-0004 | Nonfunctional    | MLS-AC-0048 | MLS-AT-0029                      | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0015                      | MLS-NFR-REL-0002 | Nonfunctional    | MLS-AC-0049 | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0013.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0006                      | MLS-BR-0039      | Business rule    | MLS-AC-0049                        | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0015                      | MLS-BR-0040      | Business rule    | MLS-AC-0049                        | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0015                      | MLS-BR-0041      | Business rule    | MLS-AC-0049                        | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0004 | MLS-UC-0010                      | MLS-BR-0042      | Business rule    | MLS-AC-0049                        | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0015                      | MLS-BR-0043      | Business rule    | MLS-AC-0049                        | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0007                      | MLS-BR-0044      | Business rule    | MLS-AC-0049                        | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0002 | MLS-UC-0015                      | MLS-BR-0045      | Business rule    | MLS-AC-0049                        | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 
 ## 双向检查规则
 
@@ -151,10 +162,67 @@
 - NFR 的验收条件直接定义在 NFR 来源条目中，不借用语义不相符的 FR 专属 AC；`MLS-OQ-0010` 至 `MLS-OQ-0015` 已关闭且指标已量化，矩阵中以「定义于来源条目（MLS-NFR-xxx）」标记，不再使用 `Not assigned`。
 - 后续总体设计、系统测试、详细设计、集成测试、模块设计和单元测试关系只在相应阶段建立后更新。
 
+
+## 本轮独立条款到验收检查点（G34-F06）
+
+原需求 ID 及主表关系保留；下表逐条定位来源义务与 AT 内独立检查点。条款定位不属于新的 MLS 工件 ID，不能覆盖来源正文。验收报告须分别记录每个条款，所有条款通过后才能汇总对应需求通过。
+
+| 来源条款 | 验收条件 | 验收用例及同名检查点 |
+| --- | --- | --- |
+| [MLS-FR-0028 C01](MLS-DOC-RA-0010.md#fr-0028-c01) | MLS-AC-0028 | MLS-AT-0015 / C01 |
+| [MLS-FR-0028 C02](MLS-DOC-RA-0010.md#fr-0028-c02) | MLS-AC-0028 | MLS-AT-0015 / C02 |
+| [MLS-FR-0028 C03](MLS-DOC-RA-0010.md#fr-0028-c03) | MLS-AC-0028 | MLS-AT-0015 / C03 |
+| [MLS-FR-0028 C04](MLS-DOC-RA-0010.md#fr-0028-c04) | MLS-AC-0028 | MLS-AT-0015 / C04 |
+| [MLS-FR-0028 C05](MLS-DOC-RA-0010.md#fr-0028-c05) | MLS-AC-0028 | MLS-AT-0015 / C05 |
+| [MLS-FR-0028 C06](MLS-DOC-RA-0010.md#fr-0028-c06) | MLS-AC-0028 | MLS-AT-0015 / C06 |
+| [MLS-FR-0028 C07](MLS-DOC-RA-0010.md#fr-0028-c07) | MLS-AC-0028 | MLS-AT-0015 / C07 |
+| [MLS-FR-0028 C08](MLS-DOC-RA-0010.md#fr-0028-c08) | MLS-AC-0028 | MLS-AT-0015 / C08 |
+| [MLS-FR-0028 C09](MLS-DOC-RA-0010.md#fr-0028-c09) | MLS-AC-0028 | MLS-AT-0015 / C09 |
+| [MLS-FR-0028 C10](MLS-DOC-RA-0010.md#fr-0028-c10) | MLS-AC-0028 | MLS-AT-0015 / C10 |
+| [MLS-FR-0028 C11](MLS-DOC-RA-0010.md#fr-0028-c11) | MLS-AC-0028 | MLS-AT-0015 / C11 |
+| [MLS-FR-0028 C12](MLS-DOC-RA-0010.md#fr-0028-c12) | MLS-AC-0028 | MLS-AT-0015 / C12 |
+| [MLS-FR-0028 C13](MLS-DOC-RA-0010.md#fr-0028-c13) | MLS-AC-0028 | MLS-AT-0015 / C13 |
+| [MLS-FR-0028 C14](MLS-DOC-RA-0010.md#fr-0028-c14) | MLS-AC-0028 | MLS-AT-0015 / C14 |
+| [MLS-FR-0028 C15](MLS-DOC-RA-0010.md#fr-0028-c15) | MLS-AC-0028 | MLS-AT-0015 / C15 |
+| [MLS-FR-0036 C01](MLS-DOC-RA-0010.md#fr-0036-c01) | MLS-AC-0036 | MLS-AT-0021 / C01 |
+| [MLS-FR-0036 C02](MLS-DOC-RA-0010.md#fr-0036-c02) | MLS-AC-0036 | MLS-AT-0021 / C02 |
+| [MLS-FR-0036 C03](MLS-DOC-RA-0010.md#fr-0036-c03) | MLS-AC-0036 | MLS-AT-0021 / C03 |
+| [MLS-FR-0036 C04](MLS-DOC-RA-0010.md#fr-0036-c04) | MLS-AC-0036 | MLS-AT-0021 / C04 |
+| [MLS-FR-0036 C05](MLS-DOC-RA-0010.md#fr-0036-c05) | MLS-AC-0036 | MLS-AT-0021 / C05 |
+| [MLS-FR-0036 C06](MLS-DOC-RA-0010.md#fr-0036-c06) | MLS-AC-0036 | MLS-AT-0021 / C06 |
+| [MLS-FR-0036 C07](MLS-DOC-RA-0010.md#fr-0036-c07) | MLS-AC-0036 | MLS-AT-0021 / C07 |
+| [MLS-FR-0037 C01](MLS-DOC-RA-0010.md#fr-0037-c01) | MLS-AC-0037 | MLS-AT-0022 / C01 |
+| [MLS-FR-0037 C02](MLS-DOC-RA-0010.md#fr-0037-c02) | MLS-AC-0037 | MLS-AT-0022 / C02 |
+| [MLS-FR-0037 C03](MLS-DOC-RA-0010.md#fr-0037-c03) | MLS-AC-0037 | MLS-AT-0022 / C03 |
+| [MLS-FR-0037 C04](MLS-DOC-RA-0010.md#fr-0037-c04) | MLS-AC-0037 | MLS-AT-0022 / C04 |
+| [MLS-FR-0037 C05](MLS-DOC-RA-0010.md#fr-0037-c05) | MLS-AC-0037 | MLS-AT-0022 / C05 |
+| [MLS-FR-0037 C06](MLS-DOC-RA-0010.md#fr-0037-c06) | MLS-AC-0037 | MLS-AT-0022 / C06 |
+| [MLS-FR-0037 C07](MLS-DOC-RA-0010.md#fr-0037-c07) | MLS-AC-0037 | MLS-AT-0022 / C07 |
+| [MLS-FR-0038 C01](MLS-DOC-RA-0010.md#fr-0038-c01) | MLS-AC-0038 | MLS-AT-0023 / C01 |
+| [MLS-FR-0038 C02](MLS-DOC-RA-0010.md#fr-0038-c02) | MLS-AC-0038 | MLS-AT-0023 / C02 |
+| [MLS-FR-0038 C03](MLS-DOC-RA-0010.md#fr-0038-c03) | MLS-AC-0038 | MLS-AT-0023 / C03 |
+| [MLS-FR-0038 C04](MLS-DOC-RA-0010.md#fr-0038-c04) | MLS-AC-0038 | MLS-AT-0023 / C04 |
+| [MLS-FR-0038 C05](MLS-DOC-RA-0010.md#fr-0038-c05) | MLS-AC-0038 | MLS-AT-0023 / C05 |
+| [MLS-FR-0038 C06](MLS-DOC-RA-0010.md#fr-0038-c06) | MLS-AC-0038 | MLS-AT-0023 / C06 |
+| [MLS-FR-0038 C07](MLS-DOC-RA-0010.md#fr-0038-c07) | MLS-AC-0038 | MLS-AT-0023 / C07 |
+| [MLS-FR-0038 C08](MLS-DOC-RA-0010.md#fr-0038-c08) | MLS-AC-0038 | MLS-AT-0023 / C08 |
+| [MLS-NFR-AVL-0001 C01](MLS-DOC-RA-0013.md#nfr-avl-0001-c01) | 定义于来源条目 | MLS-AT-0018 / C01 |
+| [MLS-NFR-AVL-0001 C02](MLS-DOC-RA-0013.md#nfr-avl-0001-c02) | 定义于来源条目 | MLS-AT-0018 / C02 |
+| [MLS-NFR-AVL-0001 C03](MLS-DOC-RA-0013.md#nfr-avl-0001-c03) | 定义于来源条目 | MLS-AT-0018 / C03 |
+| [MLS-NFR-AVL-0001 C04](MLS-DOC-RA-0013.md#nfr-avl-0001-c04) | 定义于来源条目 | MLS-AT-0018 / C04 |
+| [MLS-NFR-AVL-0001 C05](MLS-DOC-RA-0013.md#nfr-avl-0001-c05) | 定义于来源条目 | MLS-AT-0018 / C05 |
+
 ## 变更记录
+
+
+| 日期 | 版本 | 变更内容 |
+| --- | --- | --- |
+| 2026-09-11 | v0.16 | 原因：用户授权接替 G34-F02～F06 修订；提出人/检查人：Codex；影响需求：无新增业务事实；影响验收：追加 42 条来源定位到现有 AC/AT 的派生索引，主表 128 行不变；修订授权：用户“由你接替修订并继续”；正式评审人/批准人：待责任人签署；结论：修订候选已登记，不代签、不激活基线。 |
 
 | 日期       | 版本 | 变更内容                                                                                                                                                                                                                                                                                    |
 | ---------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-10 | v0.15 | 补齐 C2 新增 AC 的显式追踪；128 行覆盖 235 个目标/用例/需求/AC/AT 唯一 ID，修复 AC-0047/0048 仅在说明段出现、实际矩阵行缺失的问题。 原因：C4 与 G3/G4/G5 收尾核对；提出人/检查人：Codex；影响需求与验收：仅追踪/状态/评审证据，不改变批准业务值；批准人：正式评审待 lingzz 签署；结论：据实登记，需求基线未激活。 |
+| 2026-09-10 | v0.14 | 质量签署候选传导（`MLS-DEC-0023`，2026-09-10 B1-C C2 grill 八问用户逐项采纳）：新增 11 行追踪关系——`MLS-NFR-PER-0002`/`0003`/`0004`、`MLS-NFR-REL-0002` 共 4 行（NFR 验收条件「定义于来源条目」，验收用例 `MLS-AT-0016`/`0029`/`0030`）与 `MLS-BR-0039`~`0045` 共 7 行（验收条件 `MLS-AC-0049`、验收用例 `MLS-AT-0030`，主追踪用例按条目主导流程分别登记 `MLS-UC-0006`/`0007`/`0010`/`0015`，均在 `MLS-AT-0030` 跨用例范围内）；说明段补 C2 相关行批准依据与 NFR「定义于来源条目」标记。原因：`MLS-DOC-RA-0011` v0.15/`MLS-DOC-RA-0013` v0.8 同轮新增条目需派生追踪；提出人：B1-C 行动计划 C2 执行代理（ZCode）；影响需求：无（派生追踪登记，不改写需求与验收事实）；影响验收：无；评审人/批准人：lingzz（用户，2026-09-10 采纳）；结论：矩阵行与来源工件一致，无孤立需求或无来源测试 |
 | 2026-09-09 | v0.13 | AI 口径传导说明段同步（`MLS-DEC-0021`，2026-09-09 拍板，`MLS-OQ-0021`/`0023`/`0024` 关闭）：说明段 AI 相关行批准依据补 `MLS-DEC-0021`（呈现形态、额度计数与日志粒度相关行的条目值经其传导修订，追踪关系行不变，无新增行）。原因：AI 相关行源条目同轮修订，说明段批准依据需同步；提出人：文档维护轮（ZCode，AI 产品决策与技术验证执行代理）；影响需求：无（说明段登记，矩阵行无变化）；影响验收：无；评审人/批准人：lingzz（用户，2026-09-09 决策包拍板）；结论：追踪关系与现行条目一致 |
 | 2026-09-08 | v0.12 | 通知排序口径传导（`MLS-DEC-0020`，2026-09-08 拍板）：说明段读者门户行补 `MLS-FR-0044` 排序口径另依 `MLS-DEC-0020`；矩阵行无变化。原因：`MLS-FR-0044` 排序口径经 `MLS-DEC-0020` 登记批准；提出人：文档维护轮（ZCode，`MLS-OQ-0026` 执行代理）；影响需求：无（说明段同步）；影响验收：无；评审人/批准人：lingzz（用户，2026-09-08 拍板）；结论：说明段与来源工件一致 |
 | 2026-09-08 | v0.11 | 读者页业务口径传导（`MLS-DEC-0016`，`MLS-OQ-0026` 推进）：新增 `MLS-FR-0040`~`0046`、`MLS-BR-0037`/`0038` 共 9 行追踪关系（验收条件 `MLS-AC-0040`~`0046` 与验收用例 `MLS-AT-0001`/`0015`/`0025`~`0028` 随行登记）；功能需求唯一项更新为 46 项；说明段同步 `MLS-DEC-0016` 批准依据与行范围。原因：读者页业务口径经 `MLS-DEC-0016` 登记批准后需同步派生追踪；提出人：文档维护轮（ZCode，`MLS-OQ-0026` 执行代理）；影响需求：无（派生追踪登记，不改写需求与验收事实）；影响验收：无；评审人/批准人：lingzz（用户，`MLS-DEC-0016` 2026-09-07 批准；本轮按用户 `MLS-OQ-0026` 收口指示传导，待用户审阅）；结论：矩阵行与来源工件一致，无孤立需求或无来源测试 |
