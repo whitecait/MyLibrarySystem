@@ -17,15 +17,15 @@
 
 ## 2. 静态调查事实
 
-| 检查对象 | 当前事实 | 执行影响 |
-| --- | --- | --- |
-| 工作区 | 多份文档与两个前端页面已有未提交修改 | 清理前保存完整恢复材料；不能用 HEAD 代替未提交内容 |
-| CI/容器配置 | 未发现 `.github/`、Dockerfile 或 Compose 配置 | 按新建工作流与容器配置规划；远端历史 CI 状态尚未调查 |
-| 后端 POM | Spring Boot 3.5.0、Java 17、MySQL/H2，未引入 Flyway/Testcontainers | P2 将编译目标统一为已批准的 JDK 21，并建立 PostgreSQL 最小依赖链；不顺带升级整个框架 |
-| Maven Wrapper | Maven 3.9.9，Git 中 `mvnw` 为 100755 | 无需重复修复已正确的执行位 |
-| 前端 package.json | Vue/Vite，npm 锁文件；lint 带 `--fix --cache`，无正式 test 命令 | 引入不修改文件的检查和最小页面测试 |
-| 数据库模板 | H2 默认配置、MySQL profile、Hibernate `ddl-auto: update` | 清除旧配置，让 Flyway 单独负责迁移 |
-| Git 忽略规则 | 根目录白名单；原型与 application.yml 被忽略 | 新增 CI、Compose、脚本和无秘密配置必须显式纳入追踪 |
+| 检查对象          | 当前事实                                                           | 执行影响                                                                             |
+| ----------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| 工作区            | 多份文档与两个前端页面已有未提交修改                               | 清理前保存完整恢复材料；不能用 HEAD 代替未提交内容                                   |
+| CI/容器配置       | 未发现 `.github/`、Dockerfile 或 Compose 配置                      | 按新建工作流与容器配置规划；远端历史 CI 状态尚未调查                                 |
+| 后端 POM          | Spring Boot 3.5.0、Java 17、MySQL/H2，未引入 Flyway/Testcontainers | P2 将编译目标统一为已批准的 JDK 21，并建立 PostgreSQL 最小依赖链；不顺带升级整个框架 |
+| Maven Wrapper     | Maven 3.9.9，Git 中 `mvnw` 为 100755                               | 无需重复修复已正确的执行位                                                           |
+| 前端 package.json | Vue/Vite，npm 锁文件；lint 带 `--fix --cache`，无正式 test 命令    | 引入不修改文件的检查和最小页面测试                                                   |
+| 数据库模板        | H2 默认配置、MySQL profile、Hibernate `ddl-auto: update`           | 清除旧配置，让 Flyway 单独负责迁移                                                   |
+| Git 忽略规则      | 根目录白名单；原型与 application.yml 被忽略                        | 新增 CI、Compose、脚本和无秘密配置必须显式纳入追踪                                   |
 
 这些事实来自当前工作区的配置与目录检查，不是运行故障诊断结果。Docker 仅已知由用户安装在 Windows 侧；WSL 集成是否启用尚未验证。
 
@@ -127,17 +127,17 @@ Docker CLI 能显示版本只证明客户端存在。必须能连接服务端并
 
 ### 5.3 清理边界
 
-| 处理 | 路径 | 边界说明 |
-| --- | --- | --- |
-| 保留 | 根 `README.md`、`TODO.md`、`HANDOFF*.md`、`docs/`、本地 `AGENTS.md` 与 `docs/agents/` | 文档及既有未提交修改不属于旧实现清理范围；本地代理文档继续维持不入库约束 |
-| 保留 | `library-frontend/prototypes/**` | 27 个原型文件及日志整体保护，继续被 Git 忽略；P2 后按清理前校验清单核对并执行本地入口回归 |
-| 保留 | 前端 `index.html`、`public/favicon.ico`、Vite/ESLint/格式化配置、`package.json`、`package-lock.json` | 作为启动与构建工具链；依赖按原型和最小状态页的实际用途收敛 |
-| 替换 | 前端 `src/App.vue`、`src/main.js`、`README.md`、`package.json`/锁文件、必要 lint/Vite 配置 | 改成无旧路由/API 的单一工程状态页、非修改式检查、挂载测试与构建入口 |
-| 删除 | 前端 `src/api/**`、`src/layouts/**`、`src/router/**`、`src/utils/**`、`src/views/**`、旧脚手架 `src/components/**` 与无引用 `src/assets/**` | 旧业务实现及 Vue 初始示例；两个已有页面修改已进入恢复包，删除前不再另行覆盖 |
-| 保留 | 后端 Maven Wrapper、`LibraryApplication.java`、项目目录结构 | Wrapper 版本和执行位继续沿用；启动类作为最小 Spring Boot 入口 |
-| 替换 | 后端 `pom.xml`、`README.md`、资源配置及测试集 | 收敛为 Web/JDBC/PostgreSQL/Flyway/Testcontainers 骨架、环境变量配置、健康检查及真实 PostgreSQL 验证 |
-| 删除 | 后端旧 `controller`、`service`、`entity`、`repository`、`dto`、`security`、旧异常/配置/公共响应类及对应旧业务测试 | 不修补计划全量重写的业务代码；P2/P3 用最小骨架测试替代 |
-| 修改/新增 | 根 `.gitignore`、后续 `.github/workflows/**`、Compose、Dockerfile、验证脚本与环境模板 | 逐项放行可复现工程文件；原型、秘密与个人配置仍禁止强制入库 |
+| 处理      | 路径                                                                                                                                        | 边界说明                                                                                            |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 保留      | 根 `README.md`、`TODO.md`、`HANDOFF*.md`、`docs/`、本地 `AGENTS.md` 与 `docs/agents/`                                                       | 文档及既有未提交修改不属于旧实现清理范围；本地代理文档继续维持不入库约束                            |
+| 保留      | `library-frontend/prototypes/**`                                                                                                            | 27 个原型文件及日志整体保护，继续被 Git 忽略；P2 后按清理前校验清单核对并执行本地入口回归           |
+| 保留      | 前端 `index.html`、`public/favicon.ico`、Vite/ESLint/格式化配置、`package.json`、`package-lock.json`                                        | 作为启动与构建工具链；依赖按原型和最小状态页的实际用途收敛                                          |
+| 替换      | 前端 `src/App.vue`、`src/main.js`、`README.md`、`package.json`/锁文件、必要 lint/Vite 配置                                                  | 改成无旧路由/API 的单一工程状态页、非修改式检查、挂载测试与构建入口                                 |
+| 删除      | 前端 `src/api/**`、`src/layouts/**`、`src/router/**`、`src/utils/**`、`src/views/**`、旧脚手架 `src/components/**` 与无引用 `src/assets/**` | 旧业务实现及 Vue 初始示例；两个已有页面修改已进入恢复包，删除前不再另行覆盖                         |
+| 保留      | 后端 Maven Wrapper、`LibraryApplication.java`、项目目录结构                                                                                 | Wrapper 版本和执行位继续沿用；启动类作为最小 Spring Boot 入口                                       |
+| 替换      | 后端 `pom.xml`、`README.md`、资源配置及测试集                                                                                               | 收敛为 Web/JDBC/PostgreSQL/Flyway/Testcontainers 骨架、环境变量配置、健康检查及真实 PostgreSQL 验证 |
+| 删除      | 后端旧 `controller`、`service`、`entity`、`repository`、`dto`、`security`、旧异常/配置/公共响应类及对应旧业务测试                           | 不修补计划全量重写的业务代码；P2/P3 用最小骨架测试替代                                              |
+| 修改/新增 | 根 `.gitignore`、后续 `.github/workflows/**`、Compose、Dockerfile、验证脚本与环境模板                                                       | 逐项放行可复现工程文件；原型、秘密与个人配置仍禁止强制入库                                          |
 
 P0 通过：恢复材料覆盖已追踪差异、未追踪计划、被忽略原型和个人配置；归档可读且校验通过；原型依赖与逐路径清理边界已明确。P0 未执行任何删除、安装、构建、测试或容器操作。
 
@@ -145,14 +145,14 @@ P0 通过：恢复材料覆盖已追踪差异、未追踪计划、被忽略原�
 
 ### 6.1 工具与引擎版本
 
-| 对象 | 实测值 |
-| --- | --- |
-| WSL | Ubuntu 24.04.4 LTS；Linux `6.18.33.2-microsoft-standard-WSL2`；`x86_64` |
-| Java | Eclipse Temurin OpenJDK `21.0.12.1` LTS |
-| Maven Wrapper | Apache Maven `3.9.9`，由 `library-server/mvnw` 启动并使用上述 JDK 21 |
-| Node.js / npm | Node.js `v22.23.2`；npm `10.9.8` |
-| Docker | Client/Engine `29.5.3`；Docker Desktop `4.77.0 (228796)`；Linux `x86_64`；containerd `v2.2.4`；runc `1.3.5` |
-| Compose | Docker Compose `v5.1.4` |
+| 对象          | 实测值                                                                                                      |
+| ------------- | ----------------------------------------------------------------------------------------------------------- |
+| WSL           | Ubuntu 24.04.4 LTS；Linux `6.18.33.2-microsoft-standard-WSL2`；`x86_64`                                     |
+| Java          | Eclipse Temurin OpenJDK `21.0.12.1` LTS                                                                     |
+| Maven Wrapper | Apache Maven `3.9.9`，由 `library-server/mvnw` 启动并使用上述 JDK 21                                        |
+| Node.js / npm | Node.js `v22.23.2`；npm `10.9.8`                                                                            |
+| Docker        | Client/Engine `29.5.3`；Docker Desktop `4.77.0 (228796)`；Linux `x86_64`；containerd `v2.2.4`；runc `1.3.5` |
+| Compose       | Docker Compose `v5.1.4`                                                                                     |
 
 `docker info` 在用户重置 Docker 数据后显示 0 容器、0 镜像，存储驱动为 `overlayfs`、cgroup v2、32 个逻辑 CPU、约 15.2 GiB 内存；未发现引擎警告。首次在 Codex 沙箱内访问 `/var/run/docker.sock` 被权限策略拒绝，获得 Docker socket 访问授权后客户端与服务端通信正常；这是代理执行沙箱边界，不是 Docker Desktop 服务端故障。
 
@@ -210,12 +210,12 @@ P2 通过：旧业务代码不再进入前后端构建；正式前端 lint/test/
 - 完整 Spring 测试上下文会触发 starter-test 中未使用的 Mockito inline agent；已排除 `mockito-core` 与 `mockito-junit-jupiter`，测试仍走真实 HTTP/JDBC 边界。最终日志没有 Mockito 自附加或动态 agent 告警，未设置隐藏告警的 JVM 参数。
 - 最终命令：在 `library-server/` 执行 `./mvnw -B -ntp clean verify`，2026-09-09 21:54:17（America/Santiago）退出码 0，耗时 7.311 秒，生成可运行 jar。Surefire 合计 5 tests、0 failures、0 errors、0 skipped，其中 `PostgresInfrastructureTest` 4 项、`HealthControllerTest` 1 项。
 
-| 测试方法 | 通过的断言 |
-| --- | --- |
-| `connectsToRealPostgres` | 真实 DataSource 的产品名为 PostgreSQL，`SELECT 1` 返回 1 |
-| `appliesInfrastructureProbeExactlyOnceAndValidates` | 应用启动执行占位脚本；历史中指定 repeatable 脚本成功记录恰为 1；validate 成功；再次 migrate 执行数为 0，全部历史行不变 |
-| `rejectsChangedChecksumInIsolatedDatabase` | 独立 `checksum_probe` 数据库应用测试 V1 成功且原版 validate 通过；修改版 validate 返回唯一 V1 的 `CHECKSUM_MISMATCH`，migrate 抛出 `FlywayValidateException` |
-| `servesHealthFromRunningApplication` | 随机真实 HTTP 端口的 `/api/health` 返回 200 与 `{"status":"UP"}` |
+| 测试方法                                            | 通过的断言                                                                                                                                                   |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `connectsToRealPostgres`                            | 真实 DataSource 的产品名为 PostgreSQL，`SELECT 1` 返回 1                                                                                                     |
+| `appliesInfrastructureProbeExactlyOnceAndValidates` | 应用启动执行占位脚本；历史中指定 repeatable 脚本成功记录恰为 1；validate 成功；再次 migrate 执行数为 0，全部历史行不变                                       |
+| `rejectsChangedChecksumInIsolatedDatabase`          | 独立 `checksum_probe` 数据库应用测试 V1 成功且原版 validate 通过；修改版 validate 返回唯一 V1 的 `CHECKSUM_MISMATCH`，migrate 抛出 `FlywayValidateException` |
+| `servesHealthFromRunningApplication`                | 随机真实 HTTP 端口的 `/api/health` 返回 200 与 `{"status":"UP"}`                                                                                             |
 
 Surefire XML/TXT 报告位于 `library-server/target/surefire-reports/`，属于可重建产物，不入库。最终 jar 仅包含应用的 `db/infra-migration/R__infrastructure_probe.sql`，不包含 checksum 夹具或 Testcontainers 测试依赖。测试结束后按 `org.testcontainers=true` 标签检查无残留容器；新增源文件与 SQL 均未被 git 忽略，尚未暂存或提交。上一节无 Docker 时明确失败、零跳过的结果作为负向环境证据保留。
 
@@ -263,33 +263,33 @@ P4/P5 与本计划覆盖的 B1-A/B1-B 完成。B1-C 未执行，因此 B1 整体
 
 ## 8. 最终验收清单
 
-| 验收项 | 必须提供的证据 |
-| --- | --- |
-| 原型保护 | 备份校验、前后文件差异和本地原型入口检查记录 |
-| 前端 | 干净 npm ci、非修改式 lint、非零挂载测试、build 全通过 |
-| 后端 | Wrapper verify 通过、可运行 jar、非零数据库测试且无跳过 |
+| 验收项            | 必须提供的证据                                                  |
+| ----------------- | --------------------------------------------------------------- |
+| 原型保护          | 备份校验、前后文件差异和本地原型入口检查记录                    |
+| 前端              | 干净 npm ci、非修改式 lint、非零挂载测试、build 全通过          |
+| 后端              | Wrapper verify 通过、可运行 jar、非零数据库测试且无跳过         |
 | PostgreSQL/Flyway | 真实数据库连接、占位执行记录、重复运行无新增、checksum 负例通过 |
-| Compose | 空卷启动、保留卷重启、另一空卷复跑；页面及代理健康请求成功 |
-| CI | 对应同一提交的三个作业全部绿色，失败证据保留机制存在 |
-| 复现入口 | 新检出无需本地隐藏配置，按文档命令完成同样检查 |
+| Compose           | 空卷启动、保留卷重启、另一空卷复跑；页面及代理健康请求成功      |
+| CI                | 对应同一提交的三个作业全部绿色，失败证据保留机制存在            |
+| 复现入口          | 新检出无需本地隐藏配置，按文档命令完成同样检查                  |
 
 建议执行交接语：按 P0→P5 完成本计划，每个行动包通过后再推进；报告实际修改、执行命令、证据和未完成项。只在以上清单全部有证据后登记 B1-A/B1-B 完成，B1-C 与业务验收仍保持各自原状态。
 
 ## 修订记录
 
-| 日期 | 内容 |
-| --- | --- |
-| 2026-09-10 | P4/P5 收尾：修复数据库初始化期 socket 健康误报、镜像证据采集和 CI Temurin 完整版本标识；提交 `6fd8a8a` 在本地干净检出及远端三个作业全部通过，登记 B1-A/B1-B 完成并保留 B1-C/业务验收/需求门禁原状态。 |
-| 2026-09-09 | P4 三阶段 Compose 验收通过，新增容器、代理、隔离验收脚本和复现说明；P5 配置完成，干净检出与远端 CI 待验证。 |
-| 2026-09-09 | P3 恢复执行通过：固定 PostgreSQL 17.6 镜像摘要，Testcontainers 覆盖为 1.21.4 适配 Docker 29，排除闲置 Mockito；最终 clean verify 5/5 通过，零失败、零错误、零跳过，记录迁移/校验和/HTTP 与打包清理证据。P4/P5 未执行。 |
-| 2026-09-09 | P3 新增占位迁移、Testcontainers 集成测试与 checksum 测试夹具；编译通过，verify 因当前 Docker WSL 集成不可用失败，零跳过。镜像摘要与真实数据库验收未完成，P3 不登记通过。 |
-| 2026-09-09 | P0～P2 遗漏修订：真实浏览器打开并操作 Agent Loop、AI 助手、Overlay 三个入口；直接确认新增 `yield` 后事件按 5→9→12 条分步增长、运行中保持 busy、终态解除 busy 并恢复按钮，另完成 AI 登录续行与 Overlay 模态/Snackbar 撤销链。Node engines 由 `22.x` 收紧为 `>=22.12.0 <23`，同步 README 与锁文件根元数据。 |
+| 日期       | 内容                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-10 | P4/P5 收尾：修复数据库初始化期 socket 健康误报、镜像证据采集和 CI Temurin 完整版本标识；提交 `6fd8a8a` 在本地干净检出及远端三个作业全部通过，登记 B1-A/B1-B 完成并保留 B1-C/业务验收/需求门禁原状态。                                                                                                                                                                                             |
+| 2026-09-09 | P4 三阶段 Compose 验收通过，新增容器、代理、隔离验收脚本和复现说明；P5 配置完成，干净检出与远端 CI 待验证。                                                                                                                                                                                                                                                                                       |
+| 2026-09-09 | P3 恢复执行通过：固定 PostgreSQL 17.6 镜像摘要，Testcontainers 覆盖为 1.21.4 适配 Docker 29，排除闲置 Mockito；最终 clean verify 5/5 通过，零失败、零错误、零跳过，记录迁移/校验和/HTTP 与打包清理证据。P4/P5 未执行。                                                                                                                                                                            |
+| 2026-09-09 | P3 新增占位迁移、Testcontainers 集成测试与 checksum 测试夹具；编译通过，verify 因当前 Docker WSL 集成不可用失败，零跳过。镜像摘要与真实数据库验收未完成，P3 不登记通过。                                                                                                                                                                                                                          |
+| 2026-09-09 | P0～P2 遗漏修订：真实浏览器打开并操作 Agent Loop、AI 助手、Overlay 三个入口；直接确认新增 `yield` 后事件按 5→9→12 条分步增长、运行中保持 busy、终态解除 busy 并恢复按钮，另完成 AI 登录续行与 Overlay 模态/Snackbar 撤销链。Node engines 由 `22.x` 收紧为 `>=22.12.0 <23`，同步 README 与锁文件根元数据。                                                                                         |
 | 2026-09-09 | 执行 P2：按已批准边界清理旧前后端业务实现，以 TDD 红—绿切片建立 Vue 状态页挂载测试和 Spring MVC 健康接口测试；编译目标统一 Java 21，建立 PostgreSQL/Flyway 依赖与无秘密环境变量配置；正式 lint/test/build、后端 clean verify、三原型构建、点击回归 7/7、Agent 验证 70/70 均通过。Vitest 2 审计发现的 5 项漏洞通过显式升级 Vitest 5 收口为 0；原型仅有 generator `yield` 预期修复。P3～P5 未执行。 |
-| 2026-09-09 | 用户批准工程工具链统一使用已有 JDK 21；环境方案改为 JDK 21，P2 负责把 Maven 编译目标从 Java 17 改为 21，P4/P5 的构建镜像与 CI 同步使用 JDK 21。 |
-| 2026-09-09 | P1 收尾核验发现首次 P0 `/tmp` 恢复目录已被执行环境清理；立即在 Windows 文档目录重建当前工作区归档、差异补丁与 27 文件原型校验清单，并重新通过 SHA-256 和归档可读性验证。旧 `/tmp` 路径作废。 |
-| 2026-09-09 | 执行 P1：记录 WSL、JDK/Maven、Node/npm、Docker Desktop/Engine 与 Compose 版本；在 Docker 数据重置后的空环境成功运行并自动移除 `alpine:3.22` 一次性容器，登记不可变镜像摘要。确认 Docker 链路正常；当时尚待统一的 Java 版本随后由本表上方决策收口。 |
-| 2026-09-09 | 执行 P0：记录提交与工作区状态，建立仓库外恢复归档、二进制补丁和原型校验清单并验证可读性；核对原型无正式 `src`/共享资源引用，登记保留、删除、替换边界。P1～P5 未执行。 |
-| 2026-09-09 | 基于用户本轮清理与工程基础要求出版初版；完成静态调查，未执行清理、安装、构建、测试或远端操作。 |
+| 2026-09-09 | 用户批准工程工具链统一使用已有 JDK 21；环境方案改为 JDK 21，P2 负责把 Maven 编译目标从 Java 17 改为 21，P4/P5 的构建镜像与 CI 同步使用 JDK 21。                                                                                                                                                                                                                                                   |
+| 2026-09-09 | P1 收尾核验发现首次 P0 `/tmp` 恢复目录已被执行环境清理；立即在 Windows 文档目录重建当前工作区归档、差异补丁与 27 文件原型校验清单，并重新通过 SHA-256 和归档可读性验证。旧 `/tmp` 路径作废。                                                                                                                                                                                                      |
+| 2026-09-09 | 执行 P1：记录 WSL、JDK/Maven、Node/npm、Docker Desktop/Engine 与 Compose 版本；在 Docker 数据重置后的空环境成功运行并自动移除 `alpine:3.22` 一次性容器，登记不可变镜像摘要。确认 Docker 链路正常；当时尚待统一的 Java 版本随后由本表上方决策收口。                                                                                                                                                |
+| 2026-09-09 | 执行 P0：记录提交与工作区状态，建立仓库外恢复归档、二进制补丁和原型校验清单并验证可读性；核对原型无正式 `src`/共享资源引用，登记保留、删除、替换边界。P1～P5 未执行。                                                                                                                                                                                                                             |
+| 2026-09-09 | 基于用户本轮清理与工程基础要求出版初版；完成静态调查，未执行清理、安装、构建、测试或远端操作。                                                                                                                                                                                                                                                                                                    |
 
 > 被引用文档：
 >
