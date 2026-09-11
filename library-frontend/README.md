@@ -5,7 +5,7 @@
 > - [项目入口](../README.md)
 > - [工程基础运行与验证](../ENGINEERING.md)
 > - [工程文档唯一入口](../docs/README.md)
-> - [B1-A/B1-B 工程基础行动计划](../HANDOFF-B1-PLAN.md)
+> - [B1-A/B1-B 工程基础行动计划](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-B1-PLAN.md)
 
 本目录当前只包含 Vue 3、Vite 和 Vitest 的最小工程状态页。旧业务页面、路由和 API 已从构建输入中移除；业务功能尚未实现，当前构建和测试通过不表示需求验收通过。
 
@@ -63,6 +63,9 @@ node prototypes/tech-verification/agent-sim.mjs
 | 2026-09-07 | 登记 AI 助手 Demo 启动入口。 |
 
 ---
+
+
+- 2026-09-11：按用户要求清理过时交接文档，历史引用固定至提交 `3181a9f`；仅维护引用位置，不改变需求、业务值或既有批准结论。
 
 > 被引用文档：
 >

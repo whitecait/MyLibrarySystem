@@ -31,7 +31,7 @@
 > - [非功能需求](../requirements/MLS-DOC-RA-0013.md)
 > - [工程决策日志](../../00-governance/MLS-DOC-GOV-0005.md)
 > - [需求基线记录](MLS-DOC-REV-0002.md)
-> - [C4 收尾报告](../../../HANDOFF-C4-REVIEW.md)
+> - [C4 收尾报告](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-C4-REVIEW.md)
 
 ## 使用规则
 
@@ -296,6 +296,9 @@ D-1~D-4 经 grill 补齐并登记 `MLS-DEC-0025`（2026-09-10，`GOV-0005` v0.20
 | 2026-09-05 | 不变 | 纯链接修复：RA-0003 迁入 `requirements/` 后更新相对路径；内容无变化                                                                                                                                                 |
 
 ---
+
+
+- 2026-09-11：按用户要求清理过时交接文档，历史引用固定至提交 `3181a9f`；仅维护引用位置，不改变需求、业务值或既有批准结论。
 
 > 被引用文档：
 >

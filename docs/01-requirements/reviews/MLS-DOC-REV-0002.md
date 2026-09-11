@@ -21,7 +21,7 @@
 > - [系统验收执行报告登记册](../acceptance/MLS-DOC-AT-0003.md)
 > - [工程决策日志](../../00-governance/MLS-DOC-GOV-0005.md)
 > - [需求评审清单](MLS-DOC-REV-0001.md)
-> - [C4 收尾报告](../../../HANDOFF-C4-REVIEW.md)
+> - [C4 收尾报告](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-C4-REVIEW.md)
 
 ## 当前状态
 
@@ -220,9 +220,16 @@ G5 激活已于 2026-09-11 完成：本记录列明了逐份工件 ID、精确�
 
 ---
 
+
+- 2026-09-11：按用户要求清理过时交接文档，历史引用固定至提交 `3181a9f`；仅维护引用位置，不改变需求、业务值或既有批准结论。
+
 > 被引用文档：
 >
 > - [MyLibrarySystem](../../../README.md)
 > - [需求分析阶段工程化设计](../requirements/MLS-DOC-RA-0001.md)
 > - [需求与验收双向追踪矩阵](../requirements/MLS-DOC-RA-0014.md)
 > - [需求评审清单](MLS-DOC-REV-0001.md)
+
+> - [阶段入口 MLS-DOC-OD-0001](../../02-overall-design/MLS-DOC-OD-0001.md)
+> - [阶段入口 MLS-DOC-DD-0001](../../03-detailed-design/MLS-DOC-DD-0001.md)
+> - [阶段入口 MLS-DOC-MD-0001](../../04-module-design/MLS-DOC-MD-0001.md)

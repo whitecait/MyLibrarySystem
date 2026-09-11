@@ -4,7 +4,7 @@
 >
 > - [前端工程说明](library-frontend/README.md)
 > - [后端工程说明](library-server/README.md)
-> - [工程基础行动计划](HANDOFF-B1-PLAN.md)
+> - [工程基础行动计划](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-B1-PLAN.md)
 
 本入口用于最小 Vue 状态页、Spring 健康接口及 PostgreSQL/Flyway 基础设施验证，不包含业务功能或业务验收。
 
@@ -86,9 +86,14 @@ docker compose -p mls-dev down
 | 2026-09-09 | 干净检出发现数据库初始化期 socket 健康误报；检查改为 TCP 并加入直接执行 Compose 健康命令的回归测试。                                                          |
 | 2026-09-09 | 新增工程基础命令、容器环境、验收隔离与证据说明、CI 触发及报告约定。                                                                                           |
 
+
+- 2026-09-11：按用户要求清理过时交接文档，历史引用固定至提交 `3181a9f`；仅维护引用位置，不改变需求、业务值或既有批准结论。
+
 > 被引用文档：
+>
+> - [当前交接记录](HANDOFF.md)
 >
 > - [项目入口](README.md)
 > - [前端工程说明](library-frontend/README.md)
 > - [后端工程说明](library-server/README.md)
-> - [工程基础行动计划](HANDOFF-B1-PLAN.md)
+> - [工程基础行动计划](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-B1-PLAN.md)

@@ -5,7 +5,7 @@
 > - [项目入口](../README.md)
 > - [工程基础运行与验证](../ENGINEERING.md)
 > - [工程文档唯一入口](../docs/README.md)
-> - [B1-A/B1-B 工程基础行动计划](../HANDOFF-B1-PLAN.md)
+> - [B1-A/B1-B 工程基础行动计划](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-B1-PLAN.md)
 
 本目录当前只包含 Java 21、Spring Boot Web/JDBC、PostgreSQL JDBC 与 Flyway 的最小后端骨架。唯一应用接口是工程健康探针 `GET /api/health`；旧认证、馆藏、流通和罚款实现已从构建输入中移除。该接口属于工程验证入口，不表示业务 API 已设计或批准。
 
@@ -57,6 +57,9 @@ DB_PASSWORD=library \
 | 2026-09-09 | P2 删除旧业务实现和旧业务测试，编译目标统一为 Java 21，建立 Web/JDBC/PostgreSQL/Flyway 骨架与健康接口 MVC 测试。 |
 
 ---
+
+
+- 2026-09-11：按用户要求清理过时交接文档，历史引用固定至提交 `3181a9f`；仅维护引用位置，不改变需求、业务值或既有批准结论。
 
 > 被引用文档：
 >
