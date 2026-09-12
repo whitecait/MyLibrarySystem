@@ -4,7 +4,7 @@
 | -------- | ------------------------------------------------ |
 | 文档编号 | `MLS-DOC-GOV-0000`                               |
 | 文档状态 | `Draft`                                          |
-| 文档版本 | `v0.24`                                          |
+| 文档版本 | `v0.25`                                          |
 | 编制日期 | `2026-07-13`                                     |
 | 最近更新 | `2026-09-11`                                     |
 | 适用阶段 | 需求分析                                         |
@@ -12,6 +12,10 @@
 | 权威性质 | 工程文档唯一入口；经批准的规范性工件由本入口导航 |
 
 > 引用文档：
+>
+> - [核心流通场景因果与交互分析](02-overall-design/MLS-DOC-OD-0003.md)
+>
+> - [模块关系与 4+1 视图草图](02-overall-design/MLS-DOC-OD-0002.md)
 >
 > - 治理规则：[MLS-DOC-GOV-0001](00-governance/MLS-DOC-GOV-0001.md) 至 [MLS-DOC-GOV-0007](00-governance/MLS-DOC-GOV-0007.md)
 > - 需求分析阶段：[MLS-DOC-RA-0001](01-requirements/requirements/MLS-DOC-RA-0001.md)、[MLS-DOC-RA-0002](01-requirements/requirements/MLS-DOC-RA-0002.md)、[MLS-DOC-RA-0003](01-requirements/requirements/MLS-DOC-RA-0003.md)、[MLS-DOC-RA-0004](01-requirements/requirements/MLS-DOC-RA-0004.md)、[MLS-DOC-RA-0005](01-requirements/requirements/MLS-DOC-RA-0005.md)、[MLS-DOC-RA-0006](01-requirements/requirements/MLS-DOC-RA-0006.md)、[MLS-DOC-RA-0007](01-requirements/requirements/MLS-DOC-RA-0007.md)、[MLS-DOC-RA-0008](01-requirements/requirements/MLS-DOC-RA-0008.md)、[MLS-DOC-RA-0009](01-requirements/requirements/MLS-DOC-RA-0009.md)、[MLS-DOC-RA-0010](01-requirements/requirements/MLS-DOC-RA-0010.md)、[MLS-DOC-RA-0011](01-requirements/requirements/MLS-DOC-RA-0011.md)、[MLS-DOC-RA-0012](01-requirements/requirements/MLS-DOC-RA-0012.md)、[MLS-DOC-RA-0013](01-requirements/requirements/MLS-DOC-RA-0013.md)、[MLS-DOC-RA-0014](01-requirements/requirements/MLS-DOC-RA-0014.md)、[MLS-DOC-RA-0015](01-requirements/requirements/MLS-DOC-RA-0015.md)、[MLS-DOC-AT-0001](01-requirements/acceptance/MLS-DOC-AT-0001.md)、[MLS-DOC-AT-0002](01-requirements/acceptance/MLS-DOC-AT-0002.md)、[MLS-DOC-AT-0003](01-requirements/acceptance/MLS-DOC-AT-0003.md)、[MLS-DOC-EVD-0001](01-requirements/evidence/MLS-DOC-EVD-0001.md)、[MLS-DOC-EVD-0002](01-requirements/evidence/MLS-DOC-EVD-0002.md)、[MLS-DOC-REV-0001](01-requirements/reviews/MLS-DOC-REV-0001.md)、[MLS-DOC-REV-0002](01-requirements/reviews/MLS-DOC-REV-0002.md)
@@ -177,6 +181,8 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 | 文档编号          | 标题                                                     | 状态    |
 | ----------------- | -------------------------------------------------------- | ------- |
 | `MLS-DOC-OD-0001` | [总体设计阶段入口](02-overall-design/MLS-DOC-OD-0001.md) | `Draft` |
+| `MLS-DOC-OD-0002` | [模块关系与 4+1 视图草图](02-overall-design/MLS-DOC-OD-0002.md) | `Draft` |
+| `MLS-DOC-OD-0003` | [核心流通场景因果与交互分析](02-overall-design/MLS-DOC-OD-0003.md) | `Draft` |
 
 ### 详细设计阶段 (03-detailed-design)
 
@@ -226,6 +232,10 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 | 2026-07-13 | v0.1  | 初稿                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 ---
+
+- 2026-09-11：维护基线新增 OD-0002（Draft），登记模块关系与五类视图草图；仅代表工件已建立，未通过设计评审。
+
+- 2026-09-11（v0.25）：登记 OD-0002 与 OD-0003 设计分析工件及当前导航，均为 Draft；用户逐项确认不等同完整设计批准。
 
 > 被引用文档：
 >
