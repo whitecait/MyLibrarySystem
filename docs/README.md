@@ -4,7 +4,7 @@
 | -------- | ------------------------------------------------ |
 | 文档编号 | `MLS-DOC-GOV-0000`                               |
 | 文档状态 | `Draft`                                          |
-| 文档版本 | `v0.25`                                          |
+| 文档版本 | `v0.26`                                          |
 | 编制日期 | `2026-07-13`                                     |
 | 最近更新 | `2026-09-11`                                     |
 | 适用阶段 | 需求分析                                         |
@@ -14,6 +14,8 @@
 > 引用文档：
 >
 > - [核心流通场景因果与交互分析](02-overall-design/MLS-DOC-OD-0003.md)
+>
+> - [系统测试设计](02-overall-design/MLS-DOC-OD-0004.md)
 >
 > - [模块关系与 4+1 视图草图](02-overall-design/MLS-DOC-OD-0002.md)
 >
@@ -90,7 +92,7 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 4. 规范内容：`MLS-DOC-RA-0003` → `MLS-DOC-RA-0004` 至 `MLS-DOC-RA-0007` → `MLS-DOC-RA-0008` 至 `MLS-DOC-RA-0013`。
 5. 验收与追踪：`MLS-DOC-AT-0001` → `MLS-DOC-AT-0002` → `MLS-DOC-RA-0014` → `MLS-DOC-AT-0003`。
 6. 评审与基线：`MLS-DOC-REV-0001` → `MLS-DOC-REV-0002`。
-7. `evidence/` 按需读取；`02-overall-design/`、`03-detailed-design/`、`04-module-design/` 当前仅包含阶段入口文档。
+7. `evidence/` 按需读取；`02-overall-design/` 已含 M3 交付物（OD-0002/0003/0004 与评审 REV-0003）；`03-detailed-design/`、`04-module-design/` 当前仅包含阶段入口文档。
 
 ## V 模型四阶段导航
 
@@ -183,6 +185,8 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 | `MLS-DOC-OD-0001` | [总体设计阶段入口](02-overall-design/MLS-DOC-OD-0001.md) | `Draft` |
 | `MLS-DOC-OD-0002` | [模块关系与 4+1 视图草图](02-overall-design/MLS-DOC-OD-0002.md) | `Draft` |
 | `MLS-DOC-OD-0003` | [核心流通场景因果与交互分析](02-overall-design/MLS-DOC-OD-0003.md) | `Draft` |
+| `MLS-DOC-OD-0004` | [系统测试设计](02-overall-design/MLS-DOC-OD-0004.md) | `Draft` |
+| `MLS-DOC-REV-0003` | [总体设计评审记录](02-overall-design/reviews/MLS-DOC-REV-0003.md) | `Approved` |
 
 ### 详细设计阶段 (03-detailed-design)
 
@@ -234,6 +238,8 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 ---
 
 - 2026-09-11：维护基线新增 OD-0002（Draft），登记模块关系与五类视图草图；仅代表工件已建立，未通过设计评审。
+
+- 2026-09-12（v0.26）：维护基线新增 OD-0004（系统测试设计，Draft）与 REV-0003（总体设计评审记录，Approved——OD 评审通过，lingzz 授权 Zcode 代录 2026-09-12）；导航句同步 M3 交付物现状。仅登记工件建立与评审事实，不改变需求基线内容。
 
 - 2026-09-11（v0.25）：登记 OD-0002 与 OD-0003 设计分析工件及当前导航，均为 Draft；用户逐项确认不等同完整设计批准。
 
