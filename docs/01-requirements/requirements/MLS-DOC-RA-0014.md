@@ -4,7 +4,7 @@
 | -------- | ----------------- |
 | 文档编号 | `MLS-DOC-RA-0014` |
 | 文档状态 | `Approved`           |
-| 文档版本 | `v0.16`           |
+| 文档版本 | `v0.17`           |
 | 编制日期 | `2026-07-13`      |
 | 最近更新 | `2026-09-11`      |
 | 适用阶段 | `需求分析`        |
@@ -154,6 +154,12 @@
 | MLS-OBJ-0003 | MLS-UC-0015                      | MLS-BR-0043      | Business rule    | MLS-AC-0049                        | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0003 | MLS-UC-0007                      | MLS-BR-0044      | Business rule    | MLS-AC-0049                        | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 | MLS-OBJ-0002 | MLS-UC-0015                      | MLS-BR-0045      | Business rule    | MLS-AC-0049                        | MLS-AT-0030                      | docs/01-requirements/requirements/MLS-DOC-RA-0011.md | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0015                      | MLS-BR-0046     | Business rule    | MLS-AC-0050                       | MLS-AT-0031                     | docs/01-requirements/requirements/MLS-DOC-RA-0011.md  | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0004 | MLS-UC-0010                      | MLS-FR-0047     | Functional       | MLS-AC-0051                       | MLS-AT-0032                     | docs/01-requirements/requirements/MLS-DOC-RA-0010.md  | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0004 | MLS-UC-0010                      | MLS-BR-0047     | Business rule    | MLS-AC-0051                       | MLS-AT-0032                     | docs/01-requirements/requirements/MLS-DOC-RA-0011.md  | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0019                      | MLS-FR-0037     | Functional       | MLS-AC-0052                       | MLS-AT-0033                     | docs/01-requirements/requirements/MLS-DOC-RA-0010.md  | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0013                      | MLS-FR-0013     | Functional       | MLS-AC-0053                       | MLS-AT-0033                     | docs/01-requirements/requirements/MLS-DOC-RA-0010.md  | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
+| MLS-OBJ-0003 | MLS-UC-0013                      | MLS-BR-0048     | Business rule    | MLS-AC-0053                       | MLS-AT-0033                     | docs/01-requirements/requirements/MLS-DOC-RA-0011.md  | Draft              | Not created       | Not created    | Not created        | Not created         | Not created      | Not created  |
 
 ## 双向检查规则
 
@@ -215,6 +221,7 @@
 
 | 日期       | 版本  | 变更内容                                                                                                                                                                                                                                                                    |
 | ---------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-12 | v0.17 | 场景结论传导追踪（ODV-F01~F05，修补轮阶段 7）：新增 6 行——`MLS-BR-0046`→`MLS-AC-0050`/`MLS-AT-0031`、`MLS-FR-0047` 与 `MLS-BR-0047`→`MLS-AC-0051`/`MLS-AT-0032`、`MLS-FR-0037`→`MLS-AC-0052`/`MLS-AT-0033`、`MLS-FR-0013` 与 `MLS-BR-0048`→`MLS-AC-0053`/`MLS-AT-0033`。原因：`MLS-DOC-RA-0008`/`0010`/`0011`/`AT-0002` 同轮新增条目需派生追踪；提出人：文档维护轮（ZCode，修补执行代理）；影响需求：无（派生追踪登记）；影响验收：无；评审人/批准人：lingzz（用户，2026-09-12 十项清单执行指令）；结论：新增行与来源工件一致，无孤立需求或无来源测试 |
 | 2026-09-11 | v0.16 | 原因：用户授权接替 G34-F02～F06 修订；提出人/检查人：Codex；影响需求：无新增业务事实；影响验收：追加 42 条来源定位到现有 AC/AT 的派生索引，主表 128 行不变；修订授权：用户“由你接替修订并继续”；正式评审人/批准人：待责任人签署；结论：修订候选已登记，不代签、不激活基线。 |
 
 | 日期       | 版本  | 变更内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
