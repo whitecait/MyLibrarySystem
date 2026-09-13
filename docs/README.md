@@ -6,9 +6,9 @@
 | -------- | ------------------------------------------------ |
 | 文档编号 | `MLS-DOC-GOV-0000`                               |
 | 文档状态 | `Draft`                                          |
-| 文档版本 | `v0.30`                                          |
+| 文档版本 | `v0.31`                                          |
 | 编制日期 | `2026-07-13`                                     |
-| 最近更新 | `2026-09-12`                                     |
+| 最近更新 | `2026-09-13`                                     |
 | 适用阶段 | 需求分析                                         |
 | 验证对应 | 验收测试                                         |
 | 权威性质 | 工程文档唯一入口；经批准的规范性工件由本入口导航 |
@@ -141,14 +141,14 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 | ----------------- | ----------------------------------------------------------------------------------------- | ---------- |
 | `MLS-DOC-RA-0001` | [MyLibrarySystem 需求分析阶段工程化设计](01-requirements/requirements/MLS-DOC-RA-0001.md) | `Approved` |
 | `MLS-DOC-RA-0002` | [需求分析文档入口](01-requirements/requirements/MLS-DOC-RA-0002.md)                       | `Draft`    |
-| `MLS-DOC-RA-0003` | [MyLibrarySystem 系统需求主规格](01-requirements/requirements/MLS-DOC-RA-0003.md)         | `Draft`    |
+| `MLS-DOC-RA-0003` | [MyLibrarySystem 系统需求主规格](01-requirements/requirements/MLS-DOC-RA-0003.md)         | `Approved` |
 
 #### 需求分析阶段 (01-requirements/acceptance/) ── 验收
 
 | 文档编号          | 标题                                                                    | 状态    |
 | ----------------- | ----------------------------------------------------------------------- | ------- |
-| `MLS-DOC-AT-0001` | [系统验收策略](01-requirements/acceptance/MLS-DOC-AT-0001.md)           | `Draft` |
-| `MLS-DOC-AT-0002` | [系统验收条件与验收用例](01-requirements/acceptance/MLS-DOC-AT-0002.md) | `Draft` |
+| `MLS-DOC-AT-0001` | [系统验收策略](01-requirements/acceptance/MLS-DOC-AT-0001.md)           | `Approved` |
+| `MLS-DOC-AT-0002` | [系统验收条件与验收用例](01-requirements/acceptance/MLS-DOC-AT-0002.md) | `Approved` |
 | `MLS-DOC-AT-0003` | [系统验收执行报告登记册](01-requirements/acceptance/MLS-DOC-AT-0003.md) | `Draft` |
 
 #### 需求分析阶段 (01-requirements/evidence/) ── 证据
@@ -162,25 +162,25 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 
 | 文档编号          | 标题                                                                      | 状态    |
 | ----------------- | ------------------------------------------------------------------------- | ------- |
-| `MLS-DOC-RA-0004` | [愿景与范围](01-requirements/requirements/MLS-DOC-RA-0004.md)             | `Draft` |
-| `MLS-DOC-RA-0005` | [参与者与系统语境](01-requirements/requirements/MLS-DOC-RA-0005.md)       | `Draft` |
-| `MLS-DOC-RA-0006` | [术语表](01-requirements/requirements/MLS-DOC-RA-0006.md)                 | `Draft` |
-| `MLS-DOC-RA-0007` | [Open 问题登记册](01-requirements/requirements/MLS-DOC-RA-0007.md)        | `Draft` |
-| `MLS-DOC-RA-0008` | [业务流程](01-requirements/requirements/MLS-DOC-RA-0008.md)               | `Draft` |
-| `MLS-DOC-RA-0009` | [系统用例](01-requirements/requirements/MLS-DOC-RA-0009.md)               | `Draft` |
-| `MLS-DOC-RA-0010` | [功能需求](01-requirements/requirements/MLS-DOC-RA-0010.md)               | `Draft` |
-| `MLS-DOC-RA-0011` | [业务规则](01-requirements/requirements/MLS-DOC-RA-0011.md)               | `Draft` |
-| `MLS-DOC-RA-0012` | [信息需求](01-requirements/requirements/MLS-DOC-RA-0012.md)               | `Draft` |
-| `MLS-DOC-RA-0013` | [非功能需求](01-requirements/requirements/MLS-DOC-RA-0013.md)             | `Draft` |
-| `MLS-DOC-RA-0014` | [需求与验收双向追踪矩阵](01-requirements/requirements/MLS-DOC-RA-0014.md) | `Draft` |
-| `MLS-DOC-RA-0015` | [P1 质量与验收政策草案](01-requirements/requirements/MLS-DOC-RA-0015.md)  | `Draft` |
+| `MLS-DOC-RA-0004` | [愿景与范围](01-requirements/requirements/MLS-DOC-RA-0004.md)             | `Approved` |
+| `MLS-DOC-RA-0005` | [参与者与系统语境](01-requirements/requirements/MLS-DOC-RA-0005.md)       | `Approved` |
+| `MLS-DOC-RA-0006` | [术语表](01-requirements/requirements/MLS-DOC-RA-0006.md)                 | `Approved` |
+| `MLS-DOC-RA-0007` | [Open 问题登记册](01-requirements/requirements/MLS-DOC-RA-0007.md)        | `Approved` |
+| `MLS-DOC-RA-0008` | [业务流程](01-requirements/requirements/MLS-DOC-RA-0008.md)               | `Approved` |
+| `MLS-DOC-RA-0009` | [系统用例](01-requirements/requirements/MLS-DOC-RA-0009.md)               | `Approved` |
+| `MLS-DOC-RA-0010` | [功能需求](01-requirements/requirements/MLS-DOC-RA-0010.md)               | `Approved` |
+| `MLS-DOC-RA-0011` | [业务规则](01-requirements/requirements/MLS-DOC-RA-0011.md)               | `Approved` |
+| `MLS-DOC-RA-0012` | [信息需求](01-requirements/requirements/MLS-DOC-RA-0012.md)               | `Approved` |
+| `MLS-DOC-RA-0013` | [非功能需求](01-requirements/requirements/MLS-DOC-RA-0013.md)             | `Approved` |
+| `MLS-DOC-RA-0014` | [需求与验收双向追踪矩阵](01-requirements/requirements/MLS-DOC-RA-0014.md) | `Approved` |
+| `MLS-DOC-RA-0015` | [P1 质量与验收政策草案](01-requirements/requirements/MLS-DOC-RA-0015.md)  | `Draft`    |
 
 #### 需求分析阶段 (01-requirements/reviews/) ── 评审
 
 | 文档编号           | 标题                                                        | 状态    |
 | ------------------ | ----------------------------------------------------------- | ------- |
 | `MLS-DOC-REV-0001` | [需求评审清单](01-requirements/reviews/MLS-DOC-REV-0001.md) | `Draft` |
-| `MLS-DOC-REV-0002` | [需求基线记录](01-requirements/reviews/MLS-DOC-REV-0002.md) | `Draft` |
+| `MLS-DOC-REV-0002` | [需求基线记录](01-requirements/reviews/MLS-DOC-REV-0002.md) | `Approved` |
 
 ### 总体设计阶段 (02-overall-design)
 
@@ -213,6 +213,8 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 2026-09-11 初次复审记录（修订前）：当前工作区输入已按 SHA-256 固定；两处 D-5 状态残留已修正。REV-0001 v0.7 登记 G34-F01～F06（F01 修复复核，F02～F06 未关闭），REV-0002 v0.14 绑定候选。G3/G4 为 Blocked，存在实质语义/验收缺口；责任复审签署材料已编制、未代签，G5 批准包未准备，基线未建立。证据见 仓库根 `artifacts/g34-review-20260911/`。
 
 ## 变更记录
+
+- 2026-09-13，v0.31：维护基线状态列与各工件头部元数据对齐：`MLS-DOC-RA-0003`~`0014`、`MLS-DOC-AT-0001`、`MLS-DOC-AT-0002`、`MLS-DOC-REV-0002` 共 15 项由 `Draft` 刷新为 `Approved`。原因：2026-09-13 全量文档交叉审计发现需求基线激活后入口状态列未同步；提出人：文档维护轮（Zcode）；影响需求：无，仅入口登记对齐既有批准事实；影响验收：无；评审人：Zcode（43 份文档头部逐一核对）；批准人：lingzz（批准依据＝`MLS-DOC-REV-0002 v1.0` 于 2026-09-11 激活需求基线，本轮无新增批准）；结论：入口状态列与各工件头部一致。维护过程与全库处置见仓库根 [文档交叉审计与维护报告](../HANDOFF-AUDIT-20260913.md)。
 
 - 2026-09-12，v0.30：收尾导航同步，更新 M3/M4 当前受影响复审状态、M4 工件入口和 AI 实际接入模式待确认口径；不改变历史批准记录或产品验收结论。
 
