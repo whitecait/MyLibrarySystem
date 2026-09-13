@@ -118,7 +118,7 @@ CREATE TABLE closing_control (
     scope           VARCHAR(32) NOT NULL DEFAULT 'GLOBAL' UNIQUE,  -- 全馆隔离 SC-Q1
     status          VARCHAR(32) NOT NULL DEFAULT 'OPEN'
                     CHECK (status IN ('OPEN', 'ISOLATED', 'REOPENED')),
-    current_date    DATE,
+    "current_date"  DATE,
     retry_budget    INT      NOT NULL DEFAULT 1,   -- SC-Q8 有限自动重试（配置化）
     version         BIGINT   NOT NULL DEFAULT 0,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),

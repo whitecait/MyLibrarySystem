@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * M4 出口：正式 V1 DDL 迁移测试（GOV-0006 §6.5 迁移与验证）。
  * 验证：迁移成功且幂等、核心对象存在、建单独占部分唯一索引（BR-0047/SC-Q14）、
- * 终态释放后可再建单（SC-Q15）、重复预约守卫与同读者未缴罚款唯一（BR-0020/0019）。
+ * 终态释放后可再建单（SC-Q15）、重复预约守卫与按归还事务去重的罚款（BR-0020/0019）。
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -70,7 +70,8 @@ class V1MigrationTest {
                 SELECT indexdef FROM pg_indexes
                 WHERE indexname = 'uq_payment_order_unreleased'
                 """, String.class);
-        assertThat(indexDef).contains("ON payment_order").contains("WHERE status = 'OCCUPIED'");
+        assertThat(indexDef).contains("UNIQUE INDEX").contains("payment_order").contains("OCCUPIED");
+        assertThat(jdbc.queryForObject("SELECT pg_get_expr(indpred, indrelid) FROM pg_index WHERE indexrelid = 'uq_payment_order_unreleased'::regclass", String.class)).contains("status").contains("OCCUPIED");
         // pg_trgm 扩展与 GIN 索引（T4 检索）
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM pg_extension WHERE extname = 'pg_trgm'", Integer.class))
@@ -105,18 +106,63 @@ class V1MigrationTest {
     }
 
     @Test
-    void duplicateOpenReservationAndDuplicateOpenFineAreRejected() {
+    void duplicateReservationAndDuplicateFineForSameReturnAreRejected() {
         long reader = insertReader("guard-reader");
         long title = insertTitle("重构");
         // 同读者同书目未终结事务唯一（重复预约守卫）
         insertBorrowTx(reader, title);
         assertThatThrownBy(() -> insertBorrowTx(reader, title))
                 .isInstanceOf(DataIntegrityViolationException.class);
-        // 同读者未缴罚款唯一（F 条件）
+        // 同一归还事务不能重复计罚；不同归还事务允许同时欠费。
         long txId = insertBorrowTx(insertReader("fine-reader"));
         insertFine(txId);
         assertThatThrownBy(() -> insertFine(txId))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void separateOverdueReturnsCanCreateMultipleUnpaidFinesForOneReader() {
+        long reader = insertReader("multiple-fines-reader");
+        long firstTx = insertBorrowTx(reader);
+        long secondTx = insertBorrowTx(reader);
+        insertFine(reader, firstTx);
+        insertFine(reader, secondTx);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM fine WHERE reader_id = ? AND status = 'DUE'",
+                Integer.class, reader)).isEqualTo(2);
+        assertThatThrownBy(() -> insertFine(reader, firstTx))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void v2UpgradePreservesExistingFineAndAllowsAnotherReturn() {
+        jdbc.execute("CREATE DATABASE v1_upgrade");
+        var source = new org.springframework.jdbc.datasource.DriverManagerDataSource(
+                POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/v1_upgrade"),
+                POSTGRES.getUsername(), POSTGRES.getPassword());
+        Flyway.configure().dataSource(source).locations("classpath:db/migration").target("1").load().migrate();
+        var old = new JdbcTemplate(source);
+        old.update("INSERT INTO account (username,password_hash,display_name,role) VALUES ('upgrade','x','upgrade','READER')");
+        old.update("INSERT INTO book_title (title,price_cents) VALUES ('first',100),('second',100)");
+        old.update("INSERT INTO borrow_transaction (reader_id,title_id,status) VALUES (1,1,'RETURNED'),(1,2,'RETURNED')");
+        old.update("INSERT INTO fine (reader_id,source_tx_id,amount_cents) VALUES (1,1,50)");
+        var upgraded = Flyway.configure().dataSource(source).locations("classpath:db/migration").target("2").load();
+        assertThat(upgraded.migrate().migrationsExecuted).isEqualTo(1);
+        upgraded.validate();
+        assertThat(old.queryForObject("SELECT amount_cents FROM fine WHERE source_tx_id=1", Long.class)).isEqualTo(50L);
+        old.update("INSERT INTO fine (reader_id,source_tx_id,amount_cents) VALUES (1,2,75)");
+        assertThat(old.queryForObject("SELECT count(*) FROM fine WHERE status='DUE'", Integer.class)).isEqualTo(2);
+        assertThat(upgraded.migrate().migrationsExecuted).isZero();
+    }
+
+    @Test
+    void consumerReceiptsDistinguishEventsAndConsumers() {
+        long first = jdbc.queryForObject("INSERT INTO outbox_event (agg_type,agg_id,event_type,payload) VALUES ('BOOK',42,'UPDATED','{}') RETURNING id", Long.class);
+        long second = jdbc.queryForObject("INSERT INTO outbox_event (agg_type,agg_id,event_type,payload) VALUES ('BOOK',42,'UPDATED','{}') RETURNING id", Long.class);
+        jdbc.update("INSERT INTO event_consumer_receipt (consumer_id,event_id) VALUES ('notification',?),('notification',?),('audit',?)", first, second, first);
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO event_consumer_receipt (consumer_id,event_id) VALUES ('notification',?)", first))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM event_consumer_receipt WHERE event_id IN (?,?)", Integer.class, first, second)).isEqualTo(3);
     }
 
     // ---- fixtures ----

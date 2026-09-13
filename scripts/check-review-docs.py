@@ -45,8 +45,18 @@ for row in rows:
         r'^\*\*ID:\*\*\s*`([^`]+)`', source.read_text(), re.M
     ):
         errors.append(f'wrong source: {requirement}')
-    if any(cell.strip() != 'Not created' for cell in row[8:]):
-        errors.append(f'check downstream design status: {requirement}')
+    # Design stages now exist. Validate actual references instead of requiring
+    # every downstream cell to remain absent forever.
+    for cell in row[8:]:
+        value = cell.strip()
+        if value == 'Not created':
+            continue
+        refs = re.findall(r'MLS-DOC-(?:OD|DD|MD)-\d{4}', value)
+        if not refs:
+            errors.append(f'invalid downstream reference: {requirement}: {value}')
+        for ref in refs:
+            if not any(p.stem == ref for p in files):
+                errors.append(f'missing downstream document: {requirement}: {ref}')
 broken = []
 for p, text in texts.items():
     text = re.sub(r'^```[^\n]*\n.*?^```\s*$', '', text, flags=re.M | re.S)
