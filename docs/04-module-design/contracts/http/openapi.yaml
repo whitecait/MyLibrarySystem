@@ -1,0 +1,429 @@
+openapi: 3.1.0
+info:
+  title: MyLibrarySystem HTTP Contract
+  version: 1.0.0
+  description: >-
+    Frontend and backend shared structural contract. Business semantics, permissions,
+    idempotency and transaction guarantees remain normative in MLS-DOC-MD-0003.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+tags:
+  - {name: Identity}
+  - {name: Catalog}
+  - {name: Circulation}
+  - {name: Settlement}
+  - {name: Review}
+  - {name: Query}
+  - {name: Delivery}
+  - {name: AI}
+
+paths:
+  /auth/registrations:
+    post: {tags: [Identity], operationId: registerReader, security: [], x-permission: PUBLIC, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Registration'}, responses: {'200': {$ref: '#/components/responses/Registration'}, default: {$ref: '#/components/responses/Error'}}}
+  /auth/sessions:
+    post: {tags: [Identity], operationId: createSession, security: [], x-permission: PUBLIC, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Session'}, responses: {'200': {$ref: '#/components/responses/Session'}, default: {$ref: '#/components/responses/Error'}}}
+  /auth/sessions/current:
+    delete: {tags: [Identity], operationId: endCurrentSession, x-permission: AUTHENTICATED, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], responses: {'200': {$ref: '#/components/responses/Ended'}, default: {$ref: '#/components/responses/Error'}}}
+  /accounts:
+    get: {tags: [Identity], operationId: listAccounts, x-permission: ADMIN, parameters: [{$ref: '#/components/parameters/Role'}, {$ref: '#/components/parameters/AccountStatus'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/AccountPage'}, default: {$ref: '#/components/responses/Error'}}}
+  /accounts/{accountId}/change-requests:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    post: {tags: [Identity], operationId: requestAccountChange, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/AccountChange'}, responses: {'200': {$ref: '#/components/responses/ReviewReference'}, default: {$ref: '#/components/responses/Error'}}}
+  /accounts/{accountId}/password-reset:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    post: {tags: [Identity], operationId: resetPassword, x-permission: LIBRARIAN_OR_ADMIN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Reason'}, responses: {'200': {$ref: '#/components/responses/PasswordReset'}, default: {$ref: '#/components/responses/Error'}}}
+  /readers/{readerId}/status:
+    parameters: [{$ref: '#/components/parameters/ReaderId'}]
+    patch: {tags: [Identity], operationId: changeReaderStatus, x-permission: LIBRARIAN_OR_ADMIN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/ReaderStatusChange'}, responses: {'200': {$ref: '#/components/responses/Reader'}, default: {$ref: '#/components/responses/Error'}}}
+  /titles:
+    get: {tags: [Catalog], operationId: searchTitles, security: [], x-permission: PUBLIC, parameters: [{$ref: '#/components/parameters/Search'}, {$ref: '#/components/parameters/Category'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/TitlePage'}, default: {$ref: '#/components/responses/Error'}}}
+    post: {tags: [Catalog], operationId: createTitle, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/CreateTitle'}, responses: {'200': {$ref: '#/components/responses/Title'}, default: {$ref: '#/components/responses/Error'}}}
+  /titles/{titleId}:
+    parameters: [{$ref: '#/components/parameters/TitleId'}]
+    get: {tags: [Catalog], operationId: getTitle, security: [], x-permission: PUBLIC, responses: {'200': {$ref: '#/components/responses/Title'}, default: {$ref: '#/components/responses/Error'}}}
+    patch: {tags: [Catalog], operationId: updateTitle, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/UpdateTitle'}, responses: {'200': {$ref: '#/components/responses/Title'}, default: {$ref: '#/components/responses/Error'}}}
+    delete: {tags: [Catalog], operationId: removeTitle, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/VersionReason'}, responses: {'200': {$ref: '#/components/responses/Removed'}, default: {$ref: '#/components/responses/Error'}}}
+  /titles/{titleId}/content:
+    parameters: [{$ref: '#/components/parameters/TitleId'}]
+    get: {tags: [Catalog], operationId: getReadingContent, security: [], x-permission: PUBLIC, parameters: [{$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/ReadingContent'}, default: {$ref: '#/components/responses/Error'}}}
+  /titles/{titleId}/copies:
+    parameters: [{$ref: '#/components/parameters/TitleId'}]
+    post: {tags: [Circulation], operationId: createCopy, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/CreateCopy'}, responses: {'200': {$ref: '#/components/responses/Copy'}, default: {$ref: '#/components/responses/Error'}}}
+  /copies:
+    get: {tags: [Circulation], operationId: listCopies, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/TitleIdQuery'}, {$ref: '#/components/parameters/CopyStatus'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/CopyPage'}, default: {$ref: '#/components/responses/Error'}}}
+  /copies/{copyId}:
+    parameters: [{$ref: '#/components/parameters/CopyId'}]
+    patch: {tags: [Circulation], operationId: changeCopyState, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/CopyAction'}, responses: {'200': {$ref: '#/components/responses/Copy'}, default: {$ref: '#/components/responses/Error'}}}
+  /titles/{titleId}/reservation-calendar:
+    parameters: [{$ref: '#/components/parameters/TitleId'}]
+    get: {tags: [Circulation], operationId: getReservationCalendar, security: [], x-permission: PUBLIC, parameters: [{$ref: '#/components/parameters/FromDate'}, {$ref: '#/components/parameters/ToDate'}], responses: {'200': {$ref: '#/components/responses/ReservationCalendar'}, default: {$ref: '#/components/responses/Error'}}}
+  /reservations:
+    post: {tags: [Circulation], operationId: reserveTitle, x-permission: READER_SELF_OR_LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Reservation'}, responses: {'200': {$ref: '#/components/responses/Reservation'}, default: {$ref: '#/components/responses/Error'}}}
+  /reservations/{txId}/cancel:
+    parameters: [{$ref: '#/components/parameters/TxId'}]
+    post: {tags: [Circulation], operationId: cancelReservation, x-permission: READER_SELF_OR_LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Reason'}, responses: {'200': {$ref: '#/components/responses/Transaction'}, default: {$ref: '#/components/responses/Error'}}}
+  /walk-in-loans:
+    post: {tags: [Circulation], operationId: createWalkInLoans, x-permission: READER_SELF_OR_LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/WalkInLoan'}, responses: {'200': {$ref: '#/components/responses/LoanBatch'}, default: {$ref: '#/components/responses/Error'}}}
+  /pickups/{txId}/claim:
+    parameters: [{$ref: '#/components/parameters/TxId'}]
+    post: {tags: [Circulation], operationId: claimPickup, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/ClaimPickup'}, responses: {'200': {$ref: '#/components/responses/Transaction'}, default: {$ref: '#/components/responses/Error'}}}
+  /transactions/{txId}/manual-actions:
+    parameters: [{$ref: '#/components/parameters/TxId'}]
+    post: {tags: [Circulation], operationId: applyManualAction, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/ManualAction'}, responses: {'200': {$ref: '#/components/responses/Transaction'}, default: {$ref: '#/components/responses/Error'}}}
+  /loans/{txId}/renewals:
+    parameters: [{$ref: '#/components/parameters/TxId'}]
+    post: {tags: [Circulation], operationId: renewLoan, x-permission: READER_SELF, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Renewal'}, responses: {'200': {$ref: '#/components/responses/Renewal'}, default: {$ref: '#/components/responses/Error'}}}
+  /returns:
+    post: {tags: [Circulation], operationId: returnCopy, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Return'}, responses: {'200': {$ref: '#/components/responses/Return'}, default: {$ref: '#/components/responses/Error'}}}
+  /closing/runs:
+    post: {tags: [Circulation], operationId: runClosing, x-permission: SYSTEM, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/BusinessDate'}, responses: {'200': {$ref: '#/components/responses/ClosingRun'}, default: {$ref: '#/components/responses/Error'}}}
+  /closing/reopen:
+    post: {tags: [Circulation], operationId: reopenBusinessDate, x-permission: ADMIN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/BusinessDate'}, responses: {'200': {$ref: '#/components/responses/Reopened'}, default: {$ref: '#/components/responses/Error'}}}
+  /fines:
+    get: {tags: [Settlement], operationId: listFines, x-permission: READER_SELF_OR_LIBRARIAN, parameters: [{$ref: '#/components/parameters/ReaderIdQuery'}, {$ref: '#/components/parameters/FineStatus'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/FinePage'}, default: {$ref: '#/components/responses/Error'}}}
+  /fines/{fineId}/orders:
+    parameters: [{$ref: '#/components/parameters/FineId'}]
+    post: {tags: [Settlement], operationId: createOrder, x-permission: READER_SELF, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], responses: {'200': {$ref: '#/components/responses/Order'}, default: {$ref: '#/components/responses/Error'}}}
+  /orders/{orderId}:
+    parameters: [{$ref: '#/components/parameters/OrderId'}]
+    get: {tags: [Settlement], operationId: getOrder, x-permission: READER_SELF_OR_LIBRARIAN, responses: {'200': {$ref: '#/components/responses/Order'}, default: {$ref: '#/components/responses/Error'}}}
+  /payment-simulator/results:
+    post: {tags: [Settlement], operationId: scheduleSimulatedPayment, x-permission: CONTROLLED_TEST_OPERATOR, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Simulation'}, responses: {'200': {$ref: '#/components/responses/Simulation'}, default: {$ref: '#/components/responses/Error'}}}
+  /payment-callbacks:
+    post: {tags: [Settlement], operationId: applyPaymentCallback, x-permission: SIMULATOR_CREDENTIAL, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/PaymentCallback'}, responses: {'200': {$ref: '#/components/responses/Callback'}, default: {$ref: '#/components/responses/Error'}}}
+  /orders/{orderId}/close:
+    parameters: [{$ref: '#/components/parameters/OrderId'}]
+    post: {tags: [Settlement], operationId: closeOrder, x-permission: READER_SELF_OR_LIBRARIAN_OR_SYSTEM, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], responses: {'200': {$ref: '#/components/responses/Order'}, default: {$ref: '#/components/responses/Error'}}}
+  /orders/{orderId}/refunds:
+    parameters: [{$ref: '#/components/parameters/OrderId'}]
+    post: {tags: [Settlement], operationId: requestRefund, x-permission: LIBRARIAN_THEN_ADMIN_REVIEW, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Refund'}, responses: {'200': {$ref: '#/components/responses/ReviewReference'}, default: {$ref: '#/components/responses/Error'}}}
+  /reconciliations:
+    post: {tags: [Settlement], operationId: reconcileBusinessDate, x-permission: SYSTEM_OR_ADMIN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/BusinessDate'}, responses: {'200': {$ref: '#/components/responses/Reconciliation'}, default: {$ref: '#/components/responses/Error'}}}
+  /reviews:
+    get: {tags: [Review], operationId: listReviews, x-permission: LIBRARIAN_OR_ADMIN, parameters: [{$ref: '#/components/parameters/ReviewStatus'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/ReviewPage'}, default: {$ref: '#/components/responses/Error'}}}
+    post: {tags: [Review], operationId: requestReview, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Review'}, responses: {'200': {$ref: '#/components/responses/ReviewReference'}, default: {$ref: '#/components/responses/Error'}}}
+  /reviews/{reviewId}/decision:
+    parameters: [{$ref: '#/components/parameters/ReviewId'}]
+    post: {tags: [Review], operationId: decideReview, x-permission: ADMIN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/ReviewDecision'}, responses: {'200': {$ref: '#/components/responses/ReviewDecision'}, default: {$ref: '#/components/responses/Error'}}}
+  /dashboard/arrivals:
+    get: {tags: [Query], operationId: getArrivalDashboard, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/BusinessDateQuery'}], responses: {'200': {$ref: '#/components/responses/ArrivalDashboard'}, default: {$ref: '#/components/responses/Error'}}}
+  /me/business:
+    get: {tags: [Query], operationId: getMyBusiness, x-permission: READER, parameters: [{$ref: '#/components/parameters/BusinessKind'}, {$ref: '#/components/parameters/BusinessStatus'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/MyBusinessPage'}, default: {$ref: '#/components/responses/Error'}}}
+  /notifications:
+    get: {tags: [Delivery], operationId: listNotifications, x-permission: AUTHENTICATED_SELF, parameters: [{$ref: '#/components/parameters/UnreadOnly'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/NotificationPage'}, default: {$ref: '#/components/responses/Error'}}}
+  /notifications/{notificationId}/read:
+    parameters: [{$ref: '#/components/parameters/NotificationId'}]
+    post: {tags: [Delivery], operationId: markNotificationRead, x-permission: AUTHENTICATED_SELF, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], responses: {'200': {$ref: '#/components/responses/Read'}, default: {$ref: '#/components/responses/Error'}}}
+  /audit-events:
+    get: {tags: [Delivery], operationId: listAuditEvents, x-permission: LIBRARIAN_OR_ADMIN, parameters: [{$ref: '#/components/parameters/RelatedId'}, {$ref: '#/components/parameters/ActorId'}, {$ref: '#/components/parameters/EventType'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/AuditPage'}, default: {$ref: '#/components/responses/Error'}}}
+  /ai/sessions:
+    post: {tags: [AI], operationId: startAiSession, security: [], x-permission: PUBLIC_OR_AUTHENTICATED, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/AiSession'}, responses: {'200': {$ref: '#/components/responses/AiSession'}, default: {$ref: '#/components/responses/Error'}}}
+  /ai/sessions/{sessionId}/messages:
+    parameters: [{$ref: '#/components/parameters/SessionId'}]
+    post: {tags: [AI], operationId: sendAiMessage, x-permission: SESSION_OWNER, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/AiMessage'}, responses: {'200': {$ref: '#/components/responses/AiTurn'}, default: {$ref: '#/components/responses/Error'}}}
+  /ai/sessions/{sessionId}/events:
+    parameters: [{$ref: '#/components/parameters/SessionId'}]
+    get: {tags: [AI], operationId: listAiEvents, x-permission: SESSION_OWNER_OR_ADMIN, parameters: [{$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/AiEventPage'}, default: {$ref: '#/components/responses/Error'}}}
+
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: opaque}
+  parameters:
+    IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 1, maxLength: 128}}
+    AccountId: {name: accountId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
+    ReaderId: {name: readerId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
+    TitleId: {name: titleId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
+    CopyId: {name: copyId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
+    TxId: {name: txId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
+    FineId: {name: fineId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
+    OrderId: {name: orderId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
+    ReviewId: {name: reviewId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
+    NotificationId: {name: notificationId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
+    SessionId: {name: sessionId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
+    Cursor: {name: cursor, in: query, schema: {type: string}}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+    Search: {name: q, in: query, schema: {type: string, maxLength: 200}}
+    Category: {name: category, in: query, schema: {type: string}}
+    Role: {name: role, in: query, schema: {$ref: '#/components/schemas/Role'}}
+    AccountStatus: {name: status, in: query, schema: {$ref: '#/components/schemas/AccountStatus'}}
+    TitleIdQuery: {name: titleId, in: query, schema: {$ref: '#/components/schemas/Id'}}
+    ReaderIdQuery: {name: readerId, in: query, schema: {$ref: '#/components/schemas/Id'}}
+    CopyStatus: {name: status, in: query, schema: {$ref: '#/components/schemas/CopyStatus'}}
+    FineStatus: {name: status, in: query, schema: {$ref: '#/components/schemas/FineStatus'}}
+    ReviewStatus: {name: status, in: query, schema: {$ref: '#/components/schemas/ReviewStatus'}}
+    FromDate: {name: from, in: query, required: true, schema: {$ref: '#/components/schemas/BusinessDate'}}
+    ToDate: {name: to, in: query, required: true, schema: {$ref: '#/components/schemas/BusinessDate'}}
+    BusinessDateQuery: {name: businessDate, in: query, required: true, schema: {$ref: '#/components/schemas/BusinessDate'}}
+    BusinessKind: {name: kind, in: query, schema: {type: string, enum: [RESERVATION, LOAN, FINE, ORDER]}}
+    BusinessStatus: {name: status, in: query, schema: {type: string}}
+    UnreadOnly: {name: unreadOnly, in: query, schema: {type: boolean, default: false}}
+    RelatedId: {name: relatedId, in: query, schema: {$ref: '#/components/schemas/Id'}}
+    ActorId: {name: actorId, in: query, schema: {$ref: '#/components/schemas/Id'}}
+    EventType: {name: eventType, in: query, schema: {type: string}}
+  requestBodies:
+    Registration: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/RegistrationRequest'}}}}
+    Session: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SessionRequest'}}}}
+    AccountChange: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AccountChangeRequest'}}}}
+    Reason: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ReasonRequest'}}}}
+    ReaderStatusChange: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ReaderStatusChangeRequest'}}}}
+    CreateTitle: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CreateTitleRequest'}}}}
+    UpdateTitle: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UpdateTitleRequest'}}}}
+    VersionReason: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/VersionReasonRequest'}}}}
+    CreateCopy: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CreateCopyRequest'}}}}
+    CopyAction: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CopyActionRequest'}}}}
+    Reservation: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ReservationRequest'}}}}
+    WalkInLoan: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/WalkInLoanRequest'}}}}
+    ClaimPickup: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ClaimPickupRequest'}}}}
+    ManualAction: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ManualActionRequest'}}}}
+    Renewal: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/RenewalRequest'}}}}
+    Return: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ReturnRequest'}}}}
+    BusinessDate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/BusinessDateRequest'}}}}
+    Simulation: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SimulationRequest'}}}}
+    PaymentCallback: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PaymentCallbackRequest'}}}}
+    Refund: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/RefundRequest'}}}}
+    Review: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ReviewRequest'}}}}
+    ReviewDecision: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ReviewDecisionRequest'}}}}
+    AiSession: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AiSessionRequest'}}}}
+    AiMessage: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AiMessageRequest'}}}}
+  responses:
+    Error: {description: Stable error envelope, content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}}
+    Registration: {$ref: '#/components/responses/RegistrationResponse'}
+    Session: {$ref: '#/components/responses/SessionResponse'}
+    Ended: {$ref: '#/components/responses/EndedResponse'}
+    AccountPage: {$ref: '#/components/responses/AccountPageResponse'}
+    ReviewReference: {$ref: '#/components/responses/ReviewReferenceResponse'}
+    PasswordReset: {$ref: '#/components/responses/PasswordResetResponse'}
+    Reader: {$ref: '#/components/responses/ReaderResponse'}
+    TitlePage: {$ref: '#/components/responses/TitlePageResponse'}
+    Title: {$ref: '#/components/responses/TitleResponse'}
+    Removed: {$ref: '#/components/responses/RemovedResponse'}
+    ReadingContent: {$ref: '#/components/responses/ReadingContentResponse'}
+    Copy: {$ref: '#/components/responses/CopyResponse'}
+    CopyPage: {$ref: '#/components/responses/CopyPageResponse'}
+    ReservationCalendar: {$ref: '#/components/responses/ReservationCalendarResponse'}
+    Reservation: {$ref: '#/components/responses/ReservationResponse'}
+    Transaction: {$ref: '#/components/responses/TransactionResponse'}
+    LoanBatch: {$ref: '#/components/responses/LoanBatchResponse'}
+    Renewal: {$ref: '#/components/responses/RenewalResponse'}
+    Return: {$ref: '#/components/responses/ReturnResponse'}
+    ClosingRun: {$ref: '#/components/responses/ClosingRunResponse'}
+    Reopened: {$ref: '#/components/responses/ReopenedResponse'}
+    FinePage: {$ref: '#/components/responses/FinePageResponse'}
+    Order: {$ref: '#/components/responses/OrderResponse'}
+    Simulation: {$ref: '#/components/responses/SimulationResponse'}
+    Callback: {$ref: '#/components/responses/CallbackResponse'}
+    Reconciliation: {$ref: '#/components/responses/ReconciliationResponse'}
+    ReviewPage: {$ref: '#/components/responses/ReviewPageResponse'}
+    ReviewDecision: {$ref: '#/components/responses/ReviewDecisionResponse'}
+    ArrivalDashboard: {$ref: '#/components/responses/ArrivalDashboardResponse'}
+    MyBusinessPage: {$ref: '#/components/responses/MyBusinessPageResponse'}
+    NotificationPage: {$ref: '#/components/responses/NotificationPageResponse'}
+    Read: {$ref: '#/components/responses/ReadResponse'}
+    AuditPage: {$ref: '#/components/responses/AuditPageResponse'}
+    AiSession: {$ref: '#/components/responses/AiSessionResponse'}
+    AiTurn: {$ref: '#/components/responses/AiTurnResponse'}
+    AiEventPage: {$ref: '#/components/responses/AiEventPageResponse'}
+    RegistrationResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/RegistrationEnvelope'}}}}
+    SessionResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/SessionEnvelope'}}}}
+    EndedResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/EndedEnvelope'}}}}
+    AccountPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AccountPageEnvelope'}}}}
+    ReviewReferenceResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReviewReferenceEnvelope'}}}}
+    PasswordResetResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PasswordResetEnvelope'}}}}
+    ReaderResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReaderEnvelope'}}}}
+    TitlePageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/TitlePageEnvelope'}}}}
+    TitleResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/TitleEnvelope'}}}}
+    RemovedResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/RemovedEnvelope'}}}}
+    ReadingContentResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReadingContentEnvelope'}}}}
+    CopyResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/CopyEnvelope'}}}}
+    CopyPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/CopyPageEnvelope'}}}}
+    ReservationCalendarResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReservationCalendarEnvelope'}}}}
+    ReservationResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReservationEnvelope'}}}}
+    TransactionResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/TransactionEnvelope'}}}}
+    LoanBatchResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/LoanBatchEnvelope'}}}}
+    RenewalResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/RenewalEnvelope'}}}}
+    ReturnResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReturnEnvelope'}}}}
+    ClosingRunResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ClosingRunEnvelope'}}}}
+    ReopenedResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReopenedEnvelope'}}}}
+    FinePageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/FinePageEnvelope'}}}}
+    OrderResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/OrderEnvelope'}}}}
+    SimulationResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/SimulationEnvelope'}}}}
+    CallbackResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/CallbackEnvelope'}}}}
+    ReconciliationResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReconciliationEnvelope'}}}}
+    ReviewPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReviewPageEnvelope'}}}}
+    ReviewDecisionResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReviewDecisionEnvelope'}}}}
+    ArrivalDashboardResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ArrivalDashboardEnvelope'}}}}
+    MyBusinessPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/MyBusinessPageEnvelope'}}}}
+    NotificationPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPageEnvelope'}}}}
+    ReadResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReadEnvelope'}}}}
+    AuditPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AuditPageEnvelope'}}}}
+    AiSessionResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AiSessionEnvelope'}}}}
+    AiTurnResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AiTurnEnvelope'}}}}
+    AiEventPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AiEventPageEnvelope'}}}}
+  schemas:
+    Id: {type: string, pattern: '^[0-9]+$'}
+    BusinessDate: {type: string, format: date}
+    Timestamp: {type: string, format: date-time}
+    Role: {type: string, enum: [READER, LIBRARIAN, ADMIN, SYSTEM]}
+    AccountStatus: {type: string, enum: [ACTIVE, SUSPENDED, DISABLED]}
+    ReaderStatus: {type: string, enum: [ACTIVE, SUSPENDED]}
+    CopyStatus: {type: string, enum: [PENDING_SHELVING, AVAILABLE, RESERVED, BORROWED, MAINTENANCE, REMOVED]}
+    FineStatus: {type: string, enum: [UNPAID, OCCUPIED, PAID, REFUNDED]}
+    OrderStatus: {type: string, enum: [OCCUPIED, PAID, FAILED, CLOSED, REFUNDED]}
+    ReviewStatus: {type: string, enum: [PENDING, APPROVED, REJECTED]}
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [code, message, data]
+      properties: {code: {type: string, pattern: '^MLS-[A-Z]+-[0-9]{3}$'}, message: {type: string}, data: {type: object}}
+    RegistrationRequest: {type: object, additionalProperties: false, required: [username, password, displayName], properties: {username: {type: string, minLength: 1, maxLength: 64}, password: {type: string, minLength: 8, maxLength: 128}, displayName: {type: string, minLength: 1, maxLength: 100}}}
+    SessionRequest: {type: object, additionalProperties: false, required: [username, password], properties: {username: {type: string}, password: {type: string}}}
+    Actor: {type: object, additionalProperties: false, required: [accountId, role, displayName], properties: {accountId: {$ref: '#/components/schemas/Id'}, role: {$ref: '#/components/schemas/Role'}, displayName: {type: string}}}
+    RegistrationData: {type: object, additionalProperties: false, required: [accountId, role, status], properties: {accountId: {$ref: '#/components/schemas/Id'}, role: {const: READER}, status: {const: ACTIVE}}}
+    SessionData: {type: object, additionalProperties: false, required: [accessToken, expiresAt, actor], properties: {accessToken: {type: string}, expiresAt: {$ref: '#/components/schemas/Timestamp'}, actor: {$ref: '#/components/schemas/Actor'}}}
+    EndedData: {type: object, additionalProperties: false, required: [ended], properties: {ended: {const: true}}}
+    AccountSummary: {type: object, additionalProperties: false, required: [accountId, username, displayName, role, status, version], properties: {accountId: {$ref: '#/components/schemas/Id'}, username: {type: string}, displayName: {type: string}, role: {$ref: '#/components/schemas/Role'}, status: {$ref: '#/components/schemas/AccountStatus'}, version: {type: integer, minimum: 0}}}
+    AccountPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/AccountSummary'}}, nextCursor: {type: [string, 'null']}}}
+    AccountChangeRequest: {type: object, additionalProperties: false, required: [action, payload, reason], properties: {action: {type: string, enum: [SUSPEND, RESTORE, CHANGE_ROLE]}, payload: {type: object}, reason: {type: string, minLength: 1}}}
+    ReviewReferenceData: {type: object, additionalProperties: false, required: [reviewId, status], properties: {reviewId: {$ref: '#/components/schemas/Id'}, status: {const: PENDING}}}
+    ReasonRequest: {type: object, additionalProperties: false, required: [reason], properties: {reason: {type: string, minLength: 1}}}
+    PasswordResetData: {type: object, additionalProperties: false, required: [temporaryPassword, forceChange], properties: {temporaryPassword: {type: string}, forceChange: {const: true}}}
+    ReaderStatusChangeRequest: {type: object, additionalProperties: false, required: [status, reason], properties: {status: {$ref: '#/components/schemas/ReaderStatus'}, reason: {type: string, minLength: 1}}}
+    ReaderData: {type: object, additionalProperties: false, required: [readerId, status, version], properties: {readerId: {$ref: '#/components/schemas/Id'}, status: {$ref: '#/components/schemas/ReaderStatus'}, version: {type: integer, minimum: 0}}}
+    TitleSummary: {type: object, additionalProperties: false, required: [titleId, title, availability], properties: {titleId: {$ref: '#/components/schemas/Id'}, title: {type: string}, authors: {type: array, items: {type: string}}, category: {type: string}, availability: {type: string, enum: [AVAILABLE, UNAVAILABLE, UNKNOWN]}}}
+    TitleData: {type: object, additionalProperties: false, required: [titleId, title, authors, category, availability, isbn, priceCents, version, hasReadingContent], properties: {titleId: {$ref: '#/components/schemas/Id'}, title: {type: string}, authors: {type: array, items: {type: string}}, category: {type: string}, availability: {type: string, enum: [AVAILABLE, UNAVAILABLE, UNKNOWN]}, isbn: {type: string}, publisher: {type: [string, 'null']}, publishYear: {type: [integer, 'null']}, priceCents: {type: integer, minimum: 0}, version: {type: integer, minimum: 0}, hasReadingContent: {type: boolean}}}
+    TitlePageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/TitleSummary'}}, nextCursor: {type: [string, 'null']}}}
+    CreateTitleRequest: {type: object, additionalProperties: false, required: [isbn, title, authors, category, priceCents], properties: {isbn: {type: string}, title: {type: string}, authors: {type: array, minItems: 1, items: {type: string}}, category: {type: string}, publisher: {type: string}, publishYear: {type: integer}, priceCents: {type: integer, minimum: 0}}}
+    UpdateTitleRequest: {type: object, additionalProperties: false, required: [version], minProperties: 2, properties: {title: {type: string}, authors: {type: array, minItems: 1, items: {type: string}}, category: {type: string}, publisher: {type: [string, 'null']}, publishYear: {type: [integer, 'null']}, priceCents: {type: integer, minimum: 0}, version: {type: integer, minimum: 0}}}
+    VersionReasonRequest: {type: object, additionalProperties: false, required: [version, reason], properties: {version: {type: integer, minimum: 0}, reason: {type: string, minLength: 1}}}
+    RemovedData: {type: object, additionalProperties: false, required: [status], properties: {status: {const: REMOVED}}}
+    ReadingPage: {type: object, additionalProperties: false, required: [pageNo, text], properties: {pageNo: {type: integer, minimum: 1}, text: {type: string}}}
+    ReadingContentData: {type: object, additionalProperties: false, required: [contentType, pages, nextCursor], properties: {contentType: {type: string}, pages: {type: array, items: {$ref: '#/components/schemas/ReadingPage'}}, nextCursor: {type: [string, 'null']}}}
+    CreateCopyRequest: {type: object, additionalProperties: false, required: [copyNo], properties: {copyNo: {type: string, minLength: 1}}}
+    CopyActionRequest: {type: object, additionalProperties: false, required: [action, version], properties: {action: {type: string, enum: [SHELVE, MAINTAIN, RESTORE, REMOVE]}, version: {type: integer, minimum: 0}}}
+    CopyData: {type: object, additionalProperties: false, required: [copyId, titleId, copyNo, status, version], properties: {copyId: {$ref: '#/components/schemas/Id'}, titleId: {$ref: '#/components/schemas/Id'}, copyNo: {type: string}, status: {$ref: '#/components/schemas/CopyStatus'}, version: {type: integer, minimum: 0}}}
+    CopyPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/CopyData'}}, nextCursor: {type: [string, 'null']}}}
+    CalendarDay: {type: object, additionalProperties: false, required: [businessDate, availability], properties: {businessDate: {$ref: '#/components/schemas/BusinessDate'}, availability: {type: string, enum: [GUARANTEED, NOT_GUARANTEED, UNAVAILABLE]}}}
+    ReservationCalendarData: {type: object, additionalProperties: false, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/CalendarDay'}}}}
+    ReservationRequest: {type: object, additionalProperties: false, required: [titleId, reservationDate, pickupSlot, channel], properties: {titleId: {$ref: '#/components/schemas/Id'}, reservationDate: {$ref: '#/components/schemas/BusinessDate'}, pickupSlot: {type: string, enum: [AM, PM]}, channel: {type: string, enum: [ONLINE, DESK]}, onBehalfOf: {$ref: '#/components/schemas/Id'}, confirmWaitlist: {type: boolean, default: false}}}
+    ReservationData: {type: object, additionalProperties: false, required: [txId, outcome], properties: {txId: {oneOf: [{$ref: '#/components/schemas/Id'}, {type: 'null'}]}, outcome: {type: string, enum: [CONFIRMED, WAITLIST_PENDING_CONFIRMATION, WAITLIST_ENQUEUED, MANUAL_HANDLING, REJECTED]}, reasons: {type: array, items: {type: string}}}}
+    TransactionData: {type: object, additionalProperties: false, required: [txId, outcome], properties: {txId: {$ref: '#/components/schemas/Id'}, outcome: {type: string}, status: {type: string}}}
+    WalkInItem: {type: object, additionalProperties: false, required: [titleId], properties: {titleId: {$ref: '#/components/schemas/Id'}, copyId: {$ref: '#/components/schemas/Id'}}}
+    WalkInLoanRequest: {type: object, additionalProperties: false, required: [items, channel], properties: {readerId: {$ref: '#/components/schemas/Id'}, items: {type: array, minItems: 1, maxItems: 100, items: {$ref: '#/components/schemas/WalkInItem'}}, channel: {type: string, enum: [SELF_SERVICE, DESK]}}}
+    LoanBatchItem: {type: object, additionalProperties: false, required: [itemRef, txId, outcome], properties: {itemRef: {type: string}, txId: {oneOf: [{$ref: '#/components/schemas/Id'}, {type: 'null'}]}, outcome: {type: string}, reasons: {type: array, items: {type: string}}}}
+    LoanBatchData: {type: object, additionalProperties: false, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/LoanBatchItem'}}}}
+    ClaimPickupRequest: {type: object, additionalProperties: false, required: [copyId], properties: {copyId: {$ref: '#/components/schemas/Id'}}}
+    ManualActionRequest: {type: object, additionalProperties: false, required: [action, reason], properties: {action: {type: string, enum: [RELEASE, CONFIRM_ENTRY, REJECT]}, reason: {type: string, minLength: 1}}}
+    RenewalRequest: {type: object, additionalProperties: false, properties: {requestedDueDate: {$ref: '#/components/schemas/BusinessDate'}}}
+    RenewalData: {type: object, additionalProperties: false, required: [txId, dueDate, outcome], properties: {txId: {$ref: '#/components/schemas/Id'}, dueDate: {$ref: '#/components/schemas/BusinessDate'}, outcome: {type: string}}}
+    ReturnRequest: {type: object, additionalProperties: false, required: [copyId, condition], properties: {copyId: {$ref: '#/components/schemas/Id'}, condition: {type: string, enum: [INTACT, DAMAGED, LOST]}}}
+    ReturnData: {type: object, additionalProperties: false, required: [txId, outcome], properties: {txId: {$ref: '#/components/schemas/Id'}, outcome: {type: string, enum: [RETURNED, RETURN_ABNORMAL]}, fineId: {$ref: '#/components/schemas/Id'}}}
+    BusinessDateRequest: {type: object, additionalProperties: false, required: [businessDate], properties: {businessDate: {$ref: '#/components/schemas/BusinessDate'}}}
+    ClosingRunData: {type: object, additionalProperties: false, required: [batchId, status], properties: {batchId: {$ref: '#/components/schemas/Id'}, status: {type: string}}}
+    ReopenedData: {type: object, additionalProperties: false, required: [status, epoch], properties: {status: {const: REOPENED}, epoch: {type: integer, minimum: 1}}}
+    FineData: {type: object, additionalProperties: false, required: [fineId, readerId, amountCents, status, createdAt], properties: {fineId: {$ref: '#/components/schemas/Id'}, readerId: {$ref: '#/components/schemas/Id'}, amountCents: {type: integer, minimum: 0}, status: {$ref: '#/components/schemas/FineStatus'}, createdAt: {$ref: '#/components/schemas/Timestamp'}}}
+    FinePageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/FineData'}}, nextCursor: {type: [string, 'null']}}}
+    OrderData: {type: object, additionalProperties: false, required: [orderId, fineId, amountCents, status, expiresAt], properties: {orderId: {$ref: '#/components/schemas/Id'}, fineId: {$ref: '#/components/schemas/Id'}, amountCents: {type: integer, minimum: 0}, status: {$ref: '#/components/schemas/OrderStatus'}, expiresAt: {oneOf: [{$ref: '#/components/schemas/Timestamp'}, {type: 'null'}]}}}
+    SimulationRequest: {type: object, additionalProperties: false, required: [orderId, result], properties: {orderId: {$ref: '#/components/schemas/Id'}, result: {type: string, enum: [SUCCESS, FAILURE]}, delayMs: {type: integer, minimum: 0}, duplicateCount: {type: integer, minimum: 0, maximum: 20}}}
+    SimulationData: {type: object, additionalProperties: false, required: [simulationId, status], properties: {simulationId: {$ref: '#/components/schemas/Id'}, status: {type: string}}}
+    PaymentCallbackRequest: {type: object, additionalProperties: false, required: [eventId, orderId, result, occurredAt], properties: {eventId: {type: string}, orderId: {$ref: '#/components/schemas/Id'}, result: {type: string, enum: [SUCCESS, FAILURE]}, occurredAt: {$ref: '#/components/schemas/Timestamp'}}}
+    CallbackData: {type: object, additionalProperties: false, required: [eventId, orderId, outcome], properties: {eventId: {type: string}, orderId: {$ref: '#/components/schemas/Id'}, outcome: {type: string}}}
+    RefundRequest: {type: object, additionalProperties: false, required: [amountCents, reason], properties: {amountCents: {type: integer, minimum: 1}, reason: {type: string, minLength: 1}}}
+    ReconciliationCounts: {type: object, additionalProperties: {type: integer, minimum: 0}}
+    ReconciliationData: {type: object, additionalProperties: false, required: [reconciliationId, counts, exceptions], properties: {reconciliationId: {$ref: '#/components/schemas/Id'}, counts: {$ref: '#/components/schemas/ReconciliationCounts'}, exceptions: {type: array, items: {type: string}}}}
+    ReviewRequest: {type: object, additionalProperties: false, required: [targetType, targetId, action, payload, reason], properties: {targetType: {type: string, enum: [ACCOUNT_CHANGE, CIRCULATION_EXCEPTION, REFUND]}, targetId: {$ref: '#/components/schemas/Id'}, action: {type: string}, payload: {type: object}, reason: {type: string, minLength: 1}}}
+    ReviewDecisionRequest: {type: object, additionalProperties: false, required: [decision, reason], properties: {decision: {type: string, enum: [APPROVED, REJECTED]}, reason: {type: string, minLength: 1}}}
+    ReviewSummary: {type: object, additionalProperties: false, required: [reviewId, targetType, targetId, action, status, requestedAt], properties: {reviewId: {$ref: '#/components/schemas/Id'}, targetType: {type: string}, targetId: {$ref: '#/components/schemas/Id'}, action: {type: string}, status: {$ref: '#/components/schemas/ReviewStatus'}, requestedAt: {$ref: '#/components/schemas/Timestamp'}}}
+    ReviewPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/ReviewSummary'}}, nextCursor: {type: [string, 'null']}}}
+    ReviewDecisionData: {type: object, additionalProperties: false, required: [reviewId, status], properties: {reviewId: {$ref: '#/components/schemas/Id'}, status: {$ref: '#/components/schemas/ReviewStatus'}, targetOutcome: {type: string}}}
+    ArrivalDashboardData: {type: object, additionalProperties: false, required: [businessDate, expected, arrived, pending, exceptions], properties: {businessDate: {$ref: '#/components/schemas/BusinessDate'}, expected: {type: integer, minimum: 0}, arrived: {type: integer, minimum: 0}, pending: {type: integer, minimum: 0}, exceptions: {type: integer, minimum: 0}}}
+    BusinessItem: {type: object, additionalProperties: false, required: [kind, id, status], properties: {kind: {type: string, enum: [RESERVATION, LOAN, FINE, ORDER]}, id: {$ref: '#/components/schemas/Id'}, status: {type: string}, title: {type: string}, businessDate: {$ref: '#/components/schemas/BusinessDate'}, amountCents: {type: integer}}}
+    MyBusinessPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/BusinessItem'}}, nextCursor: {type: [string, 'null']}}}
+    NotificationData: {type: object, additionalProperties: false, required: [notificationId, type, message, read, createdAt], properties: {notificationId: {$ref: '#/components/schemas/Id'}, type: {type: string}, message: {type: string}, read: {type: boolean}, relatedTxId: {$ref: '#/components/schemas/Id'}, reservationDate: {$ref: '#/components/schemas/BusinessDate'}, createdAt: {$ref: '#/components/schemas/Timestamp'}}}
+    NotificationPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/NotificationData'}}, nextCursor: {type: [string, 'null']}}}
+    ReadData: {type: object, additionalProperties: false, required: [read], properties: {read: {const: true}}}
+    AuditEvent: {type: object, additionalProperties: false, required: [eventId, eventType, actorId, occurredAt], properties: {eventId: {$ref: '#/components/schemas/Id'}, eventType: {type: string}, actorId: {$ref: '#/components/schemas/Id'}, relatedId: {$ref: '#/components/schemas/Id'}, outcome: {type: string}, occurredAt: {$ref: '#/components/schemas/Timestamp'}}}
+    AuditPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/AuditEvent'}}, nextCursor: {type: [string, 'null']}}}
+    AiSessionRequest: {type: object, additionalProperties: false, properties: {clientSessionId: {type: string}}}
+    Quota: {type: object, additionalProperties: false, required: [remaining], properties: {remaining: {type: integer, minimum: 0}}}
+    AiSessionData: {type: object, additionalProperties: false, required: [sessionId, role, quota], properties: {sessionId: {$ref: '#/components/schemas/Id'}, role: {$ref: '#/components/schemas/Role'}, quota: {$ref: '#/components/schemas/Quota'}}}
+    AiMessageRequest: {type: object, additionalProperties: false, required: [message], properties: {message: {type: string, minLength: 1, maxLength: 4000}}}
+    AiAction: {type: object, additionalProperties: false, required: [actionType, level, prefill, draftId, label], properties: {actionType: {type: string}, level: {type: string, enum: [L1, L2, L3]}, prefill: {type: object}, draftId: {$ref: '#/components/schemas/Id'}, label: {type: string}}}
+    AiTurnData: {type: object, additionalProperties: false, required: [messageId, answer, citations, actions, quota], properties: {messageId: {$ref: '#/components/schemas/Id'}, answer: {type: string}, citations: {type: array, items: {type: string}}, actions: {type: array, items: {$ref: '#/components/schemas/AiAction'}}, quota: {$ref: '#/components/schemas/Quota'}}}
+    AiEvent: {type: object, additionalProperties: false, required: [eventId, type, occurredAt], properties: {eventId: {$ref: '#/components/schemas/Id'}, type: {type: string}, payload: {type: object}, occurredAt: {$ref: '#/components/schemas/Timestamp'}}}
+    AiEventPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/AiEvent'}}, nextCursor: {type: [string, 'null']}}}
+
+    RegistrationEnvelope: {$ref: '#/components/schemas/RegistrationDataEnvelope'}
+    SessionEnvelope: {$ref: '#/components/schemas/SessionDataEnvelope'}
+    EndedEnvelope: {$ref: '#/components/schemas/EndedDataEnvelope'}
+    AccountPageEnvelope: {$ref: '#/components/schemas/AccountPageDataEnvelope'}
+    ReviewReferenceEnvelope: {$ref: '#/components/schemas/ReviewReferenceDataEnvelope'}
+    PasswordResetEnvelope: {$ref: '#/components/schemas/PasswordResetDataEnvelope'}
+    ReaderEnvelope: {$ref: '#/components/schemas/ReaderDataEnvelope'}
+    TitlePageEnvelope: {$ref: '#/components/schemas/TitlePageDataEnvelope'}
+    TitleEnvelope: {$ref: '#/components/schemas/TitleDataEnvelope'}
+    RemovedEnvelope: {$ref: '#/components/schemas/RemovedDataEnvelope'}
+    ReadingContentEnvelope: {$ref: '#/components/schemas/ReadingContentDataEnvelope'}
+    CopyEnvelope: {$ref: '#/components/schemas/CopyDataEnvelope'}
+    CopyPageEnvelope: {$ref: '#/components/schemas/CopyPageDataEnvelope'}
+    ReservationCalendarEnvelope: {$ref: '#/components/schemas/ReservationCalendarDataEnvelope'}
+    ReservationEnvelope: {$ref: '#/components/schemas/ReservationDataEnvelope'}
+    TransactionEnvelope: {$ref: '#/components/schemas/TransactionDataEnvelope'}
+    LoanBatchEnvelope: {$ref: '#/components/schemas/LoanBatchDataEnvelope'}
+    RenewalEnvelope: {$ref: '#/components/schemas/RenewalDataEnvelope'}
+    ReturnEnvelope: {$ref: '#/components/schemas/ReturnDataEnvelope'}
+    ClosingRunEnvelope: {$ref: '#/components/schemas/ClosingRunDataEnvelope'}
+    ReopenedEnvelope: {$ref: '#/components/schemas/ReopenedDataEnvelope'}
+    FinePageEnvelope: {$ref: '#/components/schemas/FinePageDataEnvelope'}
+    OrderEnvelope: {$ref: '#/components/schemas/OrderDataEnvelope'}
+    SimulationEnvelope: {$ref: '#/components/schemas/SimulationDataEnvelope'}
+    CallbackEnvelope: {$ref: '#/components/schemas/CallbackDataEnvelope'}
+    ReconciliationEnvelope: {$ref: '#/components/schemas/ReconciliationDataEnvelope'}
+    ReviewPageEnvelope: {$ref: '#/components/schemas/ReviewPageDataEnvelope'}
+    ReviewDecisionEnvelope: {$ref: '#/components/schemas/ReviewDecisionDataEnvelope'}
+    ArrivalDashboardEnvelope: {$ref: '#/components/schemas/ArrivalDashboardDataEnvelope'}
+    MyBusinessPageEnvelope: {$ref: '#/components/schemas/MyBusinessPageDataEnvelope'}
+    NotificationPageEnvelope: {$ref: '#/components/schemas/NotificationPageDataEnvelope'}
+    ReadEnvelope: {$ref: '#/components/schemas/ReadDataEnvelope'}
+    AuditPageEnvelope: {$ref: '#/components/schemas/AuditPageDataEnvelope'}
+    AiSessionEnvelope: {$ref: '#/components/schemas/AiSessionDataEnvelope'}
+    AiTurnEnvelope: {$ref: '#/components/schemas/AiTurnDataEnvelope'}
+    AiEventPageEnvelope: {$ref: '#/components/schemas/AiEventPageDataEnvelope'}
+
+    RegistrationDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/RegistrationData'}}}
+    SessionDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/SessionData'}}}
+    EndedDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/EndedData'}}}
+    AccountPageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/AccountPageData'}}}
+    ReviewReferenceDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReviewReferenceData'}}}
+    PasswordResetDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/PasswordResetData'}}}
+    ReaderDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReaderData'}}}
+    TitlePageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/TitlePageData'}}}
+    TitleDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/TitleData'}}}
+    RemovedDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/RemovedData'}}}
+    ReadingContentDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReadingContentData'}}}
+    CopyDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/CopyData'}}}
+    CopyPageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/CopyPageData'}}}
+    ReservationCalendarDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReservationCalendarData'}}}
+    ReservationDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReservationData'}}}
+    TransactionDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/TransactionData'}}}
+    LoanBatchDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/LoanBatchData'}}}
+    RenewalDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/RenewalData'}}}
+    ReturnDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReturnData'}}}
+    ClosingRunDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ClosingRunData'}}}
+    ReopenedDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReopenedData'}}}
+    FinePageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/FinePageData'}}}
+    OrderDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/OrderData'}}}
+    SimulationDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/SimulationData'}}}
+    CallbackDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/CallbackData'}}}
+    ReconciliationDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReconciliationData'}}}
+    ReviewPageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReviewPageData'}}}
+    ReviewDecisionDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReviewDecisionData'}}}
+    ArrivalDashboardDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ArrivalDashboardData'}}}
+    MyBusinessPageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/MyBusinessPageData'}}}
+    NotificationPageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/NotificationPageData'}}}
+    ReadDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReadData'}}}
+    AuditPageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/AuditPageData'}}}
+    AiSessionDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/AiSessionData'}}}
+    AiTurnDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/AiTurnData'}}}
+    AiEventPageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/AiEventPageData'}}}
