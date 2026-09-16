@@ -7,6 +7,7 @@ import { saveContinuation } from '../platform/auth/continuation.js'
 import { AccountAdminView, LoginView, RegisterView } from '../modules/identity/index.js'
 import { CatalogAdminView, PortalView, ReadingView, TitleDetailView } from '../modules/catalog/index.js'
 import {
+  ClosingAdminView,
   CopyAdminView,
   LibrarianDeskView,
   ReservationCalendarView,
@@ -39,6 +40,7 @@ export const routes = [
   { path: '/admin/simulator', name: 'payment-simulator', component: PaymentSimulatorView, meta: { module: 'settlement', requiresAuth: true, roles: ['ADMIN'], title: '模拟支付调度' } },
   { path: '/admin/reconciliation', name: 'reconciliation', component: ReconciliationView, meta: { module: 'settlement', requiresAuth: true, roles: ['ADMIN'], title: '营业日对账' } },
   { path: '/admin/reviews', name: 'review-list', component: ReviewListView, meta: { module: 'review', requiresAuth: true, roles: ['ADMIN'], title: '高风险复核' } },
+  { path: '/admin/closing', name: 'closing-admin', component: ClosingAdminView, meta: { module: 'circulation', requiresAuth: true, roles: ['ADMIN'], title: '闭馆与恢复' } },
   { path: '/notifications', name: 'notification-center', component: NotificationCenterView, meta: { module: 'delivery', requiresAuth: true, roles: [], title: '通知中心' } },
   { path: '/admin/audit', name: 'audit-query', component: AuditQueryView, meta: { module: 'delivery', requiresAuth: true, roles: ['LIBRARIAN', 'ADMIN'], title: '审计查询' } },
   { path: '/forbidden', name: 'forbidden', component: ForbiddenPage, meta: { module: null, requiresAuth: false, roles: [], title: '无权限' } },

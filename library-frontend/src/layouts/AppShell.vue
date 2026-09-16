@@ -14,6 +14,7 @@
           <RouterLink v-if="isLibrarian" to="/desk">馆员工作台</RouterLink>
           <RouterLink v-if="isLibrarian" to="/admin/dashboard">到馆看板</RouterLink>
           <RouterLink v-if="isAdmin" to="/admin/reviews">复核决定</RouterLink>
+          <RouterLink v-if="isAdmin" to="/admin/closing">闭馆恢复</RouterLink>
           <RouterLink v-if="isAdmin" to="/admin/reconciliation">对账</RouterLink>
           <RouterLink v-if="isAdmin" to="/admin/simulator">模拟调度</RouterLink>
           <RouterLink v-if="isLibrarian || isAdmin" to="/admin/audit">审计</RouterLink>

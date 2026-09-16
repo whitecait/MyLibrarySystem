@@ -280,6 +280,16 @@ export const fixtures = {
       nextCursor: null,
     },
   },
+  reopenBusinessDate: {
+    code: 'MLS-CIRC-S010',
+    message: 'reopened',
+    data: { status: 'REOPENED', epoch: 2 },
+  },
+  runClosing: {
+    code: 'MLS-CIRC-S011',
+    message: 'run',
+    data: { batchId: '8501', status: 'COMPLETED' },
+  },
 }
 
 export default fixtures
