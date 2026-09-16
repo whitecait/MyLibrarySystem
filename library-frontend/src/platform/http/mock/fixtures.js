@@ -184,6 +184,102 @@ export const fixtures = {
       nextCursor: null,
     },
   },
+  listFines: {
+    code: 'MLS-PAY-S001',
+    message: 'ok',
+    data: {
+      items: [
+        { fineId: '5001', readerId: '1001', amountCents: 150, status: 'UNPAID', createdAt: '2026-09-15T10:00:00+08:00' },
+      ],
+      nextCursor: null,
+    },
+  },
+  createOrder: {
+    code: 'MLS-PAY-S002',
+    message: 'created',
+    data: { orderId: '6002', fineId: '5001', amountCents: 150, status: 'OCCUPIED', expiresAt: null },
+  },
+  getOrder: {
+    code: 'MLS-PAY-S003',
+    message: 'ok',
+    data: { orderId: '6002', fineId: '5001', amountCents: 150, status: 'OCCUPIED', expiresAt: null },
+  },
+  scheduleSimulatedPayment: {
+    code: 'MLS-PAY-S004',
+    message: 'scheduled',
+    data: { simulationId: '8001', status: 'SCHEDULED' },
+  },
+  closeOrder: {
+    code: 'MLS-PAY-S005',
+    message: 'closed',
+    data: { orderId: '6002', fineId: '5001', amountCents: 150, status: 'CLOSED', expiresAt: null },
+  },
+  requestRefund: { code: 'MLS-PAY-S006', message: 'review requested', data: { reviewId: '6003', status: 'PENDING' } },
+  reconcileBusinessDate: {
+    code: 'MLS-PAY-S007',
+    message: 'reconciled',
+    data: { reconciliationId: '9001', counts: { orders: 3, paid: 2, failed: 1 }, exceptions: [] },
+  },
+  listReviews: {
+    code: 'MLS-REV-S001',
+    message: 'ok',
+    data: {
+      items: [
+        {
+          reviewId: '6001',
+          targetType: 'ACCOUNT_CHANGE',
+          targetId: '1001',
+          action: 'SUSPEND',
+          status: 'PENDING',
+          requestedAt: '2026-09-15T09:00:00+08:00',
+        },
+      ],
+      nextCursor: null,
+    },
+  },
+  decideReview: { code: 'MLS-REV-S002', message: 'decided', data: { reviewId: '6001', status: 'APPROVED' } },
+  listNotifications: {
+    code: 'MLS-DEL-S001',
+    message: 'ok',
+    data: {
+      items: [
+        {
+          notificationId: '7002',
+          type: 'PICKUP_READY',
+          message: '您预约的书已到台，请于明日取书',
+          read: false,
+          relatedTxId: '4003',
+          createdAt: '2026-09-15T12:00:00+08:00',
+        },
+        {
+          notificationId: '7003',
+          type: 'CLOSING_NOTICE',
+          message: '今日闭馆批次已完成',
+          read: true,
+          createdAt: '2026-09-15T23:30:00+08:00',
+        },
+      ],
+      nextCursor: null,
+    },
+  },
+  markNotificationRead: { code: 'MLS-DEL-S002', message: 'read', data: { read: true } },
+  listAuditEvents: {
+    code: 'MLS-DEL-S003',
+    message: 'ok',
+    data: {
+      items: [
+        {
+          eventId: '9501',
+          eventType: 'ORDER_PAID',
+          actorId: '1001',
+          relatedId: '6002',
+          outcome: 'SUCCESS',
+          occurredAt: '2026-09-15T12:30:00+08:00',
+        },
+      ],
+      nextCursor: null,
+    },
+  },
 }
 
 export default fixtures

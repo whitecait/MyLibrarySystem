@@ -8,11 +8,17 @@
         <template v-if="authenticated">
           <RouterLink v-if="isReader" to="/me/business">我的业务</RouterLink>
           <RouterLink v-if="isReader || isLibrarian" to="/walk-in">现场借阅</RouterLink>
+          <RouterLink v-if="isReader || isLibrarian" to="/fines">罚款支付</RouterLink>
           <RouterLink v-if="isLibrarian" to="/admin/catalog">书目维护</RouterLink>
           <RouterLink v-if="isLibrarian" to="/admin/copies">副本维护</RouterLink>
           <RouterLink v-if="isLibrarian" to="/desk">馆员工作台</RouterLink>
           <RouterLink v-if="isLibrarian" to="/admin/dashboard">到馆看板</RouterLink>
+          <RouterLink v-if="isAdmin" to="/admin/reviews">复核决定</RouterLink>
+          <RouterLink v-if="isAdmin" to="/admin/reconciliation">对账</RouterLink>
+          <RouterLink v-if="isAdmin" to="/admin/simulator">模拟调度</RouterLink>
+          <RouterLink v-if="isLibrarian || isAdmin" to="/admin/audit">审计</RouterLink>
           <RouterLink v-if="isAdmin" to="/admin/accounts">账户管理</RouterLink>
+          <RouterLink to="/notifications">通知</RouterLink>
         </template>
       </nav>
       <div class="session-area" data-testid="session-area">
