@@ -29,3 +29,4 @@ export function apiRequest(operationId, options) {
 
 export { onUnauthorized } from './request.js'
 export { FailureKind, RequestFailure } from './errors.js'
+export { useApiRequest } from './useApi.js'
