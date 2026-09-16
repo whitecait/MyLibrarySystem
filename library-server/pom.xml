@@ -89,6 +89,27 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <!-- G0 contract gates (test scope only): CONTRACT-001 parses the approved
+             OpenAPI 3.1 document; CONTRACT-003 validates request/response bodies
+             against its JSON Schema (2020-12) via networknt. Versions pinned here
+             in the B0 baseline commit. -->
+        <dependency>
+            <groupId>io.swagger.parser.v3</groupId>
+            <artifactId>swagger-parser</artifactId>
+            <version>2.1.22</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.5.6</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

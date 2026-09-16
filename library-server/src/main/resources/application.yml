@@ -1,6 +1,10 @@
 spring:
   application:
     name: library-server
+  jackson:
+    deserialization:
+      # OpenAPI 请求 schema 均 additionalProperties:false：未知字段按字段错误拒绝
+      fail-on-unknown-properties: true
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/library}
     username: ${DB_USERNAME:library}
