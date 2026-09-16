@@ -66,6 +66,21 @@
     />
     <ErrorAlert v-if="renewState.status === 'failure'" :failure="renewState.failure" />
     <ErrorAlert v-if="cancelState.status === 'failure'" :failure="cancelState.failure" />
+
+    <el-dialog v-model="renewModalVisible" title="续借" data-testid="renew-modal">
+      <p v-if="aiDraftId" class="note" data-testid="renew-draft-note">
+        来自 AI 助手预填（草稿 {{ aiDraftId }}）；提交时走现行续借接口并重新鉴权，取消不会发送任何请求。
+      </p>
+      <el-input v-model="renewModalTxId" data-testid="renew-modal-tx-id" placeholder="交易号" />
+      <template #footer>
+        <el-button data-testid="renew-modal-cancel" @click="closeRenewModal">取消</el-button>
+        <el-button type="primary" data-testid="renew-modal-submit" :loading="modalRenewState.status === 'loading'" @click="submitModalRenew">
+          提交续借
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <AiAssistantView can-apply-prefill data-testid="ai-panel" @prefill="applyAiPrefill" />
   </section>
 </template>
 
@@ -75,6 +90,7 @@ import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { getMyBusiness } from '../index'
 import { cancelReservation as cancelReservationRequest, renewLoan } from '../../circulation'
+import { AiAssistantView } from '../../ai'
 
 const items = ref([])
 const nextCursor = ref(null)
@@ -83,6 +99,11 @@ const { state, run } = useApiRequest()
 const { state: renewState, run: runRenew } = useApiRequest()
 const renewResult = ref(null)
 const { state: cancelState, run: runCancel } = useApiRequest()
+
+const renewModalVisible = ref(false)
+const renewModalTxId = ref('')
+const aiDraftId = ref(null)
+const { state: modalRenewState, run: runModalRenew } = useApiRequest()
 
 async function load(cursor) {
   const envelope = await run(() => getMyBusiness({ kind: kind.value || undefined, cursor, limit: 20 }))
@@ -99,6 +120,27 @@ async function renew(item) {
 async function cancelReservation(item) {
   await runCancel(() => cancelReservationRequest({ txId: item.id }))
   if (cancelState.status === 'success') await load()
+}
+
+function applyAiPrefill(action) {
+  if (action.actionType !== 'RENEW_LOAN') return
+  renewModalTxId.value = action.prefill?.txId ?? ''
+  aiDraftId.value = action.draftId
+  renewModalVisible.value = true
+}
+
+function closeRenewModal() {
+  renewModalVisible.value = false
+  aiDraftId.value = null
+  renewModalTxId.value = ''
+}
+
+async function submitModalRenew() {
+  const headers = aiDraftId.value ? { 'Ai-Draft-Id': aiDraftId.value } : undefined
+  const envelope = await runModalRenew(() => renewLoan({ txId: renewModalTxId.value }, { headers }))
+  if (!envelope) return
+  renewResult.value = envelope.data
+  closeRenewModal()
 }
 
 load()

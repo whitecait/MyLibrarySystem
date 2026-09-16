@@ -14,6 +14,7 @@ import {
   WalkInLoansView,
 } from '../modules/circulation/index.js'
 import { ArrivalDashboardView, MyBusinessView } from '../modules/query/index.js'
+import { AiAssistantView } from '../modules/ai/index.js'
 import { FineSettlementView, PaymentSimulatorView, ReconciliationView } from '../modules/settlement/index.js'
 import { ReviewListView } from '../modules/review/index.js'
 import { AuditQueryView, NotificationCenterView } from '../modules/delivery/index.js'
@@ -31,6 +32,8 @@ export const routes = [
   { path: '/titles/:titleId/calendar', name: 'title-calendar', component: ReservationCalendarView, props: true, meta: { module: 'circulation', requiresAuth: false, roles: [], title: '预约日历' } },
   { path: '/walk-in', name: 'walk-in', component: WalkInLoansView, meta: { module: 'circulation', requiresAuth: true, roles: ['READER', 'LIBRARIAN'], title: '现场借阅' } },
   { path: '/me/business', name: 'my-business', component: MyBusinessView, meta: { module: 'query', requiresAuth: true, roles: ['READER'], title: '我的业务' } },
+  // 匿名 AI 会话所有权待契约修订批准后接合（当前仅提供登录态助手入口）。
+  { path: '/assistant', name: 'ai-assistant', component: AiAssistantView, meta: { module: 'ai', requiresAuth: true, roles: [], title: 'AI 助手' } },
   { path: '/admin/accounts', name: 'account-admin', component: AccountAdminView, meta: { module: 'identity', requiresAuth: true, roles: ['ADMIN'], title: '账户管理' } },
   { path: '/admin/catalog', name: 'catalog-admin', component: CatalogAdminView, meta: { module: 'catalog', requiresAuth: true, roles: ['LIBRARIAN'], title: '书目维护' } },
   { path: '/admin/copies', name: 'copy-admin', component: CopyAdminView, meta: { module: 'circulation', requiresAuth: true, roles: ['LIBRARIAN'], title: '副本维护' } },

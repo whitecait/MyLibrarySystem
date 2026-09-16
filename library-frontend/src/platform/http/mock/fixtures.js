@@ -290,6 +290,35 @@ export const fixtures = {
     message: 'run',
     data: { batchId: '8501', status: 'COMPLETED' },
   },
+  startAiSession: {
+    code: 'MLS-AI-S001',
+    message: 'ok',
+    data: { sessionId: '7001', role: 'READER', quota: { remaining: 10 } },
+  },
+  sendAiMessage: {
+    code: 'MLS-AI-S001',
+    message: 'ok',
+    data: {
+      messageId: '7101',
+      answer: '请核对后提交',
+      citations: [],
+      actions: [
+        { actionType: 'RENEW_LOAN', level: 'L2', prefill: { txId: '4001' }, draftId: '7201', label: '打开续借表单' },
+      ],
+      quota: { remaining: 9 },
+    },
+  },
+  listAiEvents: {
+    code: 'MLS-AI-S002',
+    message: 'ok',
+    data: {
+      items: [
+        { eventId: '7301', type: 'TOOL_CALL', payload: { tool: 'renew_loan' }, occurredAt: '2026-09-15T14:00:00+08:00' },
+        { eventId: '7302', type: 'QUOTA_CONSUMED', payload: { remaining: 9 }, occurredAt: '2026-09-15T14:00:01+08:00' },
+      ],
+      nextCursor: null,
+    },
+  },
 }
 
 export default fixtures

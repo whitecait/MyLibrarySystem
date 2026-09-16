@@ -76,4 +76,65 @@ describe('MyBusinessView', () => {
 
     expect(wrapper.find('[data-testid="my-business-empty"]').exists()).toBe(true)
   })
+
+  it('prefills the renew modal from an AI L2 card and submits with the draft id', async () => {
+    const calls = []
+    const { setTransport } = await import('@/platform/http')
+    const { createMockTransport } = await import('@/platform/http/mock/mockAdapter')
+    const mock = createMockTransport({ fixtures: sharedFixtures })
+    setTransport({
+      mode: 'mock',
+      async request(operationId, options = {}) {
+        calls.push({ operationId, options })
+        return mock.request(operationId, options)
+      },
+    })
+    const wrapper = await mountView(MyBusinessView)
+    await flushPromises()
+
+    await wrapper.find('[data-testid="ai-input"]').setValue('帮我预填续借')
+    await wrapper.find('[data-testid="ai-composer"]').trigger('submit')
+    await flushPromises()
+
+    await wrapper.find('[data-testid="ai-action-open-7201"]').trigger('click')
+    const modal = wrapper.find('[data-testid="renew-modal"]')
+    expect(modal.exists()).toBe(true)
+    expect(wrapper.find('[data-testid="renew-modal-tx-id"]').element.value).toBe('4001')
+    expect(wrapper.find('[data-testid="renew-draft-note"]').text()).toContain('7201')
+
+    await wrapper.find('[data-testid="renew-modal-submit"]').trigger('click')
+    await flushPromises()
+
+    const renewCall = calls.find((call) => call.operationId === 'renewLoan')
+    expect(renewCall.options.params).toEqual({ txId: '4001' })
+    expect(renewCall.options.headers).toEqual({ 'Ai-Draft-Id': '7201' })
+    expect(wrapper.find('[data-testid="renew-result"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="renew-modal"]').isVisible()).toBe(false)
+  })
+
+  it('sends no business request when the prefilled modal is cancelled', async () => {
+    const calls = []
+    const { setTransport } = await import('@/platform/http')
+    const { createMockTransport } = await import('@/platform/http/mock/mockAdapter')
+    const mock = createMockTransport({ fixtures: sharedFixtures })
+    setTransport({
+      mode: 'mock',
+      async request(operationId, options = {}) {
+        calls.push({ operationId, options })
+        return mock.request(operationId, options)
+      },
+    })
+    const wrapper = await mountView(MyBusinessView)
+    await flushPromises()
+
+    await wrapper.find('[data-testid="ai-input"]').setValue('帮我预填续借')
+    await wrapper.find('[data-testid="ai-composer"]').trigger('submit')
+    await flushPromises()
+    await wrapper.find('[data-testid="ai-action-open-7201"]').trigger('click')
+    await wrapper.find('[data-testid="renew-modal-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(calls.filter((call) => call.operationId === 'renewLoan')).toHaveLength(0)
+    expect(wrapper.find('[data-testid="renew-modal"]').isVisible()).toBe(false)
+  })
 })

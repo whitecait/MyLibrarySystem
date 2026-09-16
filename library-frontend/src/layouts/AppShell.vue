@@ -7,6 +7,7 @@
         <RouterLink to="/catalog">书目检索</RouterLink>
         <template v-if="authenticated">
           <RouterLink v-if="isReader" to="/me/business">我的业务</RouterLink>
+          <RouterLink v-if="isReader" to="/assistant">AI 助手</RouterLink>
           <RouterLink v-if="isReader || isLibrarian" to="/walk-in">现场借阅</RouterLink>
           <RouterLink v-if="isReader || isLibrarian" to="/fines">罚款支付</RouterLink>
           <RouterLink v-if="isLibrarian" to="/admin/catalog">书目维护</RouterLink>
