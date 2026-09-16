@@ -6,6 +6,13 @@ import { getRole, isAuthenticated } from '../platform/auth/session.js'
 import { saveContinuation } from '../platform/auth/continuation.js'
 import { AccountAdminView, LoginView, RegisterView } from '../modules/identity/index.js'
 import { CatalogAdminView, PortalView, ReadingView, TitleDetailView } from '../modules/catalog/index.js'
+import {
+  CopyAdminView,
+  LibrarianDeskView,
+  ReservationCalendarView,
+  WalkInLoansView,
+} from '../modules/circulation/index.js'
+import { ArrivalDashboardView, MyBusinessView } from '../modules/query/index.js'
 import ForbiddenPage from '../views/ForbiddenPage.vue'
 import HomePage from '../views/HomePage.vue'
 import NotFoundPage from '../views/NotFoundPage.vue'
@@ -17,8 +24,14 @@ export const routes = [
   { path: '/catalog', name: 'catalog-portal', component: PortalView, meta: { module: 'catalog', requiresAuth: false, roles: [], title: '书目检索' } },
   { path: '/titles/:titleId', name: 'title-detail', component: TitleDetailView, props: true, meta: { module: 'catalog', requiresAuth: false, roles: [], title: '书目详情' } },
   { path: '/titles/:titleId/read', name: 'title-reading', component: ReadingView, props: true, meta: { module: 'catalog', requiresAuth: false, roles: [], title: '阅读' } },
+  { path: '/titles/:titleId/calendar', name: 'title-calendar', component: ReservationCalendarView, props: true, meta: { module: 'circulation', requiresAuth: false, roles: [], title: '预约日历' } },
+  { path: '/walk-in', name: 'walk-in', component: WalkInLoansView, meta: { module: 'circulation', requiresAuth: true, roles: ['READER', 'LIBRARIAN'], title: '现场借阅' } },
+  { path: '/me/business', name: 'my-business', component: MyBusinessView, meta: { module: 'query', requiresAuth: true, roles: ['READER'], title: '我的业务' } },
   { path: '/admin/accounts', name: 'account-admin', component: AccountAdminView, meta: { module: 'identity', requiresAuth: true, roles: ['ADMIN'], title: '账户管理' } },
   { path: '/admin/catalog', name: 'catalog-admin', component: CatalogAdminView, meta: { module: 'catalog', requiresAuth: true, roles: ['LIBRARIAN'], title: '书目维护' } },
+  { path: '/admin/copies', name: 'copy-admin', component: CopyAdminView, meta: { module: 'circulation', requiresAuth: true, roles: ['LIBRARIAN'], title: '副本维护' } },
+  { path: '/desk', name: 'librarian-desk', component: LibrarianDeskView, meta: { module: 'circulation', requiresAuth: true, roles: ['LIBRARIAN'], title: '馆员工作台' } },
+  { path: '/admin/dashboard', name: 'arrival-dashboard', component: ArrivalDashboardView, meta: { module: 'query', requiresAuth: true, roles: ['LIBRARIAN'], title: '到馆看板' } },
   { path: '/forbidden', name: 'forbidden', component: ForbiddenPage, meta: { module: null, requiresAuth: false, roles: [], title: '无权限' } },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundPage, meta: { module: null, requiresAuth: false, roles: [], title: '页面不存在' } },
 ]

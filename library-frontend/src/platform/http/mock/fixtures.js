@@ -95,6 +95,95 @@ export const fixtures = {
     },
   },
   removeTitle: { code: 'MLS-CAT-S006', message: 'removed', data: { status: 'REMOVED' } },
+  createCopy: {
+    code: 'MLS-CIRC-S001',
+    message: 'created',
+    data: { copyId: '3001', titleId: '2001', copyNo: 'C-001', status: 'PENDING_SHELVING', version: 0 },
+  },
+  listCopies: {
+    code: 'MLS-CIRC-S002',
+    message: 'ok',
+    data: {
+      items: [
+        { copyId: '3001', titleId: '2001', copyNo: 'C-001', status: 'AVAILABLE', version: 2 },
+        { copyId: '3002', titleId: '2001', copyNo: 'C-002', status: 'BORROWED', version: 5 },
+      ],
+      nextCursor: null,
+    },
+  },
+  changeCopyState: {
+    code: 'MLS-CIRC-S003',
+    message: 'changed',
+    data: { copyId: '3001', titleId: '2001', copyNo: 'C-001', status: 'MAINTENANCE', version: 3 },
+  },
+  getReservationCalendar: {
+    code: 'MLS-CIRC-S004',
+    message: 'ok',
+    data: {
+      items: [
+        { businessDate: '2026-09-16', availability: 'GUARANTEED' },
+        { businessDate: '2026-09-17', availability: 'NOT_GUARANTEED' },
+        { businessDate: '2026-09-18', availability: 'UNAVAILABLE' },
+      ],
+    },
+  },
+  reserveTitle: {
+    code: 'MLS-CIRC-S005',
+    message: 'confirmed',
+    data: { txId: '4002', outcome: 'CONFIRMED' },
+  },
+  cancelReservation: {
+    code: 'MLS-CIRC-S006',
+    message: 'canceled',
+    data: { txId: '4002', outcome: 'CANCELED' },
+  },
+  createWalkInLoans: {
+    code: 'MLS-CIRC-S002',
+    message: 'processed',
+    data: {
+      items: [
+        { itemRef: '3001', txId: '4001', outcome: 'LENT' },
+        { itemRef: '3002', txId: null, outcome: 'REJECTED', reasons: ['COPY_NOT_AVAILABLE'] },
+      ],
+    },
+  },
+  claimPickup: {
+    code: 'MLS-CIRC-S007',
+    message: 'claimed',
+    data: { txId: '4001', outcome: 'LOAN_CREATED', status: 'ACTIVE' },
+  },
+  applyManualAction: {
+    code: 'MLS-CIRC-S008',
+    message: 'applied',
+    data: { txId: '4001', outcome: 'MANUAL_RELEASED', status: 'MANUAL_HANDLING' },
+  },
+  renewLoan: {
+    code: 'MLS-CIRC-S009',
+    message: 'renewed',
+    data: { txId: '4001', dueDate: '2026-09-29', outcome: 'RENEWED' },
+  },
+  returnCopy: {
+    code: 'MLS-CIRC-S003',
+    message: 'returned',
+    data: { txId: '4001', outcome: 'RETURNED', fineId: '5001' },
+  },
+  getArrivalDashboard: {
+    code: 'MLS-QUERY-S001',
+    message: 'ok',
+    data: { businessDate: '2026-09-16', expected: 12, arrived: 7, pending: 4, exceptions: 1 },
+  },
+  getMyBusiness: {
+    code: 'MLS-QUERY-S002',
+    message: 'ok',
+    data: {
+      items: [
+        { kind: 'LOAN', id: '4001', status: 'ACTIVE', title: 'Database Systems', businessDate: '2026-09-15' },
+        { kind: 'RESERVATION', id: '4003', status: 'WAITLIST', title: 'Database Systems', businessDate: '2026-09-16' },
+        { kind: 'FINE', id: '5001', status: 'UNPAID', amountCents: 150 },
+      ],
+      nextCursor: null,
+    },
+  },
 }
 
 export default fixtures

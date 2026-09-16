@@ -17,13 +17,17 @@
         </div>
       </dl>
       <p class="availability-note">可借状态为书目级展示，不构成借阅承诺。</p>
-      <RouterLink
-        v-if="detail.hasReadingContent"
-        :to="`/titles/${detail.titleId}/read`"
-        data-testid="title-reading-entry"
-      >
-        开始阅读
-      </RouterLink>
+      <div class="title-links">
+        <RouterLink
+          v-if="detail.hasReadingContent"
+          :to="`/titles/${detail.titleId}/read`"
+          data-testid="title-reading-entry"
+        >
+          开始阅读
+        </RouterLink>
+        <RouterLink :to="`/titles/${detail.titleId}/calendar`" data-testid="title-calendar-entry">预约日历</RouterLink>
+      </div>
+      <ReservePanel :title-id="detail.titleId" data-testid="title-reserve-panel" />
     </template>
     <ErrorAlert v-if="state.status === 'failure' && !notFound" :failure="state.failure" />
   </section>
@@ -35,6 +39,7 @@ import { RouterLink } from 'vue-router'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { FailureKind } from '@/platform/http'
 import { useApiRequest } from '@/platform/http'
+import { ReservePanel } from '../../circulation'
 import { getTitle } from '../index'
 
 const props = defineProps({ titleId: { type: String, required: true } })
@@ -85,5 +90,10 @@ onMounted(async () => {
 .availability-note {
   color: #526274;
   font-size: 0.85rem;
+}
+
+.title-links {
+  display: flex;
+  gap: 1rem;
 }
 </style>

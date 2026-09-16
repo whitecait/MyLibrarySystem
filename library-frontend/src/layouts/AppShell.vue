@@ -6,7 +6,12 @@
         <RouterLink to="/">首页</RouterLink>
         <RouterLink to="/catalog">书目检索</RouterLink>
         <template v-if="authenticated">
+          <RouterLink v-if="isReader" to="/me/business">我的业务</RouterLink>
+          <RouterLink v-if="isReader || isLibrarian" to="/walk-in">现场借阅</RouterLink>
           <RouterLink v-if="isLibrarian" to="/admin/catalog">书目维护</RouterLink>
+          <RouterLink v-if="isLibrarian" to="/admin/copies">副本维护</RouterLink>
+          <RouterLink v-if="isLibrarian" to="/desk">馆员工作台</RouterLink>
+          <RouterLink v-if="isLibrarian" to="/admin/dashboard">到馆看板</RouterLink>
           <RouterLink v-if="isAdmin" to="/admin/accounts">账户管理</RouterLink>
         </template>
       </nav>
@@ -35,6 +40,7 @@ const authenticated = computed(() => isAuthenticated())
 const roleLabel = computed(() => getRole() ?? '')
 const isAdmin = computed(() => getRole() === 'ADMIN')
 const isLibrarian = computed(() => getRole() === 'LIBRARIAN')
+const isReader = computed(() => getRole() === 'READER')
 
 async function onLogout() {
   try {
