@@ -12,6 +12,7 @@ public record Capability(String value) {
     public static final Capability AUTHENTICATED = new Capability("AUTHENTICATED");
     public static final Capability AUTHENTICATED_SELF = new Capability("AUTHENTICATED_SELF");
     public static final Capability PUBLIC_OR_AUTHENTICATED = new Capability("PUBLIC_OR_AUTHENTICATED");
+    public static final Capability READER = new Capability("READER");
     public static final Capability ADMIN = new Capability("ADMIN");
     public static final Capability LIBRARIAN = new Capability("LIBRARIAN");
     public static final Capability LIBRARIAN_OR_ADMIN = new Capability("LIBRARIAN_OR_ADMIN");

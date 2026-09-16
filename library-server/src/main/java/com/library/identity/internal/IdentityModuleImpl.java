@@ -161,6 +161,7 @@ public class IdentityModuleImpl implements IdentityRegistration, ActorResolver, 
         var allowed = switch (capability.value()) {
             case "PUBLIC", "PUBLIC_OR_AUTHENTICATED" -> true;
             case "AUTHENTICATED", "AUTHENTICATED_SELF" -> actor != null;
+            case "READER" -> role == Role.READER;
             case "ADMIN" -> role == Role.ADMIN;
             case "LIBRARIAN" -> role == Role.LIBRARIAN;
             case "LIBRARIAN_OR_ADMIN" -> role == Role.LIBRARIAN || role == Role.ADMIN;

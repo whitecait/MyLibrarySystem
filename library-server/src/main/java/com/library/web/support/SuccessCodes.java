@@ -26,7 +26,22 @@ public final class SuccessCodes {
             Map.entry("getTitle", "MLS-CAT-S003"),
             Map.entry("updateTitle", "MLS-CAT-S004"),
             Map.entry("removeTitle", "MLS-CAT-S005"),
-            Map.entry("getReadingContent", "MLS-CAT-S006")
+            Map.entry("getReadingContent", "MLS-CAT-S006"),
+            // B2 Circulation
+            Map.entry("createCopy", "MLS-CIRC-S001"),
+            Map.entry("listCopies", "MLS-CIRC-S004"),
+            Map.entry("changeCopyState", "MLS-CIRC-S005"),
+            Map.entry("getReservationCalendar", "MLS-CIRC-S006"),
+            Map.entry("reserveTitle", "MLS-CIRC-S001"),
+            Map.entry("cancelReservation", "MLS-CIRC-S007"),
+            Map.entry("createWalkInLoans", "MLS-CIRC-S002"),
+            Map.entry("claimPickup", "MLS-CIRC-S008"),
+            Map.entry("applyManualAction", "MLS-CIRC-S009"),
+            Map.entry("renewLoan", "MLS-CIRC-S010"),
+            Map.entry("returnCopy", "MLS-CIRC-S003"),
+            // B2 Query
+            Map.entry("getArrivalDashboard", "MLS-QUERY-S001"),
+            Map.entry("getMyBusiness", "MLS-QUERY-S002")
     );
 
     private SuccessCodes() {

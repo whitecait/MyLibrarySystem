@@ -145,4 +145,150 @@ public class CompositionRoot {
         }
         return new Facade(requesting);
     }
+
+    @Bean(autowireCandidate = false)
+    com.library.circulation.contract.CirculationModule circulationModule(
+            com.library.circulation.contract.AvailabilityQuery availabilityQuery,
+            com.library.circulation.contract.ReservationCommands reservationCommands,
+            com.library.circulation.contract.LoanCommands loanCommands,
+            com.library.circulation.contract.ReturnCommands returnCommands,
+            com.library.circulation.contract.CopyCommands copyCommands) {
+        record Facade(com.library.circulation.contract.AvailabilityQuery av,
+                      com.library.circulation.contract.ReservationCommands rsv,
+                      com.library.circulation.contract.LoanCommands ln,
+                      com.library.circulation.contract.ReturnCommands rt,
+                      com.library.circulation.contract.CopyCommands cp)
+                implements com.library.circulation.contract.CirculationModule,
+                com.library.circulation.contract.AvailabilityQuery,
+                com.library.circulation.contract.ReservationCommands,
+                com.library.circulation.contract.LoanCommands,
+                com.library.circulation.contract.ReturnCommands,
+                com.library.circulation.contract.CopyCommands {
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.AvailabilityQuery.AvailabilitySnapshot> availability(
+                    com.library.catalog.contract.model.TitleId titleId,
+                    com.library.circulation.contract.model.BusinessDate date) {
+                return av.availability(titleId, date);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.AvailabilityQuery.ReservationCalendar> calendar(
+                    com.library.catalog.contract.model.TitleId titleId,
+                    com.library.circulation.contract.model.BusinessDate from,
+                    com.library.circulation.contract.model.BusinessDate to) {
+                return av.calendar(titleId, from, to);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.ReservationCommands.Reservation> reserve(
+                    com.library.circulation.contract.ReservationCommands.ReservationCommand command) {
+                return rsv.reserve(command);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.Transaction> cancel(
+                    com.library.circulation.contract.ReservationCommands.CancelReservation command) {
+                return rsv.cancel(command);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.LoanCommands.LoanBatch> lend(
+                    com.library.circulation.contract.LoanCommands.WalkInLoanCommand command) {
+                return ln.lend(command);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.Transaction> claim(
+                    com.library.circulation.contract.LoanCommands.ClaimPickup command) {
+                return ln.claim(command);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.Transaction> applyManualAction(
+                    com.library.circulation.contract.LoanCommands.ManualAction command) {
+                return ln.applyManualAction(command);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.LoanCommands.Renewal> renew(
+                    com.library.circulation.contract.LoanCommands.RenewalCommand command) {
+                return ln.renew(command);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.ReturnCommands.ReturnedCopy> returnCopy(
+                    com.library.circulation.contract.ReturnCommands.ReturnCommand command) {
+                return rt.returnCopy(command);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.CopyCommands.CopySnapshot> createCopy(
+                    com.library.circulation.contract.CopyCommands.CreateCopy command) {
+                return cp.createCopy(command);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.CopyCommands.CopyPage> listCopies(
+                    com.library.circulation.contract.CopyCommands.CopyCriteria criteria) {
+                return cp.listCopies(criteria);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.circulation.contract.CopyCommands.CopySnapshot> maintainCopy(
+                    com.library.circulation.contract.CopyCommands.MaintainCopy command) {
+                return cp.maintainCopy(command);
+            }
+        }
+        return new Facade(availabilityQuery, reservationCommands, loanCommands, returnCommands, copyCommands);
+    }
+
+    @Bean(autowireCandidate = false)
+    com.library.settlement.contract.SettlementModule settlementModule(
+            com.library.settlement.contract.DebtQuery debtQuery,
+            com.library.settlement.contract.FineCommands fineCommands) {
+        record Facade(com.library.settlement.contract.DebtQuery d,
+                      com.library.settlement.contract.FineCommands f)
+                implements com.library.settlement.contract.SettlementModule,
+                com.library.settlement.contract.DebtQuery,
+                com.library.settlement.contract.FineCommands {
+            @Override
+            public com.library.contract.ModuleResult<com.library.settlement.contract.DebtQuery.DebtSnapshot> debtFor(
+                    com.library.identity.contract.model.ReaderId readerId) {
+                return d.debtFor(readerId);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.settlement.contract.FineCommands.Fine> createFine(
+                    com.library.settlement.contract.FineCommands.FineFromReturn command) {
+                return f.createFine(command);
+            }
+        }
+        return new Facade(debtQuery, fineCommands);
+    }
+
+    @Bean(autowireCandidate = false)
+    com.library.query.contract.QueryModule queryModule(
+            com.library.query.contract.ArrivalQuery arrivalQuery,
+            com.library.query.contract.MyBusinessQuery myBusinessQuery) {
+        record Facade(com.library.query.contract.ArrivalQuery a,
+                      com.library.query.contract.MyBusinessQuery m)
+                implements com.library.query.contract.QueryModule,
+                com.library.query.contract.ArrivalQuery,
+                com.library.query.contract.MyBusinessQuery {
+            @Override
+            public com.library.contract.ModuleResult<com.library.query.contract.ArrivalQuery.ArrivalDashboard> arrivals(
+                    com.library.circulation.contract.model.BusinessDate date,
+                    com.library.contract.security.ActorContext actor) {
+                return a.arrivals(date, actor);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.query.contract.MyBusinessQuery.MyBusinessPage> myBusiness(
+                    com.library.query.contract.MyBusinessQuery.MyBusinessCriteria criteria,
+                    com.library.contract.security.ActorContext actor) {
+                return m.myBusiness(criteria, actor);
+            }
+        }
+        return new Facade(arrivalQuery, myBusinessQuery);
+    }
 }

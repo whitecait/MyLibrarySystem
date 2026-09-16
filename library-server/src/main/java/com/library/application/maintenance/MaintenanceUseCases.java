@@ -10,6 +10,7 @@ import com.library.catalog.contract.TitlePage;
 import com.library.catalog.contract.TitleQuery;
 import com.library.catalog.contract.TitleView;
 import com.library.catalog.contract.model.TitleId;
+import com.library.circulation.contract.CopyCommands;
 import com.library.contract.ModuleResult;
 import com.library.contract.model.PageCursor;
 import com.library.contract.security.ActorContext;
@@ -21,7 +22,9 @@ import com.library.identity.contract.AuthorizationCheck;
 import org.springframework.stereotype.Component;
 
 /**
- * 书目维护应用用例（MLS-DOC-MD-0004 §3；B1 只含书目，副本维护随 B2 加入 CopyCommands）。
+ * 书目与副本维护应用用例（MLS-DOC-MD-0004 §3）：
+ * 书目经 CATALOG TitleCommands；副本维护经 CATALOG→CIRCULATION 的 CopyCommands
+ * （MD-0002 §3：CATALOG 不拥有副本状态，维护副本时调用 CIRCULATION）。
  * 公开读操作不做授权；维护操作要求 LIBRARIAN。
  */
 public interface MaintenanceUseCases {
@@ -37,12 +40,25 @@ public interface MaintenanceUseCases {
     ModuleResult<TitleChange> updateTitle(ActorContext actor, MaintainTitle command);
 
     ModuleResult<TitleChange> removeTitle(ActorContext actor, MaintainTitle command);
+
+    ModuleResult<CopyCommands.CopySnapshot> createCopy(ActorContext actor, CopyCommands.CreateCopy command);
+
+    ModuleResult<CopyCommands.CopyPage> listCopies(ActorContext actor, CopyCommands.CopyCriteria criteria);
+
+    ModuleResult<CopyCommands.CopySnapshot> changeCopyState(ActorContext actor, CopyCommands.MaintainCopy command);
+
+    /** 公开预约日历（无授权；日期守卫在模块）。 */
+    ModuleResult<com.library.circulation.contract.AvailabilityQuery.ReservationCalendar> reservationCalendar(
+            TitleId titleId, com.library.circulation.contract.model.BusinessDate from,
+            com.library.circulation.contract.model.BusinessDate to);
 }
 
 @Component
 record MaintenanceUseCasesImpl(TitleQuery titleQuery,
                                TitleCommands titleCommands,
                                ReadingContentQuery readingContentQuery,
+                               CopyCommands copyCommands,
+                               com.library.circulation.contract.AvailabilityQuery availabilityQuery,
                                AuthorizationCheck authorization) implements MaintenanceUseCases {
 
     @Override
@@ -85,6 +101,43 @@ record MaintenanceUseCasesImpl(TitleQuery titleQuery,
             return ModuleResult.Rejected.propagate(rejected);
         }
         return titleCommands.maintain(command);
+    }
+
+    @Override
+    public ModuleResult<CopyCommands.CopySnapshot> createCopy(ActorContext actor,
+                                                              CopyCommands.CreateCopy command) {
+        var rejected = authorizeOrReject(actor);
+        if (rejected != null) {
+            return ModuleResult.Rejected.propagate(rejected);
+        }
+        return copyCommands.createCopy(command);
+    }
+
+    @Override
+    public ModuleResult<CopyCommands.CopyPage> listCopies(ActorContext actor,
+                                                          CopyCommands.CopyCriteria criteria) {
+        var rejected = authorizeOrReject(actor);
+        if (rejected != null) {
+            return ModuleResult.Rejected.propagate(rejected);
+        }
+        return copyCommands.listCopies(criteria);
+    }
+
+    @Override
+    public ModuleResult<CopyCommands.CopySnapshot> changeCopyState(ActorContext actor,
+                                                                   CopyCommands.MaintainCopy command) {
+        var rejected = authorizeOrReject(actor);
+        if (rejected != null) {
+            return ModuleResult.Rejected.propagate(rejected);
+        }
+        return copyCommands.maintainCopy(command);
+    }
+
+    @Override
+    public ModuleResult<com.library.circulation.contract.AvailabilityQuery.ReservationCalendar> reservationCalendar(
+            TitleId titleId, com.library.circulation.contract.model.BusinessDate from,
+            com.library.circulation.contract.model.BusinessDate to) {
+        return availabilityQuery.calendar(titleId, from, to);
     }
 
     private ModuleResult.Rejected<AuthorizationDecision> authorizeOrReject(ActorContext actor) {
