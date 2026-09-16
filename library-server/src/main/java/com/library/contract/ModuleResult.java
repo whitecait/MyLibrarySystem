@@ -32,5 +32,10 @@ public sealed interface ModuleResult<T> permits ModuleResult.Accepted, ModuleRes
         public static <T> Rejected<T> conflict(String code, long currentVersion, String... reasons) {
             return new Rejected<>(code, java.util.List.of(reasons), currentVersion);
         }
+
+        /** 以既有拒绝的码与原因构造另一结果类型的拒绝（应用用例中传递鉴权/守卫拒绝）。 */
+        public static <T> Rejected<T> propagate(Rejected<?> other) {
+            return new Rejected<>(other.code(), other.reasons(), other.currentVersion());
+        }
     }
 }

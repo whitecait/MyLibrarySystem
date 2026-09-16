@@ -8,6 +8,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.slf4j.LoggerFactory;
 
 /**
  * 统一错误信封映射（MD-0003 §1）：基础设施失败与请求结构错误在此收口，
@@ -18,10 +19,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
     public static final String FIELD_ERROR_CODE_ATTRIBUTE = ApiExceptionHandler.class.getName() + ".fieldErrorCode";
 
     @ExceptionHandler(InfrastructureFailure.class)
     public ResponseEntity<Envelope> infrastructureFailure(InfrastructureFailure failure) {
+        log.error("基础设施失败", failure);
         return ResponseEntity.status(StableErrorCode.MLS_SYS_001.httpStatus())
                 .body(Envelope.of(StableErrorCode.MLS_SYS_001.code(), "系统失败", java.util.Map.of()));
     }
@@ -43,6 +47,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(Throwable.class)
     public ResponseEntity<Envelope> unexpected(Throwable e) {
+        log.error("未预期系统失败", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Envelope.of(StableErrorCode.MLS_SYS_001.code(), "系统失败", java.util.Map.of()));
     }

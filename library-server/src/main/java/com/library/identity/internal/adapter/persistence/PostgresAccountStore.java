@@ -1,14 +1,21 @@
 package com.library.identity.internal.adapter.persistence;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class PostgresAccountStore implements AccountStore {
 
     private final JdbcTemplate jdbc;
+
+    private static final RowMapper<AccountStore.StoredAccount> ROW = (rs, i) ->
+            new AccountStore.StoredAccount(rs.getLong("id"), rs.getString("username"),
+                    rs.getString("password_hash"), rs.getString("display_name"),
+                    rs.getString("role"), rs.getString("status"), rs.getLong("version"));
 
     public PostgresAccountStore(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
@@ -34,6 +41,51 @@ public class PostgresAccountStore implements AccountStore {
         if (inserted.isEmpty()) {
             throw new DuplicateUsername(candidate.username());
         }
-        return new StoredAccount(inserted.get(0), candidate.username(), candidate.displayName(), "READER", "ACTIVE", 0);
+        return new StoredAccount(inserted.get(0), candidate.username(), candidate.passwordHash(),
+                candidate.displayName(), "READER", "ACTIVE", 0);
+    }
+
+    @Override
+    public Optional<StoredAccount> byUsername(String username) {
+        return jdbc.query("SELECT * FROM account WHERE username = ?", ROW, username).stream().findFirst();
+    }
+
+    @Override
+    public Optional<StoredAccount> byId(long accountId) {
+        return jdbc.query("SELECT * FROM account WHERE id = ?", ROW, accountId).stream().findFirst();
+    }
+
+    @Override
+    public List<StoredAccount> list(String role, String status, long afterId, int limit) {
+        var sql = new StringBuilder("SELECT * FROM account WHERE id > ?");
+        var args = new java.util.ArrayList<Object>();
+        args.add(afterId);
+        if (role != null && !role.isBlank()) {
+            sql.append(" AND role = ?");
+            args.add(role);
+        }
+        if (status != null && !status.isBlank()) {
+            sql.append(" AND status = ?");
+            args.add(status);
+        }
+        sql.append(" ORDER BY id LIMIT ?");
+        args.add(limit);
+        return jdbc.query(sql.toString(), ROW, args.toArray());
+    }
+
+    @Override
+    public long updateReaderStatus(long accountId, String nextStatus) {
+        return jdbc.queryForObject("""
+                UPDATE account SET status = ?, version = version + 1, updated_at = now()
+                WHERE id = ? RETURNING version
+                """, Long.class, nextStatus, accountId);
+    }
+
+    @Override
+    public long updatePasswordHash(long accountId, String passwordHash) {
+        return jdbc.queryForObject("""
+                UPDATE account SET password_hash = ?, version = version + 1, updated_at = now()
+                WHERE id = ? RETURNING version
+                """, Long.class, passwordHash, accountId);
     }
 }
