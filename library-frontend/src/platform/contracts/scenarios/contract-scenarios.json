@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "0.2",
+  "status": "APPROVED",
+  "scenarios": [
+    {
+      "id": "AUTH-REGISTER-SUCCESS",
+      "request": {"method": "POST", "path": "/api/v1/auth/registrations", "headers": {"Idempotency-Key": "sample-register-1"}, "body": {"username": "reader01", "password": "example-only", "displayName": "Reader 01"}},
+      "response": {"httpStatus": 200, "body": {"code": "MLS-ID-S001", "message": "registered", "data": {"accountId": "1001", "role": "READER", "status": "ACTIVE"}}},
+      "expect": ["self-registration-needs-no-manual-review", "one-account-one-role"]
+    },
+    {
+      "id": "CATALOG-PUBLIC-SEARCH",
+      "request": {"method": "GET", "path": "/api/v1/titles?q=database&limit=20"},
+      "response": {"httpStatus": 200, "body": {"code": "MLS-CAT-S001", "message": "ok", "data": {"items": [{"titleId": "2001", "title": "Database Systems", "availability": "AVAILABLE"}], "nextCursor": null}}},
+      "expect": ["title-level-availability-only", "no-public-copy-state"]
+    },
+    {
+      "id": "RESERVATION-WAITLIST-CONFIRMATION",
+      "request": {"method": "POST", "path": "/api/v1/reservations", "headers": {"Idempotency-Key": "sample-res-1"}, "body": {"titleId": "2001", "reservationDate": "2026-09-15", "pickupSlot": "AM", "channel": "ONLINE"}},
+      "response": {"httpStatus": 200, "body": {"code": "MLS-CIRC-S001", "message": "confirmation required", "data": {"txId": null, "outcome": "WAITLIST_PENDING_CONFIRMATION"}}},
+      "expect": ["no-business-fact-created", "confirmation-rechecks-all-guards"]
+    },
+    {
+      "id": "WALKIN-MIXED-BATCH",
+      "request": {"method": "POST", "path": "/api/v1/walk-in-loans", "headers": {"Idempotency-Key": "sample-walkin-1"}, "body": {"channel": "SELF_SERVICE", "items": [{"titleId": "2001", "copyId": "3001"}, {"titleId": "2002", "copyId": "3002"}]}},
+      "response": {"httpStatus": 200, "body": {"code": "MLS-CIRC-S002", "message": "processed", "data": {"items": [{"itemRef": "3001", "txId": "4001", "outcome": "LENT"}, {"itemRef": "3002", "txId": null, "outcome": "REJECTED", "reasons": ["COPY_NOT_AVAILABLE"]}]}}},
+      "expect": ["one-transaction-per-copy", "mixed-results-preserved"]
+    },
+    {
+      "id": "RETURN-WITH-FINE",
+      "request": {"method": "POST", "path": "/api/v1/returns", "headers": {"Idempotency-Key": "sample-return-1"}, "body": {"copyId": "3001", "condition": "INTACT"}},
+      "response": {"httpStatus": 200, "body": {"code": "MLS-CIRC-S003", "message": "returned", "data": {"txId": "4001", "outcome": "RETURNED", "fineId": "5001"}}},
+      "expect": ["loan-copy-fine-outbox-commit-atomically", "duplicate-return-has-no-second-effect"]
+    },
+    {
+      "id": "ORDER-CONCURRENT-CONFLICT",
+      "request": {"method": "POST", "path": "/api/v1/fines/5001/orders", "headers": {"Idempotency-Key": "sample-order-2"}},
+      "response": {"httpStatus": 409, "body": {"code": "MLS-PAY-001", "message": "fine already has an unreleased order", "data": {"fineId": "5001"}}},
+      "expect": ["at-most-one-unreleased-order", "existing-order-unchanged"]
+    },
+    {
+      "id": "REVIEW-TARGET-CHANGED",
+      "request": {"method": "POST", "path": "/api/v1/reviews/6001/decision", "headers": {"Idempotency-Key": "sample-review-1"}, "body": {"decision": "APPROVED", "reason": "verified"}},
+      "response": {"httpStatus": 409, "body": {"code": "MLS-REV-001", "message": "target state changed", "data": {"reviewId": "6001", "reInitiable": true}}},
+      "expect": ["target-not-modified", "review-can-be-reinitiated"]
+    },
+    {
+      "id": "AI-L2-PREFILL",
+      "request": {"method": "POST", "path": "/api/v1/ai/sessions/7001/messages", "headers": {"Idempotency-Key": "sample-ai-turn-1"}, "body": {"message": "帮我预填续借"}},
+      "response": {"httpStatus": 200, "body": {"code": "MLS-AI-S001", "message": "ok", "data": {"messageId": "7101", "answer": "请核对后提交", "citations": [], "actions": [{"actionType": "RENEW_LOAN", "level": "L2", "prefill": {"txId": "4001"}, "draftId": "7201", "label": "打开续借表单"}], "quota": {"remaining": 9}}}},
+      "expect": ["opens-current-page-modal", "does-not-submit-business-action", "authorization-rechecked-on-submit"]
+    },
+    {
+      "id": "AI-QUOTA-EXHAUSTED",
+      "request": {"method": "POST", "path": "/api/v1/ai/sessions/7001/messages", "headers": {"Idempotency-Key": "sample-ai-turn-2"}, "body": {"message": "查询我的借阅"}},
+      "response": {"httpStatus": 429, "body": {"code": "MLS-AI-002", "message": "quota exhausted", "data": {"remaining": 0}}},
+      "expect": ["no-model-call", "quota-event-recorded"]
+    }
+  ]
+}

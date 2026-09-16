@@ -1,0 +1,412 @@
+{
+  "basePath": "/api/v1",
+  "openapiVersion": "3.1.0",
+  "sourceSha256": "eb2b8cb399f8348d2418f4fda61ba2aa4064fe6d1c9b52d905a43f1626e6722e",
+  "operations": [
+    {
+      "operationId": "listAiEvents",
+      "method": "GET",
+      "path": "/ai/sessions/{sessionId}/events",
+      "tag": "AI",
+      "permission": "SESSION_OWNER_OR_ADMIN",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "sendAiMessage",
+      "method": "POST",
+      "path": "/ai/sessions/{sessionId}/messages",
+      "tag": "AI",
+      "permission": "SESSION_OWNER",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "startAiSession",
+      "method": "POST",
+      "path": "/ai/sessions",
+      "tag": "AI",
+      "permission": "PUBLIC_OR_AUTHENTICATED",
+      "public": true,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "createTitle",
+      "method": "POST",
+      "path": "/titles",
+      "tag": "Catalog",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "getReadingContent",
+      "method": "GET",
+      "path": "/titles/{titleId}/content",
+      "tag": "Catalog",
+      "permission": "PUBLIC",
+      "public": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "getTitle",
+      "method": "GET",
+      "path": "/titles/{titleId}",
+      "tag": "Catalog",
+      "permission": "PUBLIC",
+      "public": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "removeTitle",
+      "method": "DELETE",
+      "path": "/titles/{titleId}",
+      "tag": "Catalog",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "searchTitles",
+      "method": "GET",
+      "path": "/titles",
+      "tag": "Catalog",
+      "permission": "PUBLIC",
+      "public": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "updateTitle",
+      "method": "PATCH",
+      "path": "/titles/{titleId}",
+      "tag": "Catalog",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "applyManualAction",
+      "method": "POST",
+      "path": "/transactions/{txId}/manual-actions",
+      "tag": "Circulation",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "cancelReservation",
+      "method": "POST",
+      "path": "/reservations/{txId}/cancel",
+      "tag": "Circulation",
+      "permission": "READER_SELF_OR_LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "changeCopyState",
+      "method": "PATCH",
+      "path": "/copies/{copyId}",
+      "tag": "Circulation",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "claimPickup",
+      "method": "POST",
+      "path": "/pickups/{txId}/claim",
+      "tag": "Circulation",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "createCopy",
+      "method": "POST",
+      "path": "/titles/{titleId}/copies",
+      "tag": "Circulation",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "createWalkInLoans",
+      "method": "POST",
+      "path": "/walk-in-loans",
+      "tag": "Circulation",
+      "permission": "READER_SELF_OR_LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "getReservationCalendar",
+      "method": "GET",
+      "path": "/titles/{titleId}/reservation-calendar",
+      "tag": "Circulation",
+      "permission": "PUBLIC",
+      "public": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "listCopies",
+      "method": "GET",
+      "path": "/copies",
+      "tag": "Circulation",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "renewLoan",
+      "method": "POST",
+      "path": "/loans/{txId}/renewals",
+      "tag": "Circulation",
+      "permission": "READER_SELF",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "reopenBusinessDate",
+      "method": "POST",
+      "path": "/closing/reopen",
+      "tag": "Circulation",
+      "permission": "ADMIN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "reserveTitle",
+      "method": "POST",
+      "path": "/reservations",
+      "tag": "Circulation",
+      "permission": "READER_SELF_OR_LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "returnCopy",
+      "method": "POST",
+      "path": "/returns",
+      "tag": "Circulation",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "runClosing",
+      "method": "POST",
+      "path": "/closing/runs",
+      "tag": "Circulation",
+      "permission": "SYSTEM",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "listAuditEvents",
+      "method": "GET",
+      "path": "/audit-events",
+      "tag": "Delivery",
+      "permission": "LIBRARIAN_OR_ADMIN",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "listNotifications",
+      "method": "GET",
+      "path": "/notifications",
+      "tag": "Delivery",
+      "permission": "AUTHENTICATED_SELF",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "markNotificationRead",
+      "method": "POST",
+      "path": "/notifications/{notificationId}/read",
+      "tag": "Delivery",
+      "permission": "AUTHENTICATED_SELF",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "changeReaderStatus",
+      "method": "PATCH",
+      "path": "/readers/{readerId}/status",
+      "tag": "Identity",
+      "permission": "LIBRARIAN_OR_ADMIN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "createSession",
+      "method": "POST",
+      "path": "/auth/sessions",
+      "tag": "Identity",
+      "permission": "PUBLIC",
+      "public": true,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "endCurrentSession",
+      "method": "DELETE",
+      "path": "/auth/sessions/current",
+      "tag": "Identity",
+      "permission": "AUTHENTICATED",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "listAccounts",
+      "method": "GET",
+      "path": "/accounts",
+      "tag": "Identity",
+      "permission": "ADMIN",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "registerReader",
+      "method": "POST",
+      "path": "/auth/registrations",
+      "tag": "Identity",
+      "permission": "PUBLIC",
+      "public": true,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "requestAccountChange",
+      "method": "POST",
+      "path": "/accounts/{accountId}/change-requests",
+      "tag": "Identity",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "resetPassword",
+      "method": "POST",
+      "path": "/accounts/{accountId}/password-reset",
+      "tag": "Identity",
+      "permission": "LIBRARIAN_OR_ADMIN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "getArrivalDashboard",
+      "method": "GET",
+      "path": "/dashboard/arrivals",
+      "tag": "Query",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "getMyBusiness",
+      "method": "GET",
+      "path": "/me/business",
+      "tag": "Query",
+      "permission": "READER",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "decideReview",
+      "method": "POST",
+      "path": "/reviews/{reviewId}/decision",
+      "tag": "Review",
+      "permission": "ADMIN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "listReviews",
+      "method": "GET",
+      "path": "/reviews",
+      "tag": "Review",
+      "permission": "LIBRARIAN_OR_ADMIN",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "requestReview",
+      "method": "POST",
+      "path": "/reviews",
+      "tag": "Review",
+      "permission": "LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "applyPaymentCallback",
+      "method": "POST",
+      "path": "/payment-callbacks",
+      "tag": "Settlement",
+      "permission": "SIMULATOR_CREDENTIAL",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "closeOrder",
+      "method": "POST",
+      "path": "/orders/{orderId}/close",
+      "tag": "Settlement",
+      "permission": "READER_SELF_OR_LIBRARIAN_OR_SYSTEM",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "createOrder",
+      "method": "POST",
+      "path": "/fines/{fineId}/orders",
+      "tag": "Settlement",
+      "permission": "READER_SELF",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "getOrder",
+      "method": "GET",
+      "path": "/orders/{orderId}",
+      "tag": "Settlement",
+      "permission": "READER_SELF_OR_LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "listFines",
+      "method": "GET",
+      "path": "/fines",
+      "tag": "Settlement",
+      "permission": "READER_SELF_OR_LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "reconcileBusinessDate",
+      "method": "POST",
+      "path": "/reconciliations",
+      "tag": "Settlement",
+      "permission": "SYSTEM_OR_ADMIN",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "requestRefund",
+      "method": "POST",
+      "path": "/orders/{orderId}/refunds",
+      "tag": "Settlement",
+      "permission": "LIBRARIAN_THEN_ADMIN_REVIEW",
+      "public": false,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "operationId": "scheduleSimulatedPayment",
+      "method": "POST",
+      "path": "/payment-simulator/results",
+      "tag": "Settlement",
+      "permission": "CONTROLLED_TEST_OPERATOR",
+      "public": false,
+      "requiresIdempotencyKey": true
+    }
+  ]
+}

@@ -15,8 +15,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:ci": "vitest run",
-    "lint:check": "eslint src vite.config.js eslint.config.js scripts && npm run architecture:check",
+    "lint:check": "npm run contracts:check && npm run architecture:check && eslint src vite.config.js eslint.config.js scripts",
     "architecture:check": "node scripts/check-module-boundaries.mjs",
+    "contracts:generate": "node scripts/generate-operations-manifest.mjs && openapi-typescript ../docs/04-module-design/contracts/http/openapi.yaml -o src/platform/contracts/generated/openapi.d.ts",
+    "contracts:check": "node scripts/check-contract.mjs && node scripts/check-scenarios-sync.mjs",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/"
   },
@@ -35,8 +37,10 @@
     "eslint-plugin-vue": "~10.5.1",
     "globals": "^16.5.0",
     "jsdom": "^24.1.3",
+    "openapi-typescript": "7.13.0",
     "prettier": "3.6.2",
     "vite": "^7.2.4",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "yaml": "2.9.1"
   }
 }
