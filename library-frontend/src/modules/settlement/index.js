@@ -1,5 +1,4 @@
-// SETTLEMENT 模块公开请求接口：罚款、支付单、模拟结果调度、关闭、退款申请与对账。
-// applyPaymentCallback 为模拟器凭证回调（机器对机器），前端无页面入口，仅为契约完整性保留。
+// SETTLEMENT 模块公开请求接口：罚款、支付单、模拟结果调度、模拟回调、关闭、退款申请与对账。
 import { apiRequest } from '@/platform/http'
 
 export function listFines({ readerId, status, cursor, limit } = {}, options = {}) {
@@ -19,6 +18,11 @@ export function scheduleSimulatedPayment({ orderId, result, delayMs, duplicateCo
     body: { orderId, result, delayMs, duplicateCount },
     ...options,
   })
+}
+
+// applyPaymentCallback 为模拟器凭证回调（机器对机器），前端无页面入口，仅为契约完整性保留门面函数。
+export function applyPaymentCallback({ eventId, orderId, result, occurredAt }, options = {}) {
+  return apiRequest('applyPaymentCallback', { body: { eventId, orderId, result, occurredAt }, ...options })
 }
 
 export function closeOrder({ orderId }, options = {}) {

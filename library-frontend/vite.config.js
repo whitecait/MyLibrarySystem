@@ -21,6 +21,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.js'],
-    setupFiles: ['src/test-setup.js']
+    setupFiles: ['src/test-setup.js'],
+    // 本机与后端平行代理共享，限制 worker 数以避免高并发下的资源竞争
+    maxWorkers: 8
   }
 })
