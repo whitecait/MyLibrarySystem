@@ -34,3 +34,14 @@ logging:
   pattern:
     # Correlate application log lines with OTel traces via MDC traceId/spanId.
     level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}] %m%n"
+
+library:
+  ai:
+    endpoint-url: ${AI_ENDPOINT_URL:}
+    model: ${AI_MODEL:}
+    api-key: ${AI_API_KEY:}
+    account-daily-limit: ${AI_ACCOUNT_DAILY_LIMIT:10}
+    visitor-daily-limit: ${AI_VISITOR_DAILY_LIMIT:10}
+    max-rounds: ${AI_MAX_ROUNDS:4}
+    retry-budget: ${AI_RETRY_BUDGET:2}
+    endpoint-timeout: ${AI_ENDPOINT_TIMEOUT:8s}

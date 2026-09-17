@@ -34,7 +34,10 @@ class LogicalClosingGateTest {
         url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + db);
         Flyway.configure().dataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword())
                 .locations("classpath:db/migration").load().migrate();
-        try (var c = connect()) { execute(c, "INSERT INTO closing_control (scope) VALUES ('GLOBAL')"); execute(c, "INSERT INTO closing_admission(scope) VALUES ('GLOBAL')"); }
+        try (var c = connect()) {
+            execute(c, "INSERT INTO closing_control (scope) VALUES ('GLOBAL') ON CONFLICT(scope) DO NOTHING");
+            execute(c, "INSERT INTO closing_admission(scope) VALUES ('GLOBAL') ON CONFLICT(scope) DO NOTHING");
+        }
     }
 
     Connection connect() throws SQLException {

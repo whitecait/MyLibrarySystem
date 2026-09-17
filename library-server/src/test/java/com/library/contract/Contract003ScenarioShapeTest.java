@@ -9,7 +9,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * CONTRACT-003 样例形状门禁：9 个共同样例自身通过 schema 校验，
+ * CONTRACT-003 样例形状门禁：14 个共同样例自身通过 schema 校验，
  * 且每个场景的请求/响应结构与 OpenAPI 当前文档逐操作一致。
  * 场景的活体执行随批次接入（本批 registerReader 见 RegistrationContractProbeTest）。
  */
@@ -19,11 +19,11 @@ class Contract003ScenarioShapeTest {
     private final ContractScenarios scenarios = new ContractScenarios();
 
     @Test
-    void nineScenariosArePresent() {
-        assertThat(scenarios.all()).hasSize(9);
+    void fourteenScenariosArePresent() {
+        assertThat(scenarios.all()).hasSize(14);
         var ids = new LinkedHashSet<String>();
         scenarios.all().forEach(scenario -> ids.add(scenario.path("id").asText()));
-        assertThat(ids).hasSize(9);
+        assertThat(ids).hasSize(14);
     }
 
     @Test
@@ -115,12 +115,12 @@ class Contract003ScenarioShapeTest {
             var scenario = scenarios.byId(expectation.id());
             assertThat(scenario.at("/response/httpStatus").asInt()).isEqualTo(expectation.status());
         }
-        Set<String> errorCodes = Set.of("MLS-PAY-001", "MLS-REV-001");
+        Set<String> errorCodes = Set.of("MLS-PAY-001", "MLS-REV-001", "MLS-AI-002", "MLS-AI-005");
         for (JsonNode scenario : scenarios.all()) {
             int status = scenario.at("/response/httpStatus").asInt();
             var code = scenario.at("/response/body/code").asText();
             if (status != 200) {
-                assertThat(errorCodes.contains(code) || code.equals("MLS-AI-002"))
+                assertThat(errorCodes.contains(code))
                         .as("场景 %s 的错误码 %s 应为登记稳定码", scenario.path("id").asText(), code)
                         .isTrue();
             }
