@@ -23,9 +23,9 @@ MyLibrarySystem 是一个面向单一图书馆的工程学习项目，形态为*
 
 本节是项目当前状态的唯一概述，更新至 2026-09-17 匿名 AI 契约受影响修订候选。
 
-M2 需求基线为 `v1.0 Approved`。REV-0003 v1.3、REV-0004 v1.4 与 REV-0005 v1.1 的历史批准均有效。前端 B0～B5 与后端 B0～B4 已在 `codex/unified-implementation` 形成提交；后端 AI、匿名所有权、追加迁移、前端匿名接合、系统测试和产品验收尚未完成。2026-09-17 登记 OQ-0029：匿名 AI 的公开入口、后续所有权和账户非空数据模型冲突；REV-0004 v1.5、REV-0005 v1.2 与 OpenAPI 2.0 当前均为 `In Review`，不覆盖或撤销既有批准版本。
+M2 需求基线为 `v1.0 Approved`。前端 B0～B5 与后端 B0～B4 已在 `codex/unified-implementation` 形成提交。2026-09-17 匿名 AI 契约差异获 lingzz 批准，REV-0004 v1.5、REV-0005 v1.2 与 OpenAPI 2.0 成为当前基线，OQ-0029 已关闭。后端 AI、匿名所有权迁移、前端匿名接合、系统测试和产品验收尚未完成。
 
-全部未完成工作以 [开发任务规划](TODO.md) 为准。匿名 AI 契约候选未获最终差异批准，且按用户选择暂不重建前端生成物，CONTRACT-002 漂移预期失败并阻塞该修订分支合入实现分支。Grafana 实页、真实页面场景和 M6 产品验收仍在各自阶段执行。
+全部未完成工作以 [开发任务规划](TODO.md) 为准。匿名 AI 契约虽已批准，但按用户选择暂不重建前端生成物，CONTRACT-002 与完整 CONTRACT-003 仍阻塞该修订分支合入实现分支。Grafana 实页、真实页面场景和 M6 产品验收仍在各自阶段执行。
 
 ### 当前工程状态
 
@@ -34,8 +34,8 @@ M2 需求基线为 `v1.0 Approved`。REV-0003 v1.3、REV-0004 v1.4 与 REV-0005 
 | 当前阶段         | M5 部分实现完成；匿名 AI 契约受影响修订                    |
 | 工程文档唯一入口 | [docs/README.md](docs/README.md)                          |
 | 需求基线         | `v1.0 Approved`                                           |
-| 设计评审         | REV-0003 v1.3 Approved；REV-0004 v1.5、REV-0005 v1.2 In Review |
-| Open 问题        | `MLS-OQ-0029`                                              |
+| 设计评审         | REV-0003 v1.3、REV-0004 v1.5、REV-0005 v1.2 `Approved`   |
+| Open 问题        | 无                                                         |
 | 验收执行         | 尚未执行                                                  |
 | 当前代码地位     | 前端 B0～B5、后端 B0～B4 已提交；后端 AI 与匿名契约未实现 |
 | 工程基础         | B1-A/B1-B、C0~C4、G3/G4/G5 完成；修补轮与编码准备收尾完成 |
@@ -70,11 +70,13 @@ M2 需求基线为 `v1.0 Approved`。REV-0003 v1.3、REV-0004 v1.4 与 REV-0005 
 ## 参与需求评审
 
 1. 从[系统需求主规格](docs/01-requirements/requirements/MLS-DOC-RA-0003.md)进入当前需求工件。
-2. 在[Open 问题登记册](docs/01-requirements/requirements/MLS-DOC-RA-0007.md)核对关闭依据与决策人。`MLS-OQ-0001`～`0028` 的历史关闭依据保持有效；当前唯一 Open 项为匿名 AI 契约冲突 `MLS-OQ-0029`。
+2. 在[Open 问题登记册](docs/01-requirements/requirements/MLS-DOC-RA-0007.md)核对关闭依据与决策人。当前无 Open 项；OQ-0029 的匿名 AI 契约批准与关闭依据登记于 2026-09-17 条目。
 3. 使用[需求评审清单](docs/01-requirements/reviews/MLS-DOC-REV-0001.md)记录可复现证据与评审发现。
 4. 只有[需求基线记录](docs/01-requirements/reviews/MLS-DOC-REV-0002.md)完成正式批准后，需求工件才可成为下一阶段输入；变更按[变更控制](docs/00-governance/MLS-DOC-GOV-0004.md)处理。
 
 ## 修订记录
+
+- 2026-09-17：lingzz 明确批准匿名 AI 契约差异；REV-0004 v1.5、REV-0005 v1.2 与 OpenAPI 2.0 成为当前批准基线，OQ-0029 关闭。生成物与实现门禁仍未恢复。
 
 - 2026-09-17：同步前端 B0～B5、后端 B0～B4 的提交事实，登记 OQ-0029 与 REV-0004 v1.5/REV-0005 v1.2/OpenAPI 2.0 `In Review`；匿名实现、生成物同步和 CONTRACT-002 恢复仍未完成，不新增批准结论。
 

@@ -1,12 +1,12 @@
 # MyLibrarySystem 工程文档入口
 
-> 2026-09-17 状态：既有需求及 REV-0003 v1.3、REV-0004 v1.4、REV-0005 v1.1 批准历史有效；匿名 AI 契约冲突登记为 OQ-0029，REV-0004 v1.5、REV-0005 v1.2 与 OpenAPI 2.0 当前 In Review。
+> 2026-09-17 状态：匿名 AI 契约差异已由 lingzz 批准；REV-0004 v1.5、REV-0005 v1.2 与 OpenAPI 2.0 成为当前基线，OQ-0029 已关闭。生成物、迁移与 AI 实现仍未完成。
 
 | 字段     | 值                                               |
 | -------- | ------------------------------------------------ |
 | 文档编号 | `MLS-DOC-GOV-0000`                               |
 | 文档状态 | `Draft`                                          |
-| 文档版本 | `v0.35`                                          |
+| 文档版本 | `v0.36`                                          |
 | 编制日期 | `2026-07-13`                                     |
 | 最近更新 | `2026-09-17`                                     |
 | 适用阶段 | 全生命周期；当前进入 M5                         |
@@ -28,7 +28,7 @@
 
 需求基线 v1.0 仍有效；逻辑 T、V4 排空意图、真实 PostgreSQL 机制测试与 8 张修改图复核均已完成。AI 实际模式采用 `thinking=disabled`。REV-0003 v1.3、REV-0004 v1.4 与 REV-0005 v1.1 的批准历史有效。前端 B0～B5、后端 B0～B4 已在统一实现分支形成提交，后端 AI、匿名所有权和产品验收尚未完成。
 
-匿名 AI 契约审计发现公开启动、后续 Bearer 继承、`ai_session.account_id NOT NULL` 与访客全局共享额度无法同时成立，已登记 OQ-0029。DD-0002 v0.5、DD-0003 v0.4、MD-0002～0005 新版本、REV-0004 v1.5、REV-0005 v1.2 和 OpenAPI 2.0 当前均为 `In Review`。按用户选择暂不重建前端生成物，CONTRACT-002 漂移是已知且阻塞合并的预期失败；不得将候选写成已批准或已实现。
+匿名 AI 契约审计发现公开启动、后续 Bearer 继承、`ai_session.account_id NOT NULL` 与访客全局共享额度无法同时成立，登记为 OQ-0029。lingzz 于 2026-09-17 明确批准差异；DD-0002 v0.5、DD-0003 v0.4、MD-0002～0005 新版本、REV-0004 v1.5、REV-0005 v1.2 和 OpenAPI 2.0 成为当前批准基线，OQ-0029 已关闭。按用户选择暂不重建前端生成物，CONTRACT-002 与完整 CONTRACT-003 仍阻塞合并；批准不得解释为实现或门禁完成。
 
 ## 2026-09-11 需求分析收口后的历史状态
 
@@ -45,7 +45,7 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 本文件是 MyLibrarySystem 工程文档的唯一入口。项目根 `./README.md` 和各子项目 `./library-frontend/README.md` / `./library-server/README.md` 只提供项目级引导，不重复维护需求、设计、测试或验收事实。
 
 **当前阶段:**
-为**需求基线有效、M5 部分实现完成、匿名 AI 契约受影响修订中**；产品验收仍未执行。
+为**需求与设计基线有效、M5 部分实现完成、匿名 AI 契约已批准待实现接合**；产品验收仍未执行。
 
 ## 分层权威模型
 
@@ -72,7 +72,7 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 
 - `MLS-DOC-RA-0001 v1.0` 是已标记 Approved 的需求分析阶段组织与工作基线。
 - 需求主规格、专题需求、验收定义与追踪矩阵已按 REV-0002 v1.0 激活；系统验收尚未执行。
-- G3 至 G5 已收口；OQ-0027 的 2026-09-12 实证审计差额已于 2026-09-14 复审关闭。2026-09-17 新登记 OQ-0029，当前唯一 Open 项为匿名 AI 契约冲突；既有 M3/M4 与模块设计批准版本保持有效，受影响候选另行 In Review。
+- G3 至 G5 已收口；OQ-0027 的 2026-09-12 实证审计差额已于 2026-09-14 复审关闭。OQ-0029 于 2026-09-17 经匿名 AI 契约差异批准后关闭；登记册当前无 Open 项，REV-0004 v1.5 与 REV-0005 v1.2 为 Approved。
 - `MLS-DOC-RA-0001 v1.0` 中的旧目标目录（§3.1 目录树仍含 `90-archive/`）和箭头式权威关系（§3.3）仍属于上次批准内容。G0 治理重评审已于 2026-07-24 通过，分层模型作为当前维护与评审导航；但不得宣称已经覆盖或静默改写该批准版本。
 - 全局开发计划已按 M0 正式化为 `MLS-DOC-GOV-0006`（2026-09-05）：G3/G4 复审与 G5 基线批准（对应计划里程碑 M2）是进入设计阶段的唯一路径；全量重写策略已登记为 `MLS-DEC-0007`。
 - `MLS-DOC-RA-0001` 至 `MLS-DOC-RA-0003` 现位于 `01-requirements/requirements/`。
@@ -86,7 +86,7 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 - AI 设计阶段技术口径已登记为 `MLS-DEC-0022`（2026-09-09）：只读工具/循环无业务事实、原生 Tool Calling＋OpenAI 兼容契约、内部封闭注册表不引入 MCP、内层循环＋外层状态暂停恢复、Spring/Java 手写循环；模拟端点验证为 18 场景 70 断言通过。真实端点后续验证中 provider-default 为 5/6，`thinking=disabled` 为 6/6；`MLS-DEC-0030` 已批准后者为首版实际模式。`MLS-OQ-0022` 于 2026-09-09 关闭，需求条目值不变。
 - 质量签署候选材料已登记为 `MLS-DEC-0023`（2026-09-10，来源 B1-C C2 grill 八问用户逐项采纳）并完成同轮工件传导：业务规则（`MLS-BR-0039`~`0045` 七条并发不变量新增，`MLS-DOC-RA-0011` v0.15）、非功能需求（`MLS-NFR-PER-0002`~`0004`、`MLS-NFR-REL-0002` 新增，`MLS-DOC-RA-0013` v0.8）、验收（`MLS-AC-0047`~`0049`、`MLS-AT-0029`/`0030` 新增与 `MLS-AT-0016` 补测量协议锚点，`MLS-DOC-AT-0002` v0.20）与追踪矩阵（`MLS-DOC-RA-0014` v0.14，11 行）；D-1～D-5 已分别经 `MLS-DEC-0025`/`MLS-DEC-0026` 补齐并随 G5 完成授权签署；产品验收执行仍单独记录。
 - `MLS-OQ-0027` 的 2026-09-10 正式延期及 2026-09-12 复开历史均保留；逻辑 T/V4、验证与追踪完成后，REV-0003/0004 v1.3 于 2026-09-14 批准，条目同日关闭。
-- `MLS-DOC-RA-0007` 当前唯一 Open 项为 `MLS-OQ-0029`。
+- `MLS-DOC-RA-0007` 当前无 Open 项；OQ-0029 的批准与关闭依据登记于 2026-09-17 条目。
 - `MLS-DOC-RA-0001 v1.0` 的旧目录与范围表述保留为阶段组织历史；当前业务范围以 REV-0002 激活的需求工件及 2026-09-14 受影响复审为准。AI 模型端点、预约候补和业务通知已纳入当前批准范围，不从旧表述反向删减。
 
 ## 推荐阅读顺序
@@ -198,27 +198,29 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 | 文档编号           | 标题                                                                      | 状态        |
 | ------------------ | ------------------------------------------------------------------------- | ----------- |
 | `MLS-DOC-DD-0001`  | [详细设计阶段入口](03-detailed-design/MLS-DOC-DD-0001.md)                 | `Draft`     |
-| `MLS-DOC-DD-0002`  | [模块接口契约](03-detailed-design/MLS-DOC-DD-0002.md)                     | `In Review` |
-| `MLS-DOC-DD-0003`  | [数据库设计与迁移](03-detailed-design/MLS-DOC-DD-0003.md)                 | `In Review` |
+| `MLS-DOC-DD-0002`  | [模块接口契约](03-detailed-design/MLS-DOC-DD-0002.md)                     | `Approved`  |
+| `MLS-DOC-DD-0003`  | [数据库设计与迁移](03-detailed-design/MLS-DOC-DD-0003.md)                 | `Approved`  |
 | `MLS-DOC-DD-0004`  | [事务边界、并发与恢复规则](03-detailed-design/MLS-DOC-DD-0004.md)         | `Approved`  |
 | `MLS-DOC-DD-0005`  | [Outbox、缓存、故障注入与看板查询](03-detailed-design/MLS-DOC-DD-0005.md) | `Approved`  |
 | `MLS-DOC-DD-0006`  | [可执行集成用例规格](03-detailed-design/MLS-DOC-DD-0006.md)               | `Approved`  |
-| `MLS-DOC-REV-0004` | [详细设计评审记录](03-detailed-design/reviews/MLS-DOC-REV-0004.md)        | `In Review` |
+| `MLS-DOC-REV-0004` | [详细设计评审记录](03-detailed-design/reviews/MLS-DOC-REV-0004.md)        | `Approved`  |
 
 ### 模块设计阶段 (04-module-design)
 
 | 文档编号           | 标题                                                                 | 状态        |
 | ------------------ | -------------------------------------------------------------------- | ----------- |
 | `MLS-DOC-MD-0001`  | [模块设计阶段入口](04-module-design/MLS-DOC-MD-0001.md)              | `Draft`     |
-| `MLS-DOC-MD-0002`  | [模块目录与依赖规则](04-module-design/MLS-DOC-MD-0002.md)            | `In Review` |
-| `MLS-DOC-MD-0003`  | [对外契约与共同样例](04-module-design/MLS-DOC-MD-0003.md)            | `In Review` |
-| `MLS-DOC-MD-0004`  | [内部接口与适配缝](04-module-design/MLS-DOC-MD-0004.md)              | `In Review` |
-| `MLS-DOC-MD-0005`  | [验证映射与测试责任](04-module-design/MLS-DOC-MD-0005.md)            | `In Review` |
-| `MLS-DOC-REV-0005` | [模块设计评审与基线记录](04-module-design/reviews/MLS-DOC-REV-0005.md) | `In Review` |
+| `MLS-DOC-MD-0002`  | [模块目录与依赖规则](04-module-design/MLS-DOC-MD-0002.md)            | `Approved`  |
+| `MLS-DOC-MD-0003`  | [对外契约与共同样例](04-module-design/MLS-DOC-MD-0003.md)            | `Approved`  |
+| `MLS-DOC-MD-0004`  | [内部接口与适配缝](04-module-design/MLS-DOC-MD-0004.md)              | `Approved`  |
+| `MLS-DOC-MD-0005`  | [验证映射与测试责任](04-module-design/MLS-DOC-MD-0005.md)            | `Approved`  |
+| `MLS-DOC-REV-0005` | [模块设计评审与基线记录](04-module-design/reviews/MLS-DOC-REV-0005.md) | `Approved`  |
 
 2026-09-11 初次复审记录（修订前）：当前工作区输入已按 SHA-256 固定；两处 D-5 状态残留已修正。REV-0001 v0.7 登记 G34-F01～F06（F01 修复复核，F02～F06 未关闭），REV-0002 v0.14 绑定候选。G3/G4 为 Blocked，存在实质语义/验收缺口；责任复审签署材料已编制、未代签，G5 批准包未准备，基线未建立。证据见 仓库根 `artifacts/g34-review-20260911/`。
 
 ## 变更记录
+
+- 2026-09-17，v0.36：lingzz 明确批准匿名 AI 契约差异；REV-0004 v1.5、REV-0005 v1.2、MD/DD 受影响版本与 OpenAPI 2.0 转为 Approved，OQ-0029 关闭。生成物、迁移、AI 实现及 CONTRACT-002/003 恢复仍未完成并阻塞合并。
 
 - 2026-09-17，v0.35：同步前端 B0～B5、后端 B0～B4 的提交事实；登记 OQ-0029 与匿名 AI DD/MD/OpenAPI 受影响修订候选。需求业务值不变；REV-0004 v1.5、REV-0005 v1.2 待 lingzz 最终复核，CONTRACT-002 生成物漂移阻塞合并；不新增批准或产品验收结论。
 
