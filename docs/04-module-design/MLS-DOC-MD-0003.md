@@ -3,8 +3,8 @@
 | 字段     | 值                         |
 | -------- | -------------------------- |
 | 文档编号 | `MLS-DOC-MD-0003`          |
-| 文档状态 | `Approved`                 |
-| 文档版本 | `v0.3`                     |
+| 文档状态 | `In Review`（v0.3 历史批准保留） |
+| 文档版本 | `v0.4`                     |
 | 编制日期 | `2026-09-13`               |
 | 阶段     | M5 模块设计收尾与单元测试  |
 | 权威性质 | 已批准的前后端共同契约     |
@@ -98,11 +98,13 @@
 | `GET /notifications` | 已登录本人 | `unreadOnly,cursor,limit` | 按关联预约日期临近排序 | `MLS-ID-001` | FR-0044 |
 | `POST /notifications/{notificationId}/read` | 已登录本人 | 无 | `{read:true}` | `MLS-DEL-001` 不可见 | FR-0044 |
 | `GET /audit-events` | LIBRARIAN/ADMIN | 关联 ID、操作者、类型与分页 | 审计事件列表 | `MLS-ID-001` | FR-0027 |
-| `POST /ai/sessions` | 公开或已登录 | `{clientSessionId?}` | `{sessionId,role,quota}` | `MLS-AI-001` AI 不可用 | FR-0029/0030/0035 |
-| `POST /ai/sessions/{sessionId}/messages` | 会话本人 | `{message}` | `{messageId,answer,citations,actions,quota}` | `MLS-AI-002` 超额；`003` 端点失败；`004` 工具拒绝 | FR-0030/0031/0033/0034/0035 |
-| `GET /ai/sessions/{sessionId}/events` | 会话本人；ADMIN | 分页 | 逐事件会话记录 | `MLS-AI-005` 不可见 | FR-0033 |
+| `POST /ai/sessions` | 公开或 Bearer 已登录 | 无请求体；匿名成功响应设置访客 Cookie | `{sessionId,role,quota}`，匿名 role=`VISITOR` | `MLS-AI-001` AI 不可用 | FR-0029/0030/0035 |
+| `POST /ai/sessions/{sessionId}/messages` | 账户 Bearer 本人或匹配访客 Cookie | `{message}` | `{messageId,answer,citations,actions,quota}` | `MLS-AI-002` 超额；`003` 端点失败；`004` 工具拒绝；`005` 不可见 | FR-0030/0031/0033/0034/0035 |
+| `GET /ai/sessions/{sessionId}/events` | 账户 Bearer 本人、匹配访客 Cookie；ADMIN | 分页 | 逐事件会话记录 | `MLS-ID-001` 无凭据；`MLS-AI-005` 不可见 | FR-0033 |
 
 AI `actions` 只允许 `{actionType,level,prefill,draftId,label}`。L1 可带查看入口；L2 只预填当前页面模态表单；L3 只给引导；资金与高风险动作不得由 AI 直接执行。用户提交预填后调用本文件同一业务契约，并携带可选 `Ai-Draft-Id` 供操作审计关联；取消不提交业务请求。
+
+匿名启动由服务端签发 `__Host-mls-ai-visitor` 浏览器会话 Cookie（256-bit 随机凭据；`HttpOnly; Secure; SameSite=Strict; Path=/`），仅存摘要，不在响应正文、日志或审计中出现原值。`clientSessionId` 从 OpenAPI 2.0 删除，`sessionId`、幂等键和客户端自报值均不是所有权凭据。已有访客会话即使请求同时携带 Bearer 也保持 `VISITOR`、使用访客全局额度；Bearer 只使同次新建会话归账户。没有任何所有权凭据返回 401；错误或不匹配凭据统一返回 404／`MLS-AI-005`，不泄露会话存在性。首次响应若在 Cookie 抵达前中断，允许留下不可恢复的空会话。
 
 实际模型运行配置显式采用 `thinking=disabled`（`MLS-DEC-0030`）。provider-default 的强制工具选择不兼容结果保留为证据，不作为首版配置。
 
@@ -110,9 +112,11 @@ AI `actions` 只允许 `{actionType,level,prefill,draftId,label}`。L1 可带查
 
 未登录用户触发需认证动作时，前端只保存 `{intent,path,params}`，完成登录后回到原页面并重新取得显示数据；不得保存权限结论、锁、副本占用或已通过业务判定。最终提交仍按本文件契约鉴权和复核，覆盖 FR-0042。
 
-`contracts/examples/contract-scenarios.json` 是前端 mock、后端 Controller 契约测试与联调共同使用的固定样例，并由相邻的 `contract-scenarios.schema.json` 校验样例外形。请求与响应结构还必须逐操作通过 OpenAPI 校验；样例中的 `request`、`response` 和 `expect` 必须同时更新。9 个样例是跨域关键行为集，不承担 45 个操作的结构穷举；样例通过不替代模块规则、PostgreSQL 并发或产品验收测试。
+`contracts/examples/contract-scenarios.json` 是前端 mock、后端 Controller 契约测试与联调共同使用的固定样例，并由相邻的 `contract-scenarios.schema.json` 校验样例外形。请求与响应结构还必须逐操作通过 OpenAPI 校验；样例中的 `request`、`response` 和 `expect` 必须同时更新。14 个样例是跨域关键行为集，其中新增 5 个匿名 AI 场景覆盖 Cookie 启动、连续交互、错误凭据不可见、登录不提权与跨访客共享额度；它们不承担 45 个操作的结构穷举。样例通过不替代模块规则、PostgreSQL 并发或产品验收测试。
 
 ## 修订记录
+
+- 2026-09-17，v0.4：OpenAPI 契约升至 2.0.0，删除 `clientSessionId` 和启动请求体，增加匿名 Cookie/Bearer 替代安全方案、Set-Cookie 响应、`VISITOR` AI 角色、401/404 所有权语义与 5 个共同样例；45 个 operationId 不变。影响需求：无；影响验收：匿名所有权、不可见性、登录不提权和共享额度可结构验证；前端生成物按批准选择暂不重建，CONTRACT-002 预期漂移；评审人/批准人：lingzz 待 REV-0005 v1.2 复核；结论：In Review。
 
 - 2026-09-14，v0.3：增加覆盖 45 个操作的 OpenAPI 3.1 机器契约与共同样例 Schema，统一语义化路径参数和 HTTP 200 成功状态，修正写请求样例的幂等头；批准人：lingzz；结论：批准。
 

@@ -3,8 +3,8 @@
 | 字段     | 值                         |
 | -------- | -------------------------- |
 | 文档编号 | `MLS-DOC-MD-0002`          |
-| 文档状态 | `Approved`                 |
-| 文档版本 | `v0.2`                     |
+| 文档状态 | `In Review`（v0.2 历史批准保留） |
+| 文档版本 | `v0.3`                     |
 | 编制日期 | `2026-09-13`               |
 | 阶段     | M5 模块设计收尾与单元测试  |
 | 权威性质 | 已批准模块目录与依赖基线   |
@@ -34,7 +34,7 @@
 | `SETTLEMENT` | 罚款与模拟结算 | 罚款、模拟支付订单、回调结果、退款与对账 | `library-server/src/main/java/com/library/settlement/` | `library-frontend/src/modules/settlement/` | 欠费快照、建单、查单、回调、关闭、退款、对账 |
 | `REVIEW` | 高风险复核 | 复核申请、决定及目标执行关联 | `library-server/src/main/java/com/library/review/` | `library-frontend/src/modules/review/` | 发起复核、作出决定、查询复核记录 |
 | `QUERY` | 查询组合 | 不维护权威业务状态；只组合可见快照 | `library-server/src/main/java/com/library/query/` | `library-frontend/src/modules/query/` | 首页统计、我的业务、公开可借与预约日历查询 |
-| `AI` | AI 助手 | 会话事件、消息、草稿、调用额度与工具编排状态 | `library-server/src/main/java/com/library/ai/` | `library-frontend/src/modules/ai/` | 开始会话、发送消息、工具调用与入口卡片预填 |
+| `AI` | AI 助手 | 账户/访客会话所有权、会话事件、消息、草稿、账户额度、访客全局额度与工具编排状态 | `library-server/src/main/java/com/library/ai/` | `library-frontend/src/modules/ai/` | 开始会话、发送消息、所有权校验、工具调用与入口卡片预填 |
 | `DELIVERY` | 通知与审计 | 站内通知、审计事件、消费回执 | `library-server/src/main/java/com/library/delivery/` | `library-frontend/src/modules/delivery/` | 通知查询、审计查询、Outbox 消费与去重 |
 
 应用用例放在 `library-server/src/main/java/com/library/application/`，按 `registration`、`maintenance`、`loan`、`returning`、`payment`、`reviewing`、`closing`、`querying`、`assistant` 分包；它们只依赖各模块 `contract` 包内的能力子接口与平台事务/事件能力。HTTP Adapter 位于 `com.library.web`，模块实现位于模块自己的 `internal` 包，PostgreSQL Adapter 位于各模块内部的 `internal.adapter.persistence`，装配位于 `com.library.bootstrap`。
@@ -50,7 +50,7 @@
 补充规则：
 
 - `QUERY` 只能读取 `IDENTITY`、`CATALOG`、`CIRCULATION`、`SETTLEMENT` 的公开快照，不能办理状态变更。
-- `AI` 每轮先经 `IDENTITY` 授权，再调用 `QUERY` 或登记过的业务入口；AI 草稿提交仍回到现行业务 HTTP 契约，不新增绕过校验的办理接口。
+- `AI` 的账户会话每轮先经 `IDENTITY` 解析当前账户角色并授权；访客会话由 HTTP Adapter 校验访客 Cookie 摘要，固定为 `VISITOR` 且只能调用公开 L1 查询。会话创建后所有者类型不可迁移；AI 草稿提交仍回到现行业务 HTTP 契约，不新增绕过校验的办理接口。
 - `REVIEW` 只通过被复核模块的受控动作接口生效，不接受通用表名、字段名或任意更新参数。
 - `DELIVERY` 消费事务性 Outbox；通知投递和审计记录不得反向修改流通、结算或复核状态。
 - `CATALOG` 不拥有副本状态；书目维护用例新增或维护副本时调用 `CIRCULATION`。
@@ -79,6 +79,8 @@
 物理依赖规则由 `ARCH-BE-001` 与 `ARCH-FE-001` 执行：后端扫描 Java package/import，前端扫描模块 import 和 HTTP 调用位置。规则在业务模块进入源码时即为构建门禁，不以代码评审代替。OpenAPI 是 HTTP 字段、必填性、枚举、路径参数和成功状态的唯一机器源；Markdown 保留权限、业务语义、事务、幂等和错误条件。两者冲突时停止实现并修订基线，不由任一侧自行选择。
 
 ## 修订记录
+
+- 2026-09-17，v0.3：补 AI 模块对账户/访客二选一所有权、访客全局额度和 HTTP Cookie 适配责任；IDENTITY 的全局 `ActorContext` 不改为可空。影响需求：无；影响验收：增加匿名所有权边界；评审人/批准人：lingzz 待 REV-0005 v1.2 复核；结论：In Review。
 
 - 2026-09-14，v0.2：将完整模块接口拆为调用方能力子接口，固定 `contract/internal/bootstrap` 物理位置、前端生成客户端位置和自动依赖检查责任；批准人：lingzz；结论：批准。
 

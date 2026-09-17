@@ -3,8 +3,8 @@
 | 字段     | 值                         |
 | -------- | -------------------------- |
 | 文档编号 | `MLS-DOC-MD-0004`          |
-| 文档状态 | `Approved`                 |
-| 文档版本 | `v0.3`                     |
+| 文档状态 | `In Review`（v0.3 历史批准保留） |
+| 文档版本 | `v0.4`                     |
 | 编制日期 | `2026-09-13`               |
 | 阶段     | M5 模块设计收尾与单元测试  |
 | 权威性质 | 已批准内部接口基线         |
@@ -70,8 +70,11 @@ interface MyBusinessQuery { ModuleResult<MyBusinessPage> myBusiness(MyBusinessCr
 interface PortalTitleQuery { ModuleResult<PortalTitleView> portalTitle(TitleId titleId); }
 interface QueryModule extends ArrivalQuery, MyBusinessQuery, PortalTitleQuery {}
 
-interface AiSessionCommands { ModuleResult<AiSession> start(AiSessionCommand command); ModuleResult<AiTurn> turn(AiTurnCommand command, ActorContext actor); }
-interface AiEventQuery { ModuleResult<AiEventPage> events(AiEventCriteria query, ActorContext actor); }
+sealed interface AiSessionOwner permits AccountAiOwner, VisitorAiOwner {}
+record AccountAiOwner(AccountId accountId) implements AiSessionOwner {}
+record VisitorAiOwner(VisitorOwnerDigest digest) implements AiSessionOwner {}
+interface AiSessionCommands { ModuleResult<AiSession> start(AiSessionOwner owner); ModuleResult<AiTurn> turn(AiTurnCommand command, AiSessionOwner owner); }
+interface AiEventQuery { ModuleResult<AiEventPage> events(AiEventCriteria query, AiSessionOwner owner, Optional<ActorContext> admin); }
 interface AiModule extends AiSessionCommands, AiEventQuery {}
 
 interface NotificationQuery { ModuleResult<NotificationPage> notifications(NotificationCriteria query, ActorContext actor); }
@@ -83,9 +86,10 @@ interface DeliveryModule extends NotificationQuery, NotificationCommands, AuditQ
 
 ### 2.1 命令、结果与错误的稳定形状
 
-- `RegisterReader`、`MaintainTitle`、`ReservationCommand`、`WalkInLoanCommand`、`ClaimPickup`、`ManualAction`、`RenewalCommand`、`ReturnCommand`、`MaintainCopy`、`CreateOrder`、`PaymentCallback`、`CloseOrder`、`ReconciliationCommand`、`ReviewCommand`、`DecideReview`、`AiSessionCommand` 与 `AiTurnCommand` 的业务字段，分别与 OpenAPI 中同名或对应的 `*Request` schema 一致；认证得到的 `ActorContext`、服务端版本和业务时点由应用用例附加，不接受客户端覆盖。
+- `RegisterReader`、`MaintainTitle`、`ReservationCommand`、`WalkInLoanCommand`、`ClaimPickup`、`ManualAction`、`RenewalCommand`、`ReturnCommand`、`MaintainCopy`、`CreateOrder`、`PaymentCallback`、`CloseOrder`、`ReconciliationCommand`、`ReviewCommand`、`DecideReview` 与 `AiTurnCommand` 的业务字段，分别与 OpenAPI 中同名或对应的 `*Request` schema 一致；AI 会话启动无请求业务字段。认证得到的 `ActorContext`、服务端版本和业务时点由应用用例附加，不接受客户端覆盖。
 - `AccountRegistration`、`ReaderSnapshot`、`TitlePage`、`TitleView`、`ReadingContent`、`CopySnapshot`、`AvailabilitySnapshot`、`Reservation`、`Transaction`、`LoanBatch`、`Renewal`、`ReturnedCopy`、`ClosingRun`、`ReopenedDate`、`FinePage`、`Fine`、`Order`、`Reconciliation`、`Review`、`ReviewDecision`、`ReviewPage`、`ArrivalDashboard`、`MyBusinessPage`、`PortalTitleView`、`NotificationPage`、`AuditPage`、`AiSession`、`AiTurn` 与 `AiEventPage` 的可见字段分别映射对应 OpenAPI `*Data` schema；映射可以删去仅供 HTTP 展示的 `message`，不得新增数据库、框架或 Adapter 类型。
 - `ActorContext(accountId,role,authenticatedAt)` 只由 `ActorResolver` 产生；`SubjectRef(type,id)`、`Capability(value)` 和 `Visibility(value)` 是服务端受控值。调用方不得自行构造更高权限 `ActorContext`。
+- `ActorContext.accountId` 保持非空，不为匿名访问扩散可空语义。HTTP Adapter 把 Bearer 解析为 `AccountAiOwner`，把访客 Cookie 的摘要解析为 `VisitorAiOwner`；原始 Cookie 不进入模块接口。`VisitorAiOwner` 的有效角色固定为 `VISITOR`，账户角色每轮经 IDENTITY 重新解析。会话记录的所有者类型决定后续使用哪种凭据，同时携带另一种凭据不能迁移或提升会话。
 - `PageCursor(cursor?,limit)` 的 `limit` 为 1～100；所有 Page 结果为 `items,nextCursor?`。`ModuleResult.Rejected.code` 只能使用 MD-0003 已登记稳定错误码，`reasons` 保持调用方可展示顺序；错误不得携带 JPA Entity、SQL、堆栈或不可见对象数据。
 - 每个命令接口保证完成全部守卫后才返回 `Accepted`；返回 `Rejected` 不产生业务状态变化。跨模块原子性由表 §3 的应用用例与 `UnitOfWork` 承担，单个模块接口不得自行提交。
 
@@ -105,7 +109,7 @@ HTTP Adapter 依赖按能力分组的入口，不依赖所有业务模块的合�
 | `ReviewUseCases` | 发起、决定 | `AuthorizationCheck`、`ReviewRequesting`、`ReviewDeciding`、目标 `ReviewedAction`、事件登记 | 决定、目标变化、事件整体提交 |
 | `ClosingUseCases` | 闭馆、补结、开放 | `AuthorizationCheck`、`ClosingCommands`、事件登记 | 按固定业务日批次提交 |
 | `QueryUseCases` | 门户、我的业务、首页统计 | `ArrivalQuery`、`MyBusinessQuery`、`PortalTitleQuery`、`NotificationQuery` | 只读，不以缓存结果判定提交 |
-| `AssistantUseCases` | 会话、消息、工具循环 | `AuthorizationCheck`、`AiSessionCommands`、`PortalTitleQuery`、已登记业务能力接口 | 每轮重新鉴权；草稿不形成业务事实 |
+| `AssistantUseCases` | 会话、消息、工具循环 | AI 所有者解析、`AuthorizationCheck`、`AiSessionCommands`、`PortalTitleQuery`、已登记业务能力接口 | 账户每轮重新鉴权；访客固定 L1；草稿不形成业务事实 |
 
 ## 4. 持久化与事务内部接口
 
@@ -118,7 +122,7 @@ HTTP Adapter 依赖按能力分组的入口，不依赖所有业务模块的合�
 | `CirculationStore` | CIRCULATION | 副本/事务条件更新、FIFO、closing admission 与统一锁序 |
 | `SettlementStore` | SETTLEMENT | 罚款来源唯一、订单独占、回调事件去重、终态吸收 |
 | `ReviewStore` | REVIEW | 复核版本、决定与目标执行关联 |
-| `AiSessionStore` | AI | 逐事件日志、额度调用计数、草稿关联 |
+| `AiSessionStore` | AI | 账户/访客所有者 XOR、访客摘要查询、逐事件日志、账户额度与访客全局额度 CAS、草稿关联 |
 | `DeliveryStore` | DELIVERY | Outbox 扫描、消费者回执、通知与审计查询 |
 
 应用层使用 `UnitOfWork.inTransaction(work)` 传播同一 JDBC 事务上下文。该接口只控制提交/回滚，不允许业务模块自行提交；故障注入由测试装配提供，不进入生产路由或生产 JAR。
@@ -142,6 +146,8 @@ HTTP Adapter 依赖按能力分组的入口，不依赖所有业务模块的合�
 实际 `ModelEndpoint` 配置显式采用 `thinking=disabled`（`MLS-DEC-0030`）；配置保持必填，provider-default 仅保留为不兼容回归场景。
 
 ## 修订记录
+
+- 2026-09-17，v0.4：新增 `AiSessionOwner` 的账户/访客封闭类型，保持全局 `ActorContext.accountId` 非空；固定 HTTP Adapter 只向模块传访客摘要、会话所有者决定后续凭据、账户每轮重验与访客 L1 边界。影响需求：无；影响验收：匿名所有权和登录不提权可从模块接口测试；评审人/批准人：lingzz 待 REV-0005 v1.2 复核；结论：In Review。
 
 - 2026-09-14，v0.3：将聚合模块接口拆为调用方能力接口，补齐稳定值类型、`ModuleResult`、命令/结果到 OpenAPI schema 的映射及错误保证；聚合接口只供 Composition Root 装配；批准人：lingzz；结论：批准。
 

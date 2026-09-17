@@ -3,8 +3,8 @@
 | 字段     | 值                              |
 | -------- | ------------------------------- |
 | 文档编号 | `MLS-DOC-DD-0002`               |
-| 文档状态 | `Draft`，经 DD 评审（REV-0004） |
-| 文档版本 | `v0.3`                          |
+| 文档状态 | `In Review`（v0.4 历史批准保留） |
+| 文档版本 | `v0.5`                          |
 | 编制日期 | `2026-09-12`                    |
 | 阶段     | M4 详细设计                     |
 
@@ -35,7 +35,7 @@
 
 - 权限：LIBRARIAN。结果 outcome ∈ `LENT | NOT_BORROWED_REJECTED | MANUAL_HANDLING`（PK-D4/D2/D3）；失败为 `MLS-CIRC-004`（PK-D1：隔离/无权/对象无效）。
 
-### 2.3 人工事务处置 `POST /api/v1/transactions/{txId}/manual-action`
+### 2.3 人工事务处置 `POST /api/v1/transactions/{txId}/manual-actions`
 
 - 权限：LIBRARIAN。请求 `{ action: RELEASE | CONFIRM_ENTRY | REJECT }`；RELEASE＝借出人工放行（PK-D5，TX-15b）；CONFIRM_ENTRY＝入口人工放行（PK-D6/TX-15a，服务端校验守卫）；REJECT＝拒绝（PK-D7/TX-16）。
 - 守卫不满足时 CONFIRM_ENTRY 返回 `MLS-CIRC-005`（`outcome: MANUAL_HANDLING_HELD`，事务保持人工处理中＝PK-D8 留存口径），不产生借出。
@@ -64,11 +64,15 @@
 
 ## 4. 复核模块（REV）
 
-- `POST /api/v1/reviews`（LIBRARIAN 发起）、`POST /api/v1/reviews/{id}/decision`（ADMIN，`{ decision: APPROVED|REJECTED }`）；执行前服务端复核目标最新状态，已变化返回 `MLS-REV-001`＋`reInitiable: true`（RV-D2/SC-Q4）；批准执行整体提交（RV-D4），失败 `MLS-REV-002` 仅审计（RV-D5）。
+- `POST /api/v1/reviews`（LIBRARIAN 发起）、`POST /api/v1/reviews/{reviewId}/decision`（ADMIN，`{ decision: APPROVED|REJECTED }`）；执行前服务端复核目标最新状态，已变化返回 `MLS-REV-001`＋`reInitiable: true`（RV-D2/SC-Q4）；批准执行整体提交（RV-D4），失败 `MLS-REV-002` 仅审计（RV-D5）。
 
 ## 5. 通知/审计/AI（只读与受控接口）
 
-- 通知 `GET /api/v1/notifications`（本人；按关联预约日期临近排序，同一预约事务 VISIT/NO_VISIT 互斥，不同事务可同日并存）；审计查询 `GET /api/v1/audit-events`（LIBRARIAN/ADMIN）；AI 会话 `POST /api/v1/ai/sessions`、`POST /api/v1/ai/sessions/{id}/messages`（L2 卡片动作仅返回 `actionType+prefill`，前端在当前页面打开现行表单模态框，不设服务端确认接口——`MLS-DEC-0021`）。
+- 通知 `GET /api/v1/notifications`（本人；按关联预约日期临近排序，同一预约事务 VISIT/NO_VISIT 互斥，不同事务可同日并存）；审计查询 `GET /api/v1/audit-events`（LIBRARIAN/ADMIN）。
+- `POST /api/v1/ai/sessions` 无请求体。未携带 Bearer 时，服务端生成 256-bit 随机访客凭据，通过 `__Host-mls-ai-visitor` 浏览器会话 Cookie 返回，属性固定为 `HttpOnly; Secure; SameSite=Strict; Path=/`；数据库、正文、应用日志和审计只允许出现凭据摘要，不得出现原值。携带有效 Bearer 时创建账户会话；Bearer 与既有访客 Cookie 同时存在时，新会话归账户。
+- `POST /api/v1/ai/sessions/{sessionId}/messages` 与 `GET /api/v1/ai/sessions/{sessionId}/events` 接受账户 Bearer 或访客 Cookie 二选一。账户会话只接受对应账户；访客会话只接受匹配摘要的 Cookie，额外 Bearer 不迁移所有权、不改变 `VISITOR` 角色、不切换到账户额度。ADMIN 仅可按既有权限查询事件，不得以管理员身份发送会话消息。
+- 没有任何所有权凭据返回 HTTP 401；提供了凭据但与会话不匹配时返回 HTTP 404／`MLS-AI-005`，不得区分会话不存在与不可见。匿名会话仅能使用 L1 与现行访客可见数据；L2 卡片动作继续仅返回 `actionType+prefill`，不设服务端确认接口（`MLS-DEC-0021`）。
+- 初次匿名启动若响应在 Cookie 到达前中断，可留下不可恢复的空会话；`sessionId`、`Idempotency-Key` 或客户端自报 ID 均不得恢复所有权。取得 Cookie 后，匿名写请求的幂等作用域为访客凭据摘要＋HTTP 方法＋规范路径＋键值。
 
 ## 6. 调用次序与依赖（跨模块）
 
@@ -85,6 +89,12 @@
 - 关闭接口无额外请求字段；成功返回 `{orderId,status:CLOSED}`。PAID/CLOSED 上迟到关闭只返回现有终态，不创建退款。退款接口及对账需遵守 FR-0024/0025 的已批准范围，业务实现不由关闭接口代行。
 
 ## 修订记录
+
+- 2026-09-17，v0.5：补匿名 AI 会话所有权线协议、Cookie 安全属性、登录不迁移、401/404 不可见性与匿名幂等作用域；删除 `clientSessionId` 请求字段。影响需求：无，访客仍仅 L1；影响验收：增加匿名所有权与登录不提权契约场景；评审人/批准人：lingzz 待 REV-0004 v1.5 复核；结论：In Review。
+
+- 2026-09-14，v0.4：与 MD-0003 v0.3/OpenAPI 统一人工处置复数路径及语义化复核路径参数；业务规则不变；批准人：lingzz；结论：批准。
+
+- 2026-09-14，不变：当前契约完成受影响复审，AI 实际模式由 `MLS-DEC-0030` 固定；批准人：lingzz；结论：批准。
 
 - 2026-09-12，v0.3（WIN-T/WIN-UI）：原因：Windows 实测及用户逐图反馈；提出人/选择批准人 lingzz，记录/核对 Codex；影响需求：BR-0046、FR-0031/0032 的边界与呈现；影响验收：AC-0050/0031、AT-0031/0020 及对应设计追踪；评审人：Codex（本轮核对）；整包批准人：未新增代签；结论：用户选择已传导，图与机制为修订候选，H4/H5 保持待确认。
 

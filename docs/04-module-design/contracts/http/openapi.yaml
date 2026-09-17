@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MyLibrarySystem HTTP Contract
-  version: 1.0.0
+  version: 2.0.0
   description: >-
     Frontend and backend shared structural contract. Business semantics, permissions,
     idempotency and transaction guarantees remain normative in MLS-DOC-MD-0003.
@@ -119,17 +119,18 @@ paths:
   /audit-events:
     get: {tags: [Delivery], operationId: listAuditEvents, x-permission: LIBRARIAN_OR_ADMIN, parameters: [{$ref: '#/components/parameters/RelatedId'}, {$ref: '#/components/parameters/ActorId'}, {$ref: '#/components/parameters/EventType'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/AuditPage'}, default: {$ref: '#/components/responses/Error'}}}
   /ai/sessions:
-    post: {tags: [AI], operationId: startAiSession, security: [], x-permission: PUBLIC_OR_AUTHENTICATED, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/AiSession'}, responses: {'200': {$ref: '#/components/responses/AiSession'}, default: {$ref: '#/components/responses/Error'}}}
+    post: {tags: [AI], operationId: startAiSession, security: [{}, {bearerAuth: []}], x-permission: PUBLIC_OR_AUTHENTICATED, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], responses: {'200': {$ref: '#/components/responses/AiSession'}, default: {$ref: '#/components/responses/Error'}}}
   /ai/sessions/{sessionId}/messages:
     parameters: [{$ref: '#/components/parameters/SessionId'}]
-    post: {tags: [AI], operationId: sendAiMessage, x-permission: SESSION_OWNER, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/AiMessage'}, responses: {'200': {$ref: '#/components/responses/AiTurn'}, default: {$ref: '#/components/responses/Error'}}}
+    post: {tags: [AI], operationId: sendAiMessage, security: [{bearerAuth: []}, {aiVisitorCookie: []}], x-permission: AI_SESSION_OWNER, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/AiMessage'}, responses: {'200': {$ref: '#/components/responses/AiTurn'}, default: {$ref: '#/components/responses/Error'}}}
   /ai/sessions/{sessionId}/events:
     parameters: [{$ref: '#/components/parameters/SessionId'}]
-    get: {tags: [AI], operationId: listAiEvents, x-permission: SESSION_OWNER_OR_ADMIN, parameters: [{$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/AiEventPage'}, default: {$ref: '#/components/responses/Error'}}}
+    get: {tags: [AI], operationId: listAiEvents, security: [{bearerAuth: []}, {aiVisitorCookie: []}], x-permission: AI_SESSION_OWNER_OR_ADMIN, parameters: [{$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/AiEventPage'}, default: {$ref: '#/components/responses/Error'}}}
 
 components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer, bearerFormat: opaque}
+    aiVisitorCookie: {type: apiKey, in: cookie, name: __Host-mls-ai-visitor, description: Browser-session visitor credential; HttpOnly, Secure, SameSite=Strict and Path=/; never returned in a response body.}
   parameters:
     IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 1, maxLength: 128}}
     AccountId: {name: accountId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
@@ -185,7 +186,6 @@ components:
     Refund: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/RefundRequest'}}}}
     Review: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ReviewRequest'}}}}
     ReviewDecision: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ReviewDecisionRequest'}}}}
-    AiSession: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AiSessionRequest'}}}}
     AiMessage: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AiMessageRequest'}}}}
   responses:
     Error: {description: Stable error envelope, content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}}
@@ -258,7 +258,7 @@ components:
     NotificationPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPageEnvelope'}}}}
     ReadResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReadEnvelope'}}}}
     AuditPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AuditPageEnvelope'}}}}
-    AiSessionResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AiSessionEnvelope'}}}}
+    AiSessionResponse: {description: OK; anonymous creation also sets the visitor credential, headers: {Set-Cookie: {description: 'Present only for anonymous creation: __Host-mls-ai-visitor=<opaque>; Path=/; Secure; HttpOnly; SameSite=Strict', schema: {type: string}}}, content: {application/json: {schema: {$ref: '#/components/schemas/AiSessionEnvelope'}}}}
     AiTurnResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AiTurnEnvelope'}}}}
     AiEventPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AiEventPageEnvelope'}}}}
   schemas:
@@ -345,9 +345,9 @@ components:
     ReadData: {type: object, additionalProperties: false, required: [read], properties: {read: {const: true}}}
     AuditEvent: {type: object, additionalProperties: false, required: [eventId, eventType, actorId, occurredAt], properties: {eventId: {$ref: '#/components/schemas/Id'}, eventType: {type: string}, actorId: {$ref: '#/components/schemas/Id'}, relatedId: {$ref: '#/components/schemas/Id'}, outcome: {type: string}, occurredAt: {$ref: '#/components/schemas/Timestamp'}}}
     AuditPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/AuditEvent'}}, nextCursor: {type: [string, 'null']}}}
-    AiSessionRequest: {type: object, additionalProperties: false, properties: {clientSessionId: {type: string}}}
     Quota: {type: object, additionalProperties: false, required: [remaining], properties: {remaining: {type: integer, minimum: 0}}}
-    AiSessionData: {type: object, additionalProperties: false, required: [sessionId, role, quota], properties: {sessionId: {$ref: '#/components/schemas/Id'}, role: {$ref: '#/components/schemas/Role'}, quota: {$ref: '#/components/schemas/Quota'}}}
+    AiRole: {type: string, enum: [VISITOR, READER, LIBRARIAN, ADMIN]}
+    AiSessionData: {type: object, additionalProperties: false, required: [sessionId, role, quota], properties: {sessionId: {$ref: '#/components/schemas/Id'}, role: {$ref: '#/components/schemas/AiRole'}, quota: {$ref: '#/components/schemas/Quota'}}}
     AiMessageRequest: {type: object, additionalProperties: false, required: [message], properties: {message: {type: string, minLength: 1, maxLength: 4000}}}
     AiAction: {type: object, additionalProperties: false, required: [actionType, level, prefill, draftId, label], properties: {actionType: {type: string}, level: {type: string, enum: [L1, L2, L3]}, prefill: {type: object}, draftId: {$ref: '#/components/schemas/Id'}, label: {type: string}}}
     AiTurnData: {type: object, additionalProperties: false, required: [messageId, answer, citations, actions, quota], properties: {messageId: {$ref: '#/components/schemas/Id'}, answer: {type: string}, citations: {type: array, items: {type: string}}, actions: {type: array, items: {$ref: '#/components/schemas/AiAction'}}, quota: {$ref: '#/components/schemas/Quota'}}}

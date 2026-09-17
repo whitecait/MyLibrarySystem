@@ -3,8 +3,8 @@
 | 字段     | 值                              |
 | -------- | ------------------------------- |
 | 文档编号 | `MLS-DOC-DD-0003`               |
-| 文档状态 | `Draft`，经 DD 评审（REV-0004） |
-| 文档版本 | `v0.3`                          |
+| 文档状态 | `In Review`（v0.3 历史批准保留） |
+| 文档版本 | `v0.4`                          |
 | 编制日期 | `2026-09-12`                    |
 | 阶段     | M4 详细设计                     |
 
@@ -36,7 +36,8 @@
 | idempotency_key                          | 幂等键                     | request_key UNIQUE（BR-0042）                                                                                                     |
 | notification                             | 站内通知                   | 未读索引携带 reservation_date（临近排序锚点）                                                                                     |
 | audit_event                              | 审计事件                   | 独立提交（SC-Q5/Q9 失败审计不随业务回滚）                                                                                         |
-| ai_session / ai_message / ai_quota_usage | AI 会话、消息、额度        | model_calls 按调用计数（DEC-0021）                                                                                                |
+| ai_session / ai_message / ai_quota_usage | AI 会话、消息、账户额度    | 会话所有者为账户或访客摘要二选一；账户 model_calls 按调用计数（DEC-0021/0031 候选）                                               |
+| ai_visitor_quota_usage                   | 访客全局共享额度           | `usage_date` 唯一；全体访客共享同一业务日计数，不绑定账户或单个 Cookie                                                            |
 
 可变核心业务行带 version 用于 CAS；Outbox、通知、审计等记录按各自实际 DDL 管理，并非全部表都有 version/updated_at。扩展：`pg_trgm`（迁移内 `CREATE EXTENSION IF NOT EXISTS`，幂等）。
 
@@ -53,6 +54,13 @@
 
 7. `consumerReceiptsDistinguishEventsAndConsumers`——两个同聚合同类型事件分别可消费，两个消费者独立去重，同消费者重放同事件被拒绝；这仅验证数据库回执约束，分发器实现仍属 M5。
 
+### 2.1 匿名 AI 目标数据约束（待追加迁移实现）
+
+- 已成功应用的 V1 不回写。后续迁移把 `ai_session.account_id` 改为可空，新增非明文的 `visitor_owner_digest`，并用 CHECK 保证两列恰有一列非空；分别为账户和访客摘要建立所有权查询索引。原始 Cookie 不得持久化。
+- `ai_quota_usage` 保持账户外键与 `(account_id,usage_date)` 唯一语义；新增 `ai_visitor_quota_usage(usage_date PRIMARY KEY,model_calls,version,updated_at)`，以单行 CAS 更新承载全体访客的当日共享池。
+- 会话所有者在创建后不可从访客改为账户或反向迁移。账户角色每轮从 IDENTITY 重新解析；访客角色固定为 `VISITOR`。事件日志继续永久留存，Cookie 丢失只使访客无法再次证明所有权，不删除会话或日志。
+- 追加迁移测试须覆盖账户/访客 XOR、明文不落库、同一访客多会话、两个访客竞争同一额度行、重复迁移、已有账户会话保留以及错误凭据无法通过数据库查询旁路取得会话。
+
 ## 3. 执行状态（2026-09-12 后续审计）
 
 Docker Desktop 29.7.2 已可用。本轮在真实 PostgreSQL 17.6 上复跑：原 V1 因 `current_date` 关键字列名语法错误失败；为该列加双引号后迁移成功，多笔欠费回归暴露原唯一约束错误；V2 移除该限制并保留归还来源唯一约束。实际运行结果与快照见根目录 `HANDOFF-AUDIT-20260912.md`。
@@ -66,6 +74,10 @@ DD-0006 是场景规格，业务集成实现仍属于 M5，不能称为已编译
 - 枚举值与 API/文档三方一致（OD-0002 §17）；新增枚举值须同步契约与 DD-0002。
 
 ## 修订记录
+
+- 2026-09-17，v0.4：登记匿名 AI 目标数据模型：账户/访客所有者 XOR、只存访客摘要、账户额度表保持外键并新增按日唯一访客全局额度表；明确 V1 不回写，实际追加迁移与测试仍属 M5。影响需求：无；影响验收：补所有权与共享额度数据库不变量；评审人/批准人：lingzz 待 REV-0004 v1.5 复核；结论：In Review。
+
+- 2026-09-14，不变：V1 语法修复、V2/V3/V4 与真实 PostgreSQL 证据完成受影响复审；批准人：lingzz；结论：批准。
 
 - 2026-09-12，v0.3（WIN-T）：增加 V4 admission 意图以修复行锁等待期间仍可新发许可的问题；执行授权 lingzz 继续编码准备，Codex 核对，整包批准未代录。影响 DD-0004/LogicalClosingGateTest，无新增固定墙钟保证。
 

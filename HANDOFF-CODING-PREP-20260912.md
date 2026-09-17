@@ -24,6 +24,7 @@
 > - [逻辑 T 机制](docs/03-detailed-design/MLS-DOC-DD-0004.md)
 > - [集成测试规格](docs/03-detailed-design/MLS-DOC-DD-0006.md)
 > - [DD 复审](docs/03-detailed-design/reviews/MLS-DOC-REV-0004.md)
+> - [模块设计评审与基线记录](docs/04-module-design/reviews/MLS-DOC-REV-0005.md)
 > - [已导入逐图复核](artifacts/windows-input-20260913/mermaid-human-review-1789258257884.json)
 > - [Windows 交接原文](artifacts/windows-input-20260913/WINDOWS-REVIEW-HANDOFF.md)
 
@@ -75,7 +76,7 @@ TLC Closing 增加 DRAINING/AbortWrite、隔离必须 inFlight=0，新增 InvNoO
 - 新工具/数据输入与原图在 `artifacts/windows-input-20260913/`；TLC/探针、数据库、API输出和实际字节 manifest（[`SHA256SUMS.final`](artifacts/coding-prep-20260912/SHA256SUMS.final)）在 `artifacts/coding-prep-20260912/`。不包含密钥、实际 .env 或服务原始回答；Git HEAD 不能替代当前未提交字节绑定。
 - 修改未提交；旧 Windows 194文件复核包不变。verification/ 与 artifacts/ 继续不入库。
 
-## 6. 编码前剩余处置
+## 6. 2026-09-12 编码前剩余处置
 
 1. **视觉复核**：复核修改后的8张图；14张未变图的原通过结论可追溯。需在允许的环境完成新渲染/视觉检查，不通过代理服务或替代浏览器绕过既有安全拒绝。
 2. **H4 风险职责**：仍需确认原清单的责任人/触发时点；本次逻辑 T 选择不包含 H4 批准。
@@ -83,7 +84,15 @@ TLC Closing 增加 DRAINING/AbortWrite、隔离必须 inFlight=0，新增 InvNoO
 
 H1 的业务选择、H2 的测试凭据输入、C1 Grafana 页面复核不再作为待办。前后端业务实现、全量模块契约与测试接入及产品验收仍属于后续工作包，未冒充本轮完成；当前继续准备受影响复审包，不宣称所有业务已获无条件编码准入。
 
+## 7. 2026-09-14 收口
+
+8 张修改图已在 Windows 原生 Chrome 复核全部通过，图源哈希与当前图源逐项一致；AI 实际模式采用 `thinking=disabled`；RISK-0009 责任与触发时点已登记；H5 受影响复审通过。REV-0003/0004 v1.3 为 Approved，OQ-0027 已关闭。批准人：lingzz。
+
+模块设计基线另由 REV-0005 v1.1 批准，含 OpenAPI、能力子接口和抽象依赖门禁。业务实现、生成客户端接合、系统测试与产品验收仍未完成。
+
 ## 修订记录
+
+- 2026-09-14：登记 8 图复核、AI 实际模式、H4/H5、M3/M4 基线恢复与 OQ-0027 关闭；批准人：lingzz。
 
 - 2026-09-12：Codex 按用户 Windows 交接与 JSON 反馈续接；记录已传导选择、四图返修及连带图变更、排空回归修复、分模式 API 结果与剩余门禁。逻辑 T/模态框选择据用户输入，整包复审未代签。
 - 2026-09-12：补记最终取证：21:36 的 19 项 Maven 成功证据保留；21:54 重跑因 Docker Desktop socket 不可用单独归档，不覆盖成功结果。
@@ -95,3 +104,4 @@ H1 的业务选择、H2 的测试凭据输入、C1 Grafana 页面复核不再作
 > - [当前交接](HANDOFF.md)
 > - [任务规划](TODO.md)
 > - [前轮审计](HANDOFF-AUDIT-20260912.md)
+> - [模块设计评审与基线记录](docs/04-module-design/reviews/MLS-DOC-REV-0005.md)

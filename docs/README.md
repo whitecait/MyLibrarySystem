@@ -1,16 +1,16 @@
 # MyLibrarySystem 工程文档入口
 
-> 2026-09-12/13 收尾：Docker 与真实 PostgreSQL 验证、逻辑 T 候选机制、AI 分模式复测已完成；OQ-0027 仍 Open，8 张修改 Mermaid 图待 Windows 重新视觉复核，H4/H5 待处置。详见 [编码前准备收尾](../HANDOFF-CODING-PREP-20260912.md)。
+> 2026-09-17 状态：既有需求及 REV-0003 v1.3、REV-0004 v1.4、REV-0005 v1.1 批准历史有效；匿名 AI 契约冲突登记为 OQ-0029，REV-0004 v1.5、REV-0005 v1.2 与 OpenAPI 2.0 当前 In Review。
 
 | 字段     | 值                                               |
 | -------- | ------------------------------------------------ |
 | 文档编号 | `MLS-DOC-GOV-0000`                               |
 | 文档状态 | `Draft`                                          |
-| 文档版本 | `v0.31`                                          |
+| 文档版本 | `v0.35`                                          |
 | 编制日期 | `2026-07-13`                                     |
-| 最近更新 | `2026-09-13`                                     |
-| 适用阶段 | 需求分析                                         |
-| 验证对应 | 验收测试                                         |
+| 最近更新 | `2026-09-17`                                     |
+| 适用阶段 | 全生命周期；当前进入 M5                         |
+| 验证对应 | 里程碑与工程文档导航                             |
 | 权威性质 | 工程文档唯一入口；经批准的规范性工件由本入口导航 |
 
 > 引用文档：
@@ -21,12 +21,14 @@
 > - [模块关系与 4+1 视图草图](02-overall-design/MLS-DOC-OD-0002.md)
 > - 治理规则：[MLS-DOC-GOV-0001](00-governance/MLS-DOC-GOV-0001.md) 至 [MLS-DOC-GOV-0007](00-governance/MLS-DOC-GOV-0007.md)
 > - 需求分析阶段：[MLS-DOC-RA-0001](01-requirements/requirements/MLS-DOC-RA-0001.md)、[MLS-DOC-RA-0002](01-requirements/requirements/MLS-DOC-RA-0002.md)、[MLS-DOC-RA-0003](01-requirements/requirements/MLS-DOC-RA-0003.md)、[MLS-DOC-RA-0004](01-requirements/requirements/MLS-DOC-RA-0004.md)、[MLS-DOC-RA-0005](01-requirements/requirements/MLS-DOC-RA-0005.md)、[MLS-DOC-RA-0006](01-requirements/requirements/MLS-DOC-RA-0006.md)、[MLS-DOC-RA-0007](01-requirements/requirements/MLS-DOC-RA-0007.md)、[MLS-DOC-RA-0008](01-requirements/requirements/MLS-DOC-RA-0008.md)、[MLS-DOC-RA-0009](01-requirements/requirements/MLS-DOC-RA-0009.md)、[MLS-DOC-RA-0010](01-requirements/requirements/MLS-DOC-RA-0010.md)、[MLS-DOC-RA-0011](01-requirements/requirements/MLS-DOC-RA-0011.md)、[MLS-DOC-RA-0012](01-requirements/requirements/MLS-DOC-RA-0012.md)、[MLS-DOC-RA-0013](01-requirements/requirements/MLS-DOC-RA-0013.md)、[MLS-DOC-RA-0014](01-requirements/requirements/MLS-DOC-RA-0014.md)、[MLS-DOC-RA-0015](01-requirements/requirements/MLS-DOC-RA-0015.md)、[MLS-DOC-AT-0001](01-requirements/acceptance/MLS-DOC-AT-0001.md)、[MLS-DOC-AT-0002](01-requirements/acceptance/MLS-DOC-AT-0002.md)、[MLS-DOC-AT-0003](01-requirements/acceptance/MLS-DOC-AT-0003.md)、[MLS-DOC-EVD-0001](01-requirements/evidence/MLS-DOC-EVD-0001.md)、[MLS-DOC-EVD-0002](01-requirements/evidence/MLS-DOC-EVD-0002.md)、[MLS-DOC-REV-0001](01-requirements/reviews/MLS-DOC-REV-0001.md)、[MLS-DOC-REV-0002](01-requirements/reviews/MLS-DOC-REV-0002.md)
-> - 后续阶段入口：[MLS-DOC-OD-0001](02-overall-design/MLS-DOC-OD-0001.md)、[MLS-DOC-DD-0001](03-detailed-design/MLS-DOC-DD-0001.md)、[MLS-DOC-MD-0001](04-module-design/MLS-DOC-MD-0001.md)
+> - 后续阶段入口：[MLS-DOC-OD-0001](02-overall-design/MLS-DOC-OD-0001.md)、[MLS-DOC-DD-0001](03-detailed-design/MLS-DOC-DD-0001.md)、[MLS-DOC-MD-0001](04-module-design/MLS-DOC-MD-0001.md)、[MLS-DOC-MD-0002](04-module-design/MLS-DOC-MD-0002.md) 至 [MLS-DOC-MD-0005](04-module-design/MLS-DOC-MD-0005.md)、[MLS-DOC-REV-0005](04-module-design/reviews/MLS-DOC-REV-0005.md)
 > - 项目级引导：[根 README](../README.md)、[后端项目说明](../library-server/README.md)、[前端项目说明](../library-frontend/README.md)
 
-## 2026-09-12/13 当前有效状态
+## 2026-09-17 当前有效状态
 
-需求基线 v1.0 仍有效；OQ-0027 因后续实证保持 Open。用户已选择逻辑 T，V4 排空意图与真实 PostgreSQL 机制测试已补齐；M3/M4 修订包仍待受影响复审。provider-default AI 工具调用 S3 不兼容，disabled 候选通过，实际接入模式待确认；8 张修改 Mermaid 图仍待 Windows 视觉复核。M5/M6 尚未完成。
+需求基线 v1.0 仍有效；逻辑 T、V4 排空意图、真实 PostgreSQL 机制测试与 8 张修改图复核均已完成。AI 实际模式采用 `thinking=disabled`。REV-0003 v1.3、REV-0004 v1.4 与 REV-0005 v1.1 的批准历史有效。前端 B0～B5、后端 B0～B4 已在统一实现分支形成提交，后端 AI、匿名所有权和产品验收尚未完成。
+
+匿名 AI 契约审计发现公开启动、后续 Bearer 继承、`ai_session.account_id NOT NULL` 与访客全局共享额度无法同时成立，已登记 OQ-0029。DD-0002 v0.5、DD-0003 v0.4、MD-0002～0005 新版本、REV-0004 v1.5、REV-0005 v1.2 和 OpenAPI 2.0 当前均为 `In Review`。按用户选择暂不重建前端生成物，CONTRACT-002 漂移是已知且阻塞合并的预期失败；不得将候选写成已批准或已实现。
 
 ## 2026-09-11 需求分析收口后的历史状态
 
@@ -43,7 +45,7 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 本文件是 MyLibrarySystem 工程文档的唯一入口。项目根 `./README.md` 和各子项目 `./library-frontend/README.md` / `./library-server/README.md` 只提供项目级引导，不重复维护需求、设计、测试或验收事实。
 
 **当前阶段:**
-为**需求分析已完成**，需求基线 v1.0 已激活，后续阶段可按门禁输入推进；产品验收仍未执行。
+为**需求基线有效、M5 部分实现完成、匿名 AI 契约受影响修订中**；产品验收仍未执行。
 
 ## 分层权威模型
 
@@ -70,7 +72,7 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 
 - `MLS-DOC-RA-0001 v1.0` 是已标记 Approved 的需求分析阶段组织与工作基线。
 - 需求主规格、专题需求、验收定义与追踪矩阵已按 REV-0002 v1.0 激活；系统验收尚未执行。
-- G3 至 G5 已按 2026-09-11 授权签署收口；OQ-0027 因 2026-09-12 实证审计复开为 Open，其余 OQ 历史关闭保留。
+- G3 至 G5 已收口；OQ-0027 的 2026-09-12 实证审计差额已于 2026-09-14 复审关闭。2026-09-17 新登记 OQ-0029，当前唯一 Open 项为匿名 AI 契约冲突；既有 M3/M4 与模块设计批准版本保持有效，受影响候选另行 In Review。
 - `MLS-DOC-RA-0001 v1.0` 中的旧目标目录（§3.1 目录树仍含 `90-archive/`）和箭头式权威关系（§3.3）仍属于上次批准内容。G0 治理重评审已于 2026-07-24 通过，分层模型作为当前维护与评审导航；但不得宣称已经覆盖或静默改写该批准版本。
 - 全局开发计划已按 M0 正式化为 `MLS-DOC-GOV-0006`（2026-09-05）：G3/G4 复审与 G5 基线批准（对应计划里程碑 M2）是进入设计阶段的唯一路径；全量重写策略已登记为 `MLS-DEC-0007`。
 - `MLS-DOC-RA-0001` 至 `MLS-DOC-RA-0003` 现位于 `01-requirements/requirements/`。
@@ -81,12 +83,11 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 - 到馆统计口径与在线预约日期守卫已登记为 `MLS-DEC-0019`（2026-09-08，来源 `MLS-OQ-0025` 收口 grill 逐项拍板），并完成同轮工件传导：业务规则（`MLS-BR-0020` 修订＋`MLS-BR-0036` 新增）、信息需求（`MLS-IR-0017` 新增）、功能需求（`MLS-FR-0028` 修订＋`MLS-FR-0039` 新增）、用例（`MLS-UC-0015` 修订＋`MLS-UC-0020` 新增）、业务流程（`MLS-DOC-RA-0008` §11 修订＋§16 新增）、术语（`MLS-DOC-RA-0006` 五条统计与时段术语）、范围行（`MLS-DOC-RA-0003`/`0004` 补「首页到馆统计」）、验收（`MLS-DOC-AT-0001` §2、`MLS-AC-0028` 修订＋`MLS-AC-0039`、`MLS-AT-0015` 修订＋`MLS-AT-0024`）与追踪矩阵；`MLS-OQ-0025` 于 2026-09-08 关闭。
 - 读者页业务口径传导（`MLS-DEC-0016`）已由 `MLS-OQ-0026` 收口轮完成（2026-09-08 执行代理执行，待用户审阅）：用例（`MLS-UC-0001` 修订＋`MLS-UC-0021`~`0024` 新增）、功能需求（`MLS-FR-0028`/`0036` 修订＋`MLS-FR-0040`~`0046` 新增）、业务规则（`MLS-BR-0037`/`0038` 新增）、信息需求（`MLS-IR-0003`/`0005`/`0016` 修订）、业务流程（`MLS-DOC-RA-0008` §1 修订＋§17~§20 新增）、术语（`MLS-DOC-RA-0006` 读者门户术语八条）、范围与参与者（`MLS-DOC-RA-0003` v0.9/`0004` v0.5/`0005` v0.6）、验收（`MLS-DOC-AT-0001` §2、`MLS-AC-0001` 修订＋`MLS-AC-0040`~`0046`、`MLS-AT-0001`/`0015`/`0021` 修订＋`MLS-AT-0025`~`0028`、`MLS-AT-0024` 章节错位移正）与追踪矩阵（`MLS-DOC-RA-0014` 追踪 9 行）；排除行「电子资源」按已批准在线阅读能力改为「电子资源管理」并括注；读者 AI 条款核对为已覆盖（`MLS-DEC-0012`/`MLS-OQ-0016`），呈现形态关联 `MLS-OQ-0021`；收口轮唯一遗留疑点（通知优先级排序）已经用户拍板登记为 `MLS-DEC-0020`（2026-09-08：互斥对象为同一预约事务、不同日期按临近时间节点排序，互斥口径经审阅返修明确为逐事务，`GOV-0005` v0.14），并同轮传导需求与验收。`MLS-OQ-0026` 传导完成登记后经用户审阅返修（同日互斥适用对象、`MLS-AT-0001` 在线阅读矛盾、`MLS-FR-0008`/`MLS-AC-0008` 参与者冲突、自助确认语义、Closed 早于审阅、引用登记 6 项），返修经用户核定通过，于 2026-09-08 登记 `Closed`。
 - AI 呈现形态、调用额度计数与会话日志粒度已登记为 `MLS-DEC-0021`（2026-09-09，来源执行代理产品决策包四问用户逐项拍板），并完成同轮工件传导：用例（`MLS-UC-0016`/`0017`，`MLS-DOC-RA-0009` v0.14）、功能需求（`MLS-FR-0031`/`0032`/`0033`/`0035`，`MLS-DOC-RA-0010` v0.14）、业务规则（`MLS-BR-0027`，`MLS-DOC-RA-0011` v0.14）、信息需求（`MLS-IR-0013`/`0014`/`0015`，`MLS-DOC-RA-0012` v0.13）、非功能需求（`MLS-NFR-AI-0002`/`0006`，`MLS-DOC-RA-0013` v0.7）、业务流程（`MLS-DOC-RA-0008` v0.15 §12）、范围与参与者语境与术语（`MLS-DOC-RA-0004` v0.6/`0005` v0.7/`0006` v0.10）、验收（`MLS-AC-0031`/`0032`/`0033`/`0035`＋`MLS-AT-0019`/`0020`＋§4，`MLS-DOC-AT-0002` v0.17）与追踪矩阵说明段（`MLS-DOC-RA-0014` v0.13）；原型 `ai-assistant-demo` L2 同步改为入口卡片→现行表单形态（不入库）；`MLS-OQ-0021`/`0023`/`0024` 于 2026-09-09 关闭。
-- AI 设计阶段技术口径已登记为 `MLS-DEC-0022`（2026-09-09，来源执行代理非规范性技术验证＋用户两问拍板：五项候选方向全批准、批准即关闭且未验证项显式登记）：只读工具/循环无业务事实、原生 Tool Calling＋OpenAI 兼容契约、内部封闭注册表不引入 MCP、内层循环＋外层状态暂停恢复、Spring/Java 手写循环；验证证据为 `library-frontend/prototypes/tech-verification/agent-sim.mjs`（模拟 OpenAI 兼容端点，18 场景 70 断言通过——含审计返修补充的重试终止场景，原型不入库）；真实端点兼容性等未验证项列为 M3 前置责任与风险；`MLS-OQ-0022` 于 2026-09-09 关闭，需求条目值不变。
+- AI 设计阶段技术口径已登记为 `MLS-DEC-0022`（2026-09-09）：只读工具/循环无业务事实、原生 Tool Calling＋OpenAI 兼容契约、内部封闭注册表不引入 MCP、内层循环＋外层状态暂停恢复、Spring/Java 手写循环；模拟端点验证为 18 场景 70 断言通过。真实端点后续验证中 provider-default 为 5/6，`thinking=disabled` 为 6/6；`MLS-DEC-0030` 已批准后者为首版实际模式。`MLS-OQ-0022` 于 2026-09-09 关闭，需求条目值不变。
 - 质量签署候选材料已登记为 `MLS-DEC-0023`（2026-09-10，来源 B1-C C2 grill 八问用户逐项采纳）并完成同轮工件传导：业务规则（`MLS-BR-0039`~`0045` 七条并发不变量新增，`MLS-DOC-RA-0011` v0.15）、非功能需求（`MLS-NFR-PER-0002`~`0004`、`MLS-NFR-REL-0002` 新增，`MLS-DOC-RA-0013` v0.8）、验收（`MLS-AC-0047`~`0049`、`MLS-AT-0029`/`0030` 新增与 `MLS-AT-0016` 补测量协议锚点，`MLS-DOC-AT-0002` v0.20）与追踪矩阵（`MLS-DOC-RA-0014` v0.14，11 行）；D-1～D-5 已分别经 `MLS-DEC-0025`/`MLS-DEC-0026` 补齐并随 G5 完成授权签署；产品验收执行仍单独记录。
-- `MLS-OQ-0027` 正式延期已登记为 `MLS-DEC-0024`（2026-09-10，来源 B1-C C3 grill 六问用户逐项采纳）：需求层外部行为覆盖确认无缺项（`MLS-BR-0035`/`0037`/`0038`/`0045`、`MLS-NFR-REL-0002`、`MLS-AC-0046`/`0049`、`MLS-AT-0015`/`0023`/`0030`），并发处理机制设计展期至 M4 详细设计（DD）评审前（硬约束，目标日期于 M3/M4 排期确定时固定）；责任人 lingzz、协调人执行代理（ZCode）；逾期未登记即延期失效回归阻断（G5 不得批准）。`MLS-DOC-RA-0007` v0.23 条目状态为 `Open（已批准延期）`，登记册无未延期 Open 项；`MLS-DOC-REV-0002` 延期同步随 C4 办理。
-- `MLS-DOC-RA-0007` 当前 Open 项为 `MLS-OQ-0027`（`MLS-OQ-0021`/`0022`/`0023`/`0024` 已于 2026-09-09 关闭——`MLS-DEC-0021`/`MLS-DEC-0022`，`MLS-OQ-0025`/`0026` 已于 2026-09-08 关闭——后者经审阅返修与用户核定，`MLS-OQ-0028` 登记即关闭）：`MLS-OQ-0027` 高并发下保证状态变化处理规则（详细设计机制；需求层外部行为口径已登记 `MLS-BR-0035`）。
-- `MLS-DOC-RA-0001 v1.0`（Approved）中的外部系统范围约束行仍为"除本地支付模拟器外不接入其他外部系统"的旧口径，与修订后的 `MLS-CON-0003`（允许 AI 模型服务端点）存在口径差异；该批准版本未被改写，差异在此显式登记，随 G3 复审按变更控制同步处置。
-- `MLS-DOC-RA-0003` §3 范围摘要与 `MLS-DOC-RA-0004` §3/§4 已于 2026-09-08 按 `MLS-DEC-0018` 传导修订（预约与候补、预约到馆通知入范围，删除「预约排队、业务通知」排除行）；`MLS-DOC-RA-0001 v1.0` §7.3 的范围排除行（Approved，不改写）仍与修订后口径存在差异，差异在此显式登记，随 G3 复审按变更控制同步处置。
+- `MLS-OQ-0027` 的 2026-09-10 正式延期及 2026-09-12 复开历史均保留；逻辑 T/V4、验证与追踪完成后，REV-0003/0004 v1.3 于 2026-09-14 批准，条目同日关闭。
+- `MLS-DOC-RA-0007` 当前唯一 Open 项为 `MLS-OQ-0029`。
+- `MLS-DOC-RA-0001 v1.0` 的旧目录与范围表述保留为阶段组织历史；当前业务范围以 REV-0002 激活的需求工件及 2026-09-14 受影响复审为准。AI 模型端点、预约候补和业务通知已纳入当前批准范围，不从旧表述反向删减。
 
 ## 推荐阅读顺序
 
@@ -145,11 +146,11 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 
 #### 需求分析阶段 (01-requirements/acceptance/) ── 验收
 
-| 文档编号          | 标题                                                                    | 状态    |
-| ----------------- | ----------------------------------------------------------------------- | ------- |
+| 文档编号          | 标题                                                                    | 状态       |
+| ----------------- | ----------------------------------------------------------------------- | ---------- |
 | `MLS-DOC-AT-0001` | [系统验收策略](01-requirements/acceptance/MLS-DOC-AT-0001.md)           | `Approved` |
 | `MLS-DOC-AT-0002` | [系统验收条件与验收用例](01-requirements/acceptance/MLS-DOC-AT-0002.md) | `Approved` |
-| `MLS-DOC-AT-0003` | [系统验收执行报告登记册](01-requirements/acceptance/MLS-DOC-AT-0003.md) | `Draft` |
+| `MLS-DOC-AT-0003` | [系统验收执行报告登记册](01-requirements/acceptance/MLS-DOC-AT-0003.md) | `Draft`    |
 
 #### 需求分析阶段 (01-requirements/evidence/) ── 证据
 
@@ -160,8 +161,8 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 
 #### 需求分析阶段 (01-requirements/requirements/) ── 专题工件
 
-| 文档编号          | 标题                                                                      | 状态    |
-| ----------------- | ------------------------------------------------------------------------- | ------- |
+| 文档编号          | 标题                                                                      | 状态       |
+| ----------------- | ------------------------------------------------------------------------- | ---------- |
 | `MLS-DOC-RA-0004` | [愿景与范围](01-requirements/requirements/MLS-DOC-RA-0004.md)             | `Approved` |
 | `MLS-DOC-RA-0005` | [参与者与系统语境](01-requirements/requirements/MLS-DOC-RA-0005.md)       | `Approved` |
 | `MLS-DOC-RA-0006` | [术语表](01-requirements/requirements/MLS-DOC-RA-0006.md)                 | `Approved` |
@@ -177,9 +178,9 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 
 #### 需求分析阶段 (01-requirements/reviews/) ── 评审
 
-| 文档编号           | 标题                                                        | 状态    |
-| ------------------ | ----------------------------------------------------------- | ------- |
-| `MLS-DOC-REV-0001` | [需求评审清单](01-requirements/reviews/MLS-DOC-REV-0001.md) | `Draft` |
+| 文档编号           | 标题                                                        | 状态       |
+| ------------------ | ----------------------------------------------------------- | ---------- |
+| `MLS-DOC-REV-0001` | [需求评审清单](01-requirements/reviews/MLS-DOC-REV-0001.md) | `Draft`    |
 | `MLS-DOC-REV-0002` | [需求基线记录](01-requirements/reviews/MLS-DOC-REV-0002.md) | `Approved` |
 
 ### 总体设计阶段 (02-overall-design)
@@ -187,32 +188,45 @@ C4、D-1～D-5、D1/D2/D3 用户报告登记及 G3/G4/G5 收口均已完成；�
 | 文档编号           | 标题                                                               | 状态        |
 | ------------------ | ------------------------------------------------------------------ | ----------- |
 | `MLS-DOC-OD-0001`  | [总体设计阶段入口](02-overall-design/MLS-DOC-OD-0001.md)           | `Draft`     |
-| `MLS-DOC-OD-0002`  | [模块关系与 4+1 视图草图](02-overall-design/MLS-DOC-OD-0002.md)    | `Draft`     |
-| `MLS-DOC-OD-0003`  | [核心流通场景因果与交互分析](02-overall-design/MLS-DOC-OD-0003.md) | `Draft`     |
-| `MLS-DOC-OD-0004`  | [系统测试设计](02-overall-design/MLS-DOC-OD-0004.md)               | `Draft`     |
-| `MLS-DOC-REV-0003` | [总体设计评审记录](02-overall-design/reviews/MLS-DOC-REV-0003.md)  | `In Review` |
+| `MLS-DOC-OD-0002`  | [模块关系与 4+1 视图草图](02-overall-design/MLS-DOC-OD-0002.md)    | `Approved`  |
+| `MLS-DOC-OD-0003`  | [核心流通场景因果与交互分析](02-overall-design/MLS-DOC-OD-0003.md) | `Approved`  |
+| `MLS-DOC-OD-0004`  | [系统测试设计](02-overall-design/MLS-DOC-OD-0004.md)               | `Approved`  |
+| `MLS-DOC-REV-0003` | [总体设计评审记录](02-overall-design/reviews/MLS-DOC-REV-0003.md)  | `Approved`  |
 
 ### 详细设计阶段 (03-detailed-design)
 
 | 文档编号           | 标题                                                                      | 状态        |
 | ------------------ | ------------------------------------------------------------------------- | ----------- |
 | `MLS-DOC-DD-0001`  | [详细设计阶段入口](03-detailed-design/MLS-DOC-DD-0001.md)                 | `Draft`     |
-| `MLS-DOC-DD-0002`  | [模块接口契约](03-detailed-design/MLS-DOC-DD-0002.md)                     | `Draft`     |
-| `MLS-DOC-DD-0003`  | [数据库设计与迁移](03-detailed-design/MLS-DOC-DD-0003.md)                 | `Draft`     |
-| `MLS-DOC-DD-0004`  | [事务边界、并发与恢复规则](03-detailed-design/MLS-DOC-DD-0004.md)         | `Draft`     |
-| `MLS-DOC-DD-0005`  | [Outbox、缓存、故障注入与看板查询](03-detailed-design/MLS-DOC-DD-0005.md) | `Draft`     |
-| `MLS-DOC-DD-0006`  | [可执行集成用例规格](03-detailed-design/MLS-DOC-DD-0006.md)               | `Draft`     |
+| `MLS-DOC-DD-0002`  | [模块接口契约](03-detailed-design/MLS-DOC-DD-0002.md)                     | `In Review` |
+| `MLS-DOC-DD-0003`  | [数据库设计与迁移](03-detailed-design/MLS-DOC-DD-0003.md)                 | `In Review` |
+| `MLS-DOC-DD-0004`  | [事务边界、并发与恢复规则](03-detailed-design/MLS-DOC-DD-0004.md)         | `Approved`  |
+| `MLS-DOC-DD-0005`  | [Outbox、缓存、故障注入与看板查询](03-detailed-design/MLS-DOC-DD-0005.md) | `Approved`  |
+| `MLS-DOC-DD-0006`  | [可执行集成用例规格](03-detailed-design/MLS-DOC-DD-0006.md)               | `Approved`  |
 | `MLS-DOC-REV-0004` | [详细设计评审记录](03-detailed-design/reviews/MLS-DOC-REV-0004.md)        | `In Review` |
 
 ### 模块设计阶段 (04-module-design)
 
-| 文档编号          | 标题                                                    | 状态    |
-| ----------------- | ------------------------------------------------------- | ------- |
-| `MLS-DOC-MD-0001` | [模块设计阶段入口](04-module-design/MLS-DOC-MD-0001.md) | `Draft` |
+| 文档编号           | 标题                                                                 | 状态        |
+| ------------------ | -------------------------------------------------------------------- | ----------- |
+| `MLS-DOC-MD-0001`  | [模块设计阶段入口](04-module-design/MLS-DOC-MD-0001.md)              | `Draft`     |
+| `MLS-DOC-MD-0002`  | [模块目录与依赖规则](04-module-design/MLS-DOC-MD-0002.md)            | `In Review` |
+| `MLS-DOC-MD-0003`  | [对外契约与共同样例](04-module-design/MLS-DOC-MD-0003.md)            | `In Review` |
+| `MLS-DOC-MD-0004`  | [内部接口与适配缝](04-module-design/MLS-DOC-MD-0004.md)              | `In Review` |
+| `MLS-DOC-MD-0005`  | [验证映射与测试责任](04-module-design/MLS-DOC-MD-0005.md)            | `In Review` |
+| `MLS-DOC-REV-0005` | [模块设计评审与基线记录](04-module-design/reviews/MLS-DOC-REV-0005.md) | `In Review` |
 
 2026-09-11 初次复审记录（修订前）：当前工作区输入已按 SHA-256 固定；两处 D-5 状态残留已修正。REV-0001 v0.7 登记 G34-F01～F06（F01 修复复核，F02～F06 未关闭），REV-0002 v0.14 绑定候选。G3/G4 为 Blocked，存在实质语义/验收缺口；责任复审签署材料已编制、未代签，G5 批准包未准备，基线未建立。证据见 仓库根 `artifacts/g34-review-20260911/`。
 
 ## 变更记录
+
+- 2026-09-17，v0.35：同步前端 B0～B5、后端 B0～B4 的提交事实；登记 OQ-0029 与匿名 AI DD/MD/OpenAPI 受影响修订候选。需求业务值不变；REV-0004 v1.5、REV-0005 v1.2 待 lingzz 最终复核，CONTRACT-002 生成物漂移阻塞合并；不新增批准或产品验收结论。
+
+- 2026-09-14，v0.34：模块设计基线增加 OpenAPI 3.1、共同样例 Schema、调用方能力接口、稳定类型映射及前后端依赖门禁；REV-0005 升至 v1.1。业务实现与产品验收未完成。批准人：lingzz；结论：批准。
+
+- 2026-09-14，v0.33：同步 8 图复核、RISK-0009 职责、AI 实际模式、H5、OQ-0027 关闭及 REV-0003/0004/0005 Approved 状态。业务实现与产品验收未完成。批准人：lingzz；结论：批准。
+
+- 2026-09-13，v0.32：登记 MD-0002～0005、共同契约样例与 REV-0005。原因：执行 9 月 13—15 日模块 spec 工作包；提出人：执行代理；影响需求：无，47 项功能均分配模块与契约责任；影响验收：补齐单元与集成测试责任；评审人：执行代理完成候选完整性检查；批准人：待模块设计评审；结论：可评审材料齐备，受 H3/H4/H5 和 AI 模式确认阻塞，正式模块基线未冻结。
 
 - 2026-09-13，v0.31：维护基线状态列与各工件头部元数据对齐：`MLS-DOC-RA-0003`~`0014`、`MLS-DOC-AT-0001`、`MLS-DOC-AT-0002`、`MLS-DOC-REV-0002` 共 15 项由 `Draft` 刷新为 `Approved`。原因：2026-09-13 全量文档交叉审计发现需求基线激活后入口状态列未同步；提出人：文档维护轮（Zcode）；影响需求：无，仅入口登记对齐既有批准事实；影响验收：无；评审人：Zcode（43 份文档头部逐一核对）；批准人：lingzz（批准依据＝`MLS-DOC-REV-0002 v1.0` 于 2026-09-11 激活需求基线，本轮无新增批准）；结论：入口状态列与各工件头部一致。维护过程与全库处置见仓库根 [文档交叉审计与维护报告](../HANDOFF-AUDIT-20260913.md)。
 

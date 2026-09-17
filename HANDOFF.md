@@ -9,19 +9,20 @@
 > - [开发任务规划](TODO.md)
 > - [工程运行与验证](ENGINEERING.md)
 > - [工程文档唯一入口](docs/README.md)
+> - [模块设计评审与基线记录](docs/04-module-design/reviews/MLS-DOC-REV-0005.md)
 > - [收口合并 PR #2](https://github.com/whitecait/Mylibrary/pull/2)
 
 ## 已完成事实
 
-本节登记经 2026-09-13 交叉审计确认的已完成事实，均为陈述性记录，不构成新的批准或验收结论。被取代的历史过程细节已从本页删除，原文可依 git 提交历史追溯。
+本节登记截至 2026-09-17 已确认的完成事实。被取代的历史过程细节已从本页删除，原文可依 git 提交历史追溯。
 
 ### 需求与阶段评审
 
 - M2 需求分析已于 2026-09-11 经 lingzz 授权签署收口，需求基线 `v1.0 Approved` 由 `MLS-DOC-REV-0002` 激活。产品验收未执行。
 - M3 总体设计已交付，产物为 OD-0001 至 OD-0004；M4 详细设计已交付，产物为 DD-0001 至 DD-0006。
-- `MLS-DOC-REV-0003` 与 `MLS-DOC-REV-0004` 曾于 2026-09-12 经授权代录批准。同日实证审计产生差额后，两份评审降为 `In Review`，v1.0 历史批准保留，差额待受影响复审。
+- `MLS-DOC-REV-0003` 与 `MLS-DOC-REV-0004` 的实证审计差额已于 2026-09-14 完成受影响复审；当前版本分别为 v1.3、v1.4，均为 `Approved`。REV-0004 v1.4 另纳入路径规范化复审。批准人：lingzz。
 - 场景分析 SC-Q1 至 SC-Q15 已由用户逐项确认，结论已传导至 OD-0002、OD-0003 与需求、验收工件。
-- Open 问题 `MLS-OQ-0001`~`0026` 与 `MLS-OQ-0028` 已全部关闭；`MLS-OQ-0027` 于 2026-09-12 复开，为当前唯一 Open 项。
+- Open 问题 `MLS-OQ-0001`～`0028` 的历史关闭依据保持有效；2026-09-17 新登记匿名 AI 契约冲突 `MLS-OQ-0029`，当前保持 Open，等待 REV-0004 v1.5 与 REV-0005 v1.2 最终复核。
 
 ### 工程基础与提交链
 
@@ -50,7 +51,7 @@
 - `mvnw verify` 最终 19 项通过、失败 0。重跑因 WSL 无法连接 Docker Desktop socket 失败，日志存 `artifacts/coding-prep-20260912/maven-rerun-docker-unavailable.log`。
 - TLC 验证：Closing 模型 410 个去重状态、订单模型 9522 个去重状态，安全不变量均无违反。
 - 22 张旧 SVG 逐项 SHA-256 核对一致，旧图结论为 18 张通过、4 张退回。4 张退回图已修订，共 8 个图源变化；14 个未变图沿用旧视觉结论。
-- AI 真实端点验证两组结果分别保留：provider-default 配置 5/6 通过且强制工具调用 S3 返回 400；`thinking=disabled` 候选配置 6/6 通过。候选配置未被批准为默认配置。
+- AI 真实端点验证两组结果分别保留：provider-default 配置 5/6 通过且强制工具调用 S3 返回 400；`thinking=disabled` 配置 6/6 通过并由 `MLS-DEC-0030` 批准为首版实际模式。批准人：lingzz。
 - Grafana C1 观测骨架已由用户复核通过。
 
 ### 已登记的前后端分工
@@ -66,23 +67,107 @@
 
 2026-09-12 编码准入核对曾对副本状态机、预约队列、支付、Outbox 四核心模块作出"可实现、可测试"达标结论。该结论基于当时的 REV-0003/0004 v1.0 批准；实证审计后不再存在无条件的编码准入，剩余门禁以 [TODO.md](TODO.md) 为准。
 
+### 9 月 13—15 日模块 spec 候选
+
+- 2026-09-13 建立 `MLS-DOC-MD-0002`～`0005` 与 `MLS-DOC-REV-0005 v0.1`：8 个稳定业务模块及目标代码位置、全部对外契约、内部接口与适配缝、单元/集成测试责任和模块设计评审记录均已有可评审入口。
+- 功能覆盖检查将 `MLS-FR-0001`～`0047` 共 47 个唯一功能需求逐项分配给一个主责模块；REVIEW 的协作责任另列。共同 JSON 样例含 9 个跨域场景，可由前端 mock 与后端契约测试共用。
+- 截至 2026-09-13，候选检查结论为材料齐备但尚未批准；该状态已由 2026-09-14 的批准结论取代。当时业务源码仍未实现，模块目标目录不得解释为当时已存在实现；后续实现事实以本页 2026-09-15～17 条目为准。
+
+### 2026-09-14 门禁与模块基线批准
+
+- 8 张修订图已在 Windows 原生 Chrome 完成视觉复核，8/8 通过；复核 JSON 的图源哈希与当前图源逐项一致。归档副本为 `artifacts/windows-input-20260914/revised-8-visual-review.json`，SHA-256 为 `a49246be1c7b020b46ea61e9ae9b31847ba115d2cbb1c5f30d695f042e71df29`；原下载附件 SHA-256 为 `1d75d24b6fd0ee6e318b7a5d78bfbed704eb8887de0e57e29b698cdccf1bf3d6`，两者仅换行字节规范化不同。
+- `MLS-RISK-0009` 的复审责任人和剩余风险接受人为 lingzz，触发点为阶段出口前、受影响需求或设计变更后、重大验证反例后；GOV-0007 v0.7 与 OD-0002 R11 已登记。批准人：lingzz。
+- 首版 AI 实际模式为 `thinking=disabled`，登记为 `MLS-DEC-0030`；provider-default 的 S3 失败保留为不兼容证据。批准人：lingzz。
+- H5 受影响复审通过，REV-0003/0004 v1.3 为 Approved，OQ-0027 已关闭，M3/M4 基线恢复有效。批准人：lingzz。
+- MD-0002～0005、OpenAPI、共同样例及其 Schema 完成评审，REV-0005 v1.1 为 Approved；调用方能力接口、稳定类型映射和物理依赖门禁纳入模块设计基线。批准人：lingzz。
+
+### 2026-09-15 前端 B0：共同契约与运行骨架（frontend-implement 分支）
+
+- 前端工作流在新建分支 `frontend-implement`（基于 `aeeb58a`）交付 G0/B0：openapi-typescript 7.13.0 与 yaml 2.9.1 精确锁定，`npm run contracts:generate` 单命令重建 `src/platform/contracts/generated/openapi.d.ts` 与 45 操作运行时清单 `operations.json`（含 basePath、权限、公开与幂等标记）。
+- `CONTRACT-001`（OpenAPI 3.1 解析、内部 `$ref` 完整、45 个唯一 operationId、幂等键仅在非 GET）与 `CONTRACT-002`（生成物重建哈希一致、`/api/` URL 字面量仅限 platform/http 与 generated）经 `npm run contracts:check` 纳入默认 `lint:check` 链。
+- 共同样例 `contract-scenarios.json` 逐字节同步至 `src/platform/contracts/scenarios/`，同步校验脚本核对与 docs 源一致；9 场景经 Mock Adapter 按场景选择回放，未登记操作立即失败，mock 不实现业务规则。
+- `src/platform/http`：统一 `{code,message,data}` 信封解析、Bearer 认证头、31 个写操作 Idempotency-Key 自动注入、30 秒总等待上限与取消、400/401/403/404/409/422/429/500 与网络/超时/取消/信封异常的统一失败分类；`src/platform/auth`：会话状态与登录续行意图（仅 `{intent,path,params}`）。
+- 应用壳、路由元数据（module/requiresAuth/roles）与守卫（未登录保存续行意图跳登录、角色不足 403 呈现）接入 vue-router 与 element-plus；`App.vue` 由静态状态页改为壳布局。
+- 前端门禁全绿：`architecture:check`、`contracts:check`、`lint:check`、`test:ci`（10 文件 69 测试）、`build`；证据 `artifacts/m5-b0-frontend-run1/`。B0-GATE 的后端侧（CONTRACT-003、共同后端类型与机制）由平行后端代理负责，本批前端未涉及、未登记其状态。
+
+### 2026-09-15 前端 B1：身份、书目与公开门户闭环（frontend-implement 分支）
+
+- 交付 IDENTITY（7 操作）与 CATALOG（6 操作）前端闭环：登录/注册/退出、馆员账户管理（列表、高风险变更申请仅显示待复核受理号、密码重置一次性临时密码、读者状态办理）、公开门户检索（书目级 `availability` 三态、空态、加载更多）、书目详情（404 不可见独立呈现）、分页阅读器、馆员书目维护（新增/乐观锁更新/带原因下架，409 版本冲突呈现刷新提示）。
+- 新增 `src/platform/http/useApi.js` 统一请求结果模型（idle/loading/success/failure + RequestFailure）；页面经 `src/modules/<模块>/index.js` 公开门面调用，视图经模块公开入口导出，路由不触碰模块 `internal`。
+- 状态覆盖：401/403/404/409/422/500 与加载/空/成功态在 HTTP 与 Mock Adapter 下经组件测试断言一致；登录续行意图全链路（保存→登录→回跳）有测试。
+- 前端门禁全绿：architecture:check、contracts:check、lint:check、test:ci（20 文件 111 测试）、build；证据 `artifacts/m5-b1-frontend-run1/`。后端侧同批实现由平行后端代理负责。
+
+### 2026-09-15 前端 B2：副本、预约、借阅、续借、归还与查询闭环（frontend-implement 分支）
+
+- 交付 CIRCULATION 11 操作与 QUERY 2 操作前端闭环：副本维护（乐观锁动作）、公开预约日历、预约面板（五种 outcome 独立呈现；候补待确认需读者显式确认，确认复送完整字段并携带新幂等键）、现场逐册借阅（混合成败逐册呈现，DESK 渠道携带 readerId）、馆员工作台（归还含罚款形成指引与异常转人工呈现、到台取书确认、人工处置）、我的业务（kind 过滤、行内续借/取消）、到馆看板。
+- 状态覆盖：MLS-CIRC-006/010/011/012 等稳定错误码与 401/403/404/409/422/500 状态均在组件测试断言；书目级 availability 仅作展示的提示落在详情页与现场借阅页。
+- 过程证据：架构门禁实际拦截一次跨模块 internal 导入（看板测试误置于流通模块目录），已按边界拆分，证明 ARCH-FE-001 门禁有效。
+- 前端门禁全绿：architecture:check、contracts:check、lint:check、test:ci（28 文件 143 测试）、build；证据 `artifacts/m5-b2-frontend-run1/`。B4 批次将补充 runClosing/reopenBusinessDate 入口；后端侧由平行后端代理负责。
+
+### 2026-09-15 前端 B3：支付、复核、通知与审计闭环（frontend-implement 分支）
+
+- 交付 SETTLEMENT/REVIEW/DELIVERY 14 操作前端闭环：罚款列表与建单（并发冲突 409 MLS-PAY-001 呈现且罚款不变）、支付单查询（仅手动刷新，明示"等待超时不代表支付失败"）、失败单关闭、退款申请仅显示待复核受理号、营业日对账（计数与异常清单）、受控测试操作员模拟调度页（result/delayMs/duplicateCount）、复核列表与决定（批准前明示目标不执行；目标已变 409 MLS-REV-001 呈现未执行与重新发起提示）、通知中心（一次性已读标记、未读过滤）、审计查询（三过滤条件）。
+- 契约边界：applyPaymentCallback 为模拟器凭证回调，仅保留门面无页面；requestReview 由后端高风险用例内部发起，无独立发起页。
+- 前端门禁全绿：architecture:check、contracts:check、lint:check、test:ci（34 文件 163 测试）、build；期间一次 test:ci 偶发失败未复现，随后连续三次全绿。证据 `artifacts/m5-b3-frontend-run1/`。后端侧由平行后端代理负责。
+
+### 2026-09-15 前端 B4：闭馆、恢复与隔离期呈现（frontend-implement 分支）
+
+- 交付闭馆恢复管理员视图：重开营业日成功呈现 REOPENED 状态与新 epoch（明示旧请求不自动重放）；批次未追平（MLS-CIRC-008/013）触发"先补结再重开"独立阻断提示；其他失败走通用呈现。runClosing 为 SYSTEM 专用，仅保留契约门面无业务入口。
+- 隔离期呈现：预约在隔离期收到 422 MLS-CIRC-014 明确失败（组件测试覆盖），不做无限等待呈现。
+- 前端门禁全绿：architecture:check、contracts:check、lint:check、test:ci（35 文件 167 测试）、build；证据 `artifacts/m5-b4-frontend-run1/`。后端侧（逻辑 T、批次补结、恢复证据）由平行后端代理负责。
+
+### 2026-09-15 前端 B5：AI 助手与现行业务入口接合（frontend-implement 分支）
+
+- 交付 AI 3 操作前端闭环与现行表单接合：AI 助手视图（会话与额度呈现、消息问答、引用、事件流按需加载）、入口卡片 L1 只读/L3 引导/拒绝语义呈现；L2 仅预填当前页面模态表单——我的业务页续借模态经 AI 卡片预填（txId/草稿号），提交走现行 renewLoan 契约接口并携带 `Ai-Draft-Id` 头，取消不发任何业务请求（组件测试断言调用记录）；额度耗尽 429 MLS-AI-002 呈现耗尽态并禁用输入。
+- 匿名边界：/assistant 仅登录态开放；匿名 AI 会话所有权待 OpenAPI 契约修订批准后接合，届时 CONTRACT-002 生成物漂移检查将强制前端同步。
+- 前端门禁全绿：architecture:check、contracts:check、lint:check、test:ci（37 文件 180 测试）、build；证据 `artifacts/m5-b5-frontend-run1/`。后端侧（AI 会话内核、额度与工具循环）由平行后端代理负责。
+
+### 2026-09-15 前端 M5 收口：B0～B5 全量门禁与覆盖核对（frontend-implement 分支）
+
+- B0～B5 六个批次全部交付并逐批提交（e54e8b2 / ebe5077 / 333af0a / a751bc5 / ffda7de / 7330dfd，另有收口提交）：45/45 个 OpenAPI 操作在 identity/catalog/circulation/settlement/review/query/delivery/ai 八个模块门面接合（脚本核对无缺失、无多余）。
+- 最终全量门禁全绿：architecture:check、contracts:check、lint:check、test:ci（37 文件 180 测试）、build；证据 `artifacts/m5-frontend-final/`，逐批证据在 `artifacts/m5-b0～b5-frontend-run1/`。
+- 稳定化：vitest maxWorkers 限制为 8（本机与后端平行代理共享）；本日 2 次 test:ci 偶发失败均无法复现（分别 3 次、6 次连续全绿），无重复失败的测试，已在证据目录如实登记。
+- 移交事项：匿名 AI 会话所有权等 OpenAPI 契约修订批准后，经 contracts:generate 重建并接合；E2E-001、E2E-AI-001 与真实浏览器验证移交 Windows 原生环境。
+
+### 2026-09-16～17 后端 B0～B4（codex/unified-implementation 分支）
+
+- B0 提交 `a504740` 建立共同契约与运行骨架：CONTRACT-001/003、共同类型、幂等、事务、Outbox、时钟和注册垂直切片；提交记录登记 `mvnw verify` 40/40 通过。
+- B1 提交 `6254041` 交付 IDENTITY、CATALOG、Bearer 会话、授权与不可见性、V5 迁移和对应单元/集成/契约测试；提交记录登记 57/57 通过。
+- B2 提交 `e36523f` 交付 CIRCULATION、QUERY、归还罚款形成、V6 迁移和核心闭环测试；提交记录登记 72/72 通过。
+- B3/B4 提交 `8ff6182` 交付 SETTLEMENT、REVIEW、DELIVERY、闭馆/恢复接口、V7 迁移及对应模块测试文件。该提交未在提交说明中登记全量验证结果，本交接只登记源码与测试资产存在，不冒充批门已复跑通过。
+- 后端 AI、ModelEndpoint、匿名会话所有权和访客全局额度尚未实现；当前分支不存在 `com.library.ai` 或 `application.assistant` 实现。
+
 ## 未完成责任
 
-本表与 [TODO.md](TODO.md) 当前待办一一对应，待办权威源为 TODO.md：
+本表与 [TODO.md](TODO.md) 当前待办按类别对应，逐项完成条件以 TODO.md 和 REV-0005 §3 为准：
 
-| 待办                   | 说明与完成条件                                                                                                  |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 8 张修订图视觉复核     | 8 个已修订图源需在允许的 Windows 环境重新渲染并人工复核；图源位于 `verification/rendering/coding-prep-20260912/` |
-| H4 风险复审职责        | 确认 RISK-0009 的复审责任人、风险接受人和触发时点                                                               |
-| H5 受影响修订包复审    | 审阅并批准逻辑 T 与 V4、8 张图修订、AI 实际模式确认及需求、验收、OD、DD 传导包；完成后关闭 OQ-0027，REV-0003/0004 恢复 Approved |
-| Grafana 实页取证       | 统一配置时执行；C1 API 与测量链路完成结论不受影响                                                               |
-| M5 全量实现            | 待门禁完成后按已登记四工作包推进；迁移测试不替代业务实现                                                       |
-| M6 系统测试与产品验收  | 按批准验收定义在相应阶段执行                                                                                    |
+| 类别 | 未完成责任 |
+| ---- | ---------- |
+| Windows 验证 | Grafana 实页取证；功能实现后的 `E2E-001` 与 `E2E-AI-001` |
+| 匿名 AI 契约 | lingzz 最终复核 REV-0004 v1.5、REV-0005 v1.2 与 `MLS-DEC-0031`；批准后关闭 OQ-0029。当前 OpenAPI 2.0/14 样例为候选，CONTRACT-002 漂移按选择暂时保留 |
+| 后端 | 追加迁移、AI/ModelEndpoint、访客 Cookie Adapter、账户/访客所有权与全局访客额度；复跑 B3/B4 和全量门禁 |
+| 前端 | 批准后重建 OpenAPI 2.0 类型/operations、同步 14 样例并接合匿名 `/assistant`；恢复 CONTRACT-002 |
+| 集成与验收 | 全业务闭环联调、M5 检查、M6 系统测试和产品验收 |
 
 原型及 `artifacts/` 取证目录不入库；历史交接原文可经提交 `3181a9f` 恢复，不意味着本地证据已随 git 发布。
 
 ## 修订记录
 
+- 2026-09-17：登记统一实现分支后端 B0～B4 的提交事实与证据边界；同步 OQ-0029、匿名 AI 契约 In Review、生成物漂移和后续迁移/后端/前端责任。不把候选契约、未复跑 B3/B4 或匿名实现登记为完成。
+
+- 2026-09-15：登记前端 M5 收口（frontend-implement 分支）：45/45 操作接合核对、最终五项门禁与 180 项测试全绿、偶发失败登记与 maxWorkers 稳定化、Windows 侧移交事项与契约修订依赖；证据在 artifacts/m5-frontend-final/。执行代理：Zcode（前端）。
+- 2026-09-15：登记前端 B5 交付（frontend-implement 分支）：AI 助手视图与 L1~L4 卡片呈现、L2 预填当前页续借模态并携 Ai-Draft-Id 走现行接口、取消零请求、额度耗尽呈现；五项前端门禁与 180 项测试通过，证据在 artifacts/m5-b5-frontend-run1/。执行代理：Zcode（前端）。
+- 2026-09-15：登记前端 B4 交付（frontend-implement 分支）：闭馆恢复管理员视图（epoch 呈现、未追平阻断提示）、隔离期明确失败呈现；五项前端门禁与 167 项测试通过，证据在 artifacts/m5-b4-frontend-run1/。执行代理：Zcode（前端）。
+- 2026-09-15：登记前端 B3 交付（frontend-implement 分支）：SETTLEMENT/REVIEW/DELIVERY 14 操作前端闭环（建单冲突、等待不伪造失败、退款待复核、复核目标重验、通知与审计）；五项前端门禁与 163 项测试通过，证据在 artifacts/m5-b3-frontend-run1/。执行代理：Zcode（前端）。
+- 2026-09-15：登记前端 B2 交付（frontend-implement 分支）：CIRCULATION/QUERY 13 操作前端闭环（副本、预约五态、现场逐册借阅、取书、人工处置、续借、归还计罚、我的业务、到馆看板）；五项前端门禁与 143 项测试通过，证据在 artifacts/m5-b2-frontend-run1/。执行代理：Zcode（前端）。
+- 2026-09-15：登记前端 B1 交付（frontend-implement 分支）：IDENTITY/CATALOG 13 操作前端闭环、统一请求结果模型、权限与错误状态组件测试、登录续行全链路；五项前端门禁与 111 项测试通过，证据在 artifacts/m5-b1-frontend-run1/。执行代理：Zcode（前端）。
+- 2026-09-15：登记前端 B0 交付（frontend-implement 分支）：契约生成与 CONTRACT-001/002 前端门禁、platform/http 统一信封与双 Adapter、会话与登录续行、应用壳与守卫；五项前端门禁与 69 项测试通过，证据在 artifacts/m5-b0-frontend-run1/。执行代理：Zcode（前端）。
+
+- 2026-09-14：补齐 OpenAPI/JSON Schema、调用方能力接口、稳定类型映射及前后端物理依赖门禁；REV-0005 v1.1 批准修订基线。生成客户端和 Controller 契约校验仍属 M5 实现任务。批准人：lingzz。
+
+- 2026-09-14：登记 8 图复核、RISK-0009 职责、AI `thinking=disabled`、H5、OQ-0027 关闭及 M3/M4/模块设计基线 Approved。批准人：lingzz。业务实现和产品验收仍未完成。
+
+- 2026-09-13：登记 9 月 13—15 日模块 spec 候选完成证据、47 项功能覆盖、9 个共同样例及正式冻结阻塞；同步未完成责任分类，不新增上游批准或业务实现结论。
 - 2026-09-13：执行全量交叉审计与维护。已完成事实收敛为本页唯一登记区，未完成责任表与 TODO.md 六项待办一一对齐；删除场景分析九轮过程、形式化验证交接、修补轮阶段 2~10 等被取代的过程节，原文见 git 历史；维护报告见 [HANDOFF-AUDIT-20260913.md](HANDOFF-AUDIT-20260913.md)。
 - 2026-09-12：按 lingzz 后续补齐指令同步实证审计入口；Codex 记录。Docker 与迁移测试已补跑，严格截止反例和受影响门禁待复核；不新增批准或产品验收结论。
 - 2026-09-12：登记阶段 10 与本轮收口——编码准入达标、四工作包分工登记、十项清单完成与提交链、遗留责任表刷新。

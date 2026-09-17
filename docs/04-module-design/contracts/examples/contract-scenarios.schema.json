@@ -36,6 +36,7 @@
       "required": ["httpStatus", "body"],
       "properties": {
         "httpStatus": {"type": "integer", "minimum": 100, "maximum": 599},
+        "headers": {"$ref": "#/$defs/headers"},
         "body": {
           "type": "object",
           "additionalProperties": false,
