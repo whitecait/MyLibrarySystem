@@ -15,7 +15,8 @@ import java.util.Set;
  * 只有已批准的高风险动作类型可以发起复核。
  */
 @Component
-public class ReviewModuleImpl implements ReviewRequesting {
+public class ReviewModuleImpl implements ReviewRequesting, com.library.review.contract.ReviewDeciding,
+        com.library.review.contract.ReviewQuery {
 
     private static final Set<String> TARGET_TYPES = Set.of("ACCOUNT_CHANGE", "CIRCULATION_EXCEPTION", "REFUND");
     private static final Set<String> ACCOUNT_CHANGE_ACTIONS = Set.of("SUSPEND", "RESTORE", "CHANGE_ROLE");
@@ -48,4 +49,44 @@ public class ReviewModuleImpl implements ReviewRequesting {
                 command.targetId(), action, command.payload(), command.reason(), command.targetVersion()));
         return ModuleResult.Accepted.of(new Review(id, "PENDING"));
     }
+
+    @Override
+    public ModuleResult<com.library.review.contract.ReviewDeciding.ReviewDecision> decide(
+            com.library.review.contract.ReviewDeciding.DecideReview command,
+            com.library.review.contract.ReviewedAction action) {
+        var review=reviews.byId(command.reviewId());
+        if(review.isEmpty() || !"PENDING".equals(review.get().decision()))
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_002.code(),"复核不存在或已终结");
+        var row=review.get();
+        if("REJECTED".equals(command.decision())) {
+            reviews.decide(row.id(),row.version(),"REJECTED",command.decidedBy(),null);
+            return ModuleResult.Accepted.of(new com.library.review.contract.ReviewDeciding.ReviewDecision(row.id(),"REJECTED",null));
+        }
+        if(!"APPROVED".equals(command.decision()))
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_002.code(),"决定值无效");
+        if(action.currentVersion()!=row.targetVersion())
+            return ModuleResult.Rejected.conflict(StableErrorCode.MLS_REV_001.code(),action.currentVersion(),"目标已变化，请重新发起");
+        var executed=action.execute(row.payload());
+        if(executed instanceof ModuleResult.Rejected<String>)
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_002.code(),"目标执行失败");
+        var outcome=((ModuleResult.Accepted<String>)executed).value();
+        if(!reviews.decide(row.id(),row.version(),"APPROVED",command.decidedBy(),outcome))
+            return ModuleResult.Rejected.conflict(StableErrorCode.MLS_REV_001.code(),row.version()+1,"复核已变化");
+        return ModuleResult.Accepted.of(new com.library.review.contract.ReviewDeciding.ReviewDecision(row.id(),"APPROVED",outcome));
+    }
+
+    @Override
+    public ModuleResult<com.library.review.contract.ReviewQuery.ReviewPage> reviews(
+            com.library.review.contract.ReviewQuery.ReviewCriteria query) {
+        var page=query.page()==null?com.library.contract.model.PageCursor.first():query.page();
+        var after=page.cursor()==null?0:Long.parseLong(page.cursor());
+        var rows=reviews.list(query.status(),after,page.limit()+1);
+        var hasMore=rows.size()>page.limit();
+        var items=rows.stream().limit(page.limit()).map(r->new com.library.review.contract.ReviewQuery.ReviewSummary(
+                r.id(),r.targetType(),r.targetId(),r.action(),r.decision(),r.createdAt())).toList();
+        return ModuleResult.Accepted.of(new com.library.review.contract.ReviewQuery.ReviewPage(items,
+                hasMore?Long.toString(items.get(items.size()-1).reviewId()):null));
+    }
+
+    @Override public ModuleResult<com.library.review.contract.ReviewQuery.ReviewDetail> review(long id){return reviews.byId(id).<ModuleResult<com.library.review.contract.ReviewQuery.ReviewDetail>>map(r->ModuleResult.Accepted.of(new com.library.review.contract.ReviewQuery.ReviewDetail(r.id(),r.targetType(),r.targetId(),r.action(),r.payload(),r.decision(),r.targetVersion()))).orElseGet(()->ModuleResult.Rejected.of(StableErrorCode.MLS_REV_002.code(),"复核不存在"));}
 }

@@ -26,13 +26,16 @@ public class JdbcIdempotencyService implements IdempotencyService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
     private final com.library.contract.transaction.UnitOfWork unitOfWork;
+    private final com.library.contract.closing.WriteAdmissionGate admission;
 
     public JdbcIdempotencyService(JdbcTemplate jdbc,
                                   ObjectMapper mapper,
-                                  com.library.contract.transaction.UnitOfWork unitOfWork) {
+                                  com.library.contract.transaction.UnitOfWork unitOfWork,
+                                  com.library.contract.closing.WriteAdmissionGate admission) {
         this.jdbc = jdbc;
         this.mapper = mapper;
         this.unitOfWork = unitOfWork;
+        this.admission = admission;
     }
 
     /** 幂等键行主键：SHA-256(主体|方法|规范路径|键)，64 位 hex，满足 VARCHAR(128)。 */
@@ -58,6 +61,13 @@ public class JdbcIdempotencyService implements IdempotencyService {
                                             Class<T> dataType,
                                             Supplier<ModuleResult<T>> work) {
         return unitOfWork.inTransaction(() -> {
+            if (!admission.acquire(scope.canonicalPath())) {
+                var rejected=ModuleResult.Rejected.<T>of(
+                        com.library.contract.error.StableErrorCode.MLS_CIRC_014.code(),
+                        "闭馆协调中，普通写入未获许可");
+                return new IdempotentOutcome<>(IdempotentOutcome.Kind.FRESH,
+                        com.library.contract.error.StableErrorCode.MLS_CIRC_014.code(), rejected);
+            }
             var requestKey = scopeKey(scope, key);
             // ON CONFLICT DO NOTHING：并发同键时等待对方结束后按冲突处理，
             // 避免约束错误中止当前 PostgreSQL 事务（X2 幂等键并发）

@@ -11,6 +11,7 @@ import com.library.circulation.contract.ReturnCommands;
 import com.library.circulation.contract.LoanCommands;
 import com.library.circulation.contract.ReservationCommands;
 import com.library.circulation.contract.Transaction;
+import com.library.circulation.contract.ClosingCommands;
 import com.library.circulation.contract.model.BusinessDate;
 import com.library.circulation.contract.model.CopyId;
 import com.library.catalog.contract.model.TitleId;
@@ -49,17 +50,20 @@ public class CirculationController {
     private final MaintenanceUseCases maintenance;
     private final LoanUseCases loans;
     private final ReturnUseCases returns;
+    private final ClosingCommands closing;
     private final com.library.contract.idempotency.IdempotencyService idempotency;
     private final ApiResponses responses;
 
     public CirculationController(MaintenanceUseCases maintenance,
                                  LoanUseCases loans,
                                  ReturnUseCases returns,
+                                 ClosingCommands closing,
                                  com.library.contract.idempotency.IdempotencyService idempotency,
                                  ApiResponses responses) {
         this.maintenance = maintenance;
         this.loans = loans;
         this.returns = returns;
+        this.closing = closing;
         this.idempotency = idempotency;
         this.responses = responses;
     }
@@ -95,6 +99,7 @@ public class CirculationController {
 
     public record ReturnWebRequest(String copyId, String condition) {
     }
+    public record BusinessDateWebRequest(String businessDate) {}
 
     // ---- 副本维护 -----------------------------------------------------------
 
@@ -368,6 +373,28 @@ public class CirculationController {
                 });
     }
 
+    @PostMapping("/closing/runs")
+    public ResponseEntity<Envelope> runClosing(HttpServletRequest request,
+                                               @RequestHeader("Idempotency-Key") String key,
+                                               @RequestBody BusinessDateWebRequest body) {
+        var actor=requireActor(request);
+        if(actor==null||actor.role()!=com.library.contract.model.Role.SYSTEM) return forbidden("/api/v1/closing/runs");
+        var out=idempotency.execute(scope(actor,"POST","/api/v1/closing/runs"),key,hash(body),SuccessCodes.of("runClosing"),ClosingCommands.ClosingRun.class,
+                ()->closing.closeBusinessDate(new ClosingCommands.ClosingCommand(BusinessDate.parse(body.businessDate()))));
+        return responses.forResult(out.result(),out.code(),v->Map.of("batchId",Long.toString(v.batchId()),"status",v.status()));
+    }
+
+    @PostMapping("/closing/reopen")
+    public ResponseEntity<Envelope> reopen(HttpServletRequest request,
+                                           @RequestHeader("Idempotency-Key") String key,
+                                           @RequestBody BusinessDateWebRequest body) {
+        var actor=requireActor(request);
+        if(actor==null||actor.role()!=com.library.contract.model.Role.ADMIN) return forbidden("/api/v1/closing/reopen");
+        var out=idempotency.execute(scope(actor,"POST","/api/v1/closing/reopen"),key,hash(body),SuccessCodes.of("reopenBusinessDate"),ClosingCommands.ReopenedDate.class,
+                ()->closing.reopen(new ClosingCommands.ReopenCommand(BusinessDate.parse(body.businessDate()))));
+        return responses.forResult(out.result(),out.code(),v->Map.of("status",v.status(),"epoch",v.epoch()));
+    }
+
     // ---- helpers ---------------------------------------------------------------
 
     private static ActorContext requireActor(HttpServletRequest request) {
@@ -404,6 +431,10 @@ public class CirculationController {
         return responses.forResult(
                 ModuleResult.Rejected.of(StableErrorCode.MLS_ID_001.code(), "未认证：需要登录"),
                 StableErrorCode.MLS_ID_001.code(), null, path, null, null);
+    }
+
+    private ResponseEntity<Envelope> forbidden(String path) {
+        return responses.forResult(ModuleResult.Rejected.of(StableErrorCode.MLS_ID_005.code(), "无权执行闭馆操作"),StableErrorCode.MLS_ID_005.code(),null,path,null,null);
     }
 
     private ResponseEntity<Envelope> fieldError(String path, String message) {

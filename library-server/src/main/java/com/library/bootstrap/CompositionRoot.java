@@ -135,15 +135,21 @@ public class CompositionRoot {
     }
 
     @Bean(autowireCandidate = false)
-    ReviewModule reviewModule(ReviewRequesting requesting) {
-        record Facade(ReviewRequesting r) implements ReviewModule, ReviewRequesting {
+    ReviewModule reviewModule(ReviewRequesting requesting,
+                              com.library.review.contract.ReviewDeciding deciding,
+                              com.library.review.contract.ReviewQuery query) {
+        record Facade(ReviewRequesting r, com.library.review.contract.ReviewDeciding d,
+                      com.library.review.contract.ReviewQuery q) implements ReviewModule {
             @Override
             public com.library.contract.ModuleResult<com.library.review.contract.Review> request(
                     com.library.review.contract.ReviewCommand command) {
                 return r.request(command);
             }
+            @Override public com.library.contract.ModuleResult<com.library.review.contract.ReviewDeciding.ReviewDecision> decide(com.library.review.contract.ReviewDeciding.DecideReview c, com.library.review.contract.ReviewedAction a){return d.decide(c,a);}
+            @Override public com.library.contract.ModuleResult<com.library.review.contract.ReviewQuery.ReviewPage> reviews(com.library.review.contract.ReviewQuery.ReviewCriteria c){return q.reviews(c);}
+            @Override public com.library.contract.ModuleResult<com.library.review.contract.ReviewQuery.ReviewDetail> review(long id){return q.review(id);}
         }
-        return new Facade(requesting);
+        return new Facade(requesting,deciding,query);
     }
 
     @Bean(autowireCandidate = false)
@@ -152,18 +158,21 @@ public class CompositionRoot {
             com.library.circulation.contract.ReservationCommands reservationCommands,
             com.library.circulation.contract.LoanCommands loanCommands,
             com.library.circulation.contract.ReturnCommands returnCommands,
-            com.library.circulation.contract.CopyCommands copyCommands) {
+            com.library.circulation.contract.CopyCommands copyCommands,
+            com.library.circulation.contract.ClosingCommands closingCommands) {
         record Facade(com.library.circulation.contract.AvailabilityQuery av,
                       com.library.circulation.contract.ReservationCommands rsv,
                       com.library.circulation.contract.LoanCommands ln,
                       com.library.circulation.contract.ReturnCommands rt,
-                      com.library.circulation.contract.CopyCommands cp)
+                      com.library.circulation.contract.CopyCommands cp,
+                      com.library.circulation.contract.ClosingCommands cl)
                 implements com.library.circulation.contract.CirculationModule,
                 com.library.circulation.contract.AvailabilityQuery,
                 com.library.circulation.contract.ReservationCommands,
                 com.library.circulation.contract.LoanCommands,
                 com.library.circulation.contract.ReturnCommands,
-                com.library.circulation.contract.CopyCommands {
+                com.library.circulation.contract.CopyCommands,
+                com.library.circulation.contract.ClosingCommands {
             @Override
             public com.library.contract.ModuleResult<com.library.circulation.contract.AvailabilityQuery.AvailabilitySnapshot> availability(
                     com.library.catalog.contract.model.TitleId titleId,
@@ -238,19 +247,29 @@ public class CompositionRoot {
                     com.library.circulation.contract.CopyCommands.MaintainCopy command) {
                 return cp.maintainCopy(command);
             }
+            @Override public com.library.contract.ModuleResult<com.library.circulation.contract.ClosingCommands.ClosingRun> closeBusinessDate(com.library.circulation.contract.ClosingCommands.ClosingCommand c){return cl.closeBusinessDate(c);}
+            @Override public com.library.contract.ModuleResult<com.library.circulation.contract.ClosingCommands.ReopenedDate> reopen(com.library.circulation.contract.ClosingCommands.ReopenCommand c){return cl.reopen(c);}
         }
-        return new Facade(availabilityQuery, reservationCommands, loanCommands, returnCommands, copyCommands);
+        return new Facade(availabilityQuery, reservationCommands, loanCommands, returnCommands, copyCommands, closingCommands);
     }
 
     @Bean(autowireCandidate = false)
     com.library.settlement.contract.SettlementModule settlementModule(
             com.library.settlement.contract.DebtQuery debtQuery,
-            com.library.settlement.contract.FineCommands fineCommands) {
+            com.library.settlement.contract.FineCommands fineCommands,
+            com.library.settlement.contract.FineQuery fineQuery,
+            com.library.settlement.contract.OrderCommands orderCommands,
+            com.library.settlement.contract.OrderQuery orderQuery,
+            com.library.settlement.contract.RefundCommands refundCommands,
+            com.library.settlement.contract.ReconciliationCommands reconciliationCommands) {
         record Facade(com.library.settlement.contract.DebtQuery d,
-                      com.library.settlement.contract.FineCommands f)
-                implements com.library.settlement.contract.SettlementModule,
-                com.library.settlement.contract.DebtQuery,
-                com.library.settlement.contract.FineCommands {
+                      com.library.settlement.contract.FineCommands f,
+                      com.library.settlement.contract.FineQuery fq,
+                      com.library.settlement.contract.OrderCommands oc,
+                      com.library.settlement.contract.OrderQuery oq,
+                      com.library.settlement.contract.RefundCommands rf,
+                      com.library.settlement.contract.ReconciliationCommands rc)
+                implements com.library.settlement.contract.SettlementModule {
             @Override
             public com.library.contract.ModuleResult<com.library.settlement.contract.DebtQuery.DebtSnapshot> debtFor(
                     com.library.identity.contract.model.ReaderId readerId) {
@@ -262,8 +281,16 @@ public class CompositionRoot {
                     com.library.settlement.contract.FineCommands.FineFromReturn command) {
                 return f.createFine(command);
             }
+            @Override public com.library.contract.ModuleResult<com.library.settlement.contract.FineQuery.FinePage> fines(com.library.settlement.contract.FineQuery.FineCriteria q) { return fq.fines(q); }
+            @Override public com.library.contract.ModuleResult<com.library.settlement.contract.OrderCommands.Order> createOrder(com.library.settlement.contract.OrderCommands.CreateOrder c) { return oc.createOrder(c); }
+            @Override public com.library.contract.ModuleResult<com.library.settlement.contract.OrderCommands.Callback> applyCallback(com.library.settlement.contract.OrderCommands.PaymentCallback c) { return oc.applyCallback(c); }
+            @Override public com.library.contract.ModuleResult<com.library.settlement.contract.OrderCommands.Order> closeOrder(com.library.settlement.contract.OrderCommands.CloseOrder c) { return oc.closeOrder(c); }
+            @Override public com.library.contract.ModuleResult<com.library.settlement.contract.OrderCommands.Order> order(long id, com.library.contract.security.ActorContext a) { return oq.order(id,a); }
+            @Override public com.library.contract.ModuleResult<com.library.settlement.contract.RefundCommands.Refund> refund(com.library.settlement.contract.RefundCommands.ApprovedRefundCommand c) { return rf.refund(c); }
+            @Override public com.library.contract.ModuleResult<com.library.settlement.contract.ReconciliationCommands.Reconciliation> reconcile(com.library.settlement.contract.ReconciliationCommands.ReconciliationCommand c) { return rc.reconcile(c); }
         }
-        return new Facade(debtQuery, fineCommands);
+        return new Facade(debtQuery, fineCommands, fineQuery, orderCommands, orderQuery,
+                refundCommands, reconciliationCommands);
     }
 
     @Bean(autowireCandidate = false)

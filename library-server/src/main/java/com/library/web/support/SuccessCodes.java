@@ -41,7 +41,25 @@ public final class SuccessCodes {
             Map.entry("returnCopy", "MLS-CIRC-S003"),
             // B2 Query
             Map.entry("getArrivalDashboard", "MLS-QUERY-S001"),
-            Map.entry("getMyBusiness", "MLS-QUERY-S002")
+            Map.entry("getMyBusiness", "MLS-QUERY-S002"),
+            // B3 Settlement / Review / Delivery
+            Map.entry("listFines", "MLS-PAY-S001"),
+            Map.entry("createOrder", "MLS-PAY-S002"),
+            Map.entry("getOrder", "MLS-PAY-S003"),
+            Map.entry("scheduleSimulatedPayment", "MLS-PAY-S004"),
+            Map.entry("applyPaymentCallback", "MLS-PAY-S005"),
+            Map.entry("closeOrder", "MLS-PAY-S006"),
+            Map.entry("requestRefund", "MLS-PAY-S007"),
+            Map.entry("reconcileBusinessDate", "MLS-PAY-S008"),
+            Map.entry("listReviews", "MLS-REV-S001"),
+            Map.entry("requestReview", "MLS-REV-S002"),
+            Map.entry("decideReview", "MLS-REV-S003"),
+            Map.entry("listNotifications", "MLS-DEL-S001"),
+            Map.entry("markNotificationRead", "MLS-DEL-S002"),
+            Map.entry("listAuditEvents", "MLS-DEL-S003"),
+            // B4 Closing
+            Map.entry("runClosing", "MLS-CIRC-S011"),
+            Map.entry("reopenBusinessDate", "MLS-CIRC-S012")
     );
 
     private SuccessCodes() {

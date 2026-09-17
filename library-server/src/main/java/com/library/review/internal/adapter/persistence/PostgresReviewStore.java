@@ -9,7 +9,9 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
+import java.util.List;
 import java.util.Optional;
+import java.time.OffsetDateTime;
 
 @Repository
 public class PostgresReviewStore implements ReviewStore {
@@ -22,7 +24,8 @@ public class PostgresReviewStore implements ReviewStore {
             rs.getLong("target_id"), rs.getString("action_type"), parsePayload(rs.getString("action_payload")),
             rs.getString("reason"), rs.getString("decision"),
             rs.getObject("target_version") == null ? 0 : rs.getLong("target_version"),
-            rs.getString("target_outcome"), rs.getLong("version"));
+            rs.getString("target_outcome"), rs.getLong("version"),
+            rs.getObject("created_at", OffsetDateTime.class).toInstant());
 
     public PostgresReviewStore(JdbcTemplate jdbc, ObjectMapper mapper) {
         this.jdbc = jdbc;
@@ -60,5 +63,17 @@ public class PostgresReviewStore implements ReviewStore {
     @Override
     public Optional<StoredReview> byId(long reviewId) {
         return jdbc.query("SELECT * FROM review_request WHERE id = ?", ROW, reviewId).stream().findFirst();
+    }
+
+    @Override
+    public List<StoredReview> list(String decision,long afterId,int limit) {
+        if(decision==null||decision.isBlank()) return jdbc.query("SELECT * FROM review_request WHERE id>? ORDER BY id LIMIT ?",ROW,afterId,limit);
+        return jdbc.query("SELECT * FROM review_request WHERE id>? AND decision=? ORDER BY id LIMIT ?",ROW,afterId,decision,limit);
+    }
+
+    @Override
+    public boolean decide(long reviewId,long version,String decision,long decidedBy,String targetOutcome) {
+        return jdbc.update("UPDATE review_request SET decision=?, decided_by=?, decided_at=now(), target_outcome=?, version=version+1 WHERE id=? AND version=? AND decision='PENDING'",
+                decision,decidedBy,targetOutcome,reviewId,version)==1;
     }
 }

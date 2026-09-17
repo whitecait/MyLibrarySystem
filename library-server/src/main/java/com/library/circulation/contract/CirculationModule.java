@@ -5,5 +5,5 @@ package com.library.circulation.contract;
  * （MLS-DOC-MD-0002 §3），不得注入应用用例。ClosingCommands 随 B4 加入。
  */
 public interface CirculationModule extends AvailabilityQuery, ReservationCommands, LoanCommands,
-        ReturnCommands, CopyCommands {
+        ReturnCommands, CopyCommands, ClosingCommands {
 }
