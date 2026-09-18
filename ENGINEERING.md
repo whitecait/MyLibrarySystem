@@ -28,7 +28,7 @@ Dockerfile 的所有基础镜像均固定标签和摘要。第一次执行需要
 bash scripts/verify.sh
 ```
 
-脚本顺序执行 `npm ci`、非修改式 lint、Vitest 挂载测试、前端生产构建、后端 `clean verify` 与 Compose 验收；任一步失败即返回非零。正常结果为前端 1 项测试、后端 5 项测试通过，Compose 三个阶段均报告页面、代理、SQL 与迁移断言通过。后端无 Docker 时明确失败。
+脚本顺序执行 `npm ci`、非修改式 lint、Vitest 测试、前端生产构建、后端 `clean verify`、基础 Compose 验收与 B5 跨侧集成验收；任一步失败即返回非零。2026-09-18 的基线结果为前端 193 项测试、后端 127 项测试通过，基础 Compose 三个阶段均报告页面、代理、SQL 与 V1～V9 迁移断言通过，随后跨侧集成脚本验证匿名 AI、模型端点与现行续借提交。后端无 Docker 时明确失败。
 
 仅执行容器验收：
 
@@ -39,6 +39,16 @@ bash scripts/verify-compose.sh
 该脚本首先执行 `test-database-readiness.sh`，验证实际配置的健康命令会拒绝仅监听 Unix socket 的 PostgreSQL 服务，然后执行完整启动链。它不读取本地 `.env`，自行生成一次性数据库口令、随机宿主端口及两个唯一 Compose 项目名。验证次序为新空卷启动、保留该卷并重建容器、另一新空卷启动。每次检查三个服务健康、首页及页面 JS 内容、前端代理 `/api/health` 的精确 JSON、`SELECT 1` 与唯一成功迁移；保留卷重启前后比较完整迁移历史。
 
 正常结束和失败退出均保存脱敏日志，并清理这两个验收项目的容器、网络和卷；不清理开发项目。日志默认保存在被 Git 忽略的 `artifacts/compose-<运行号>/`，可用 `EVIDENCE_DIR` 改变位置。退出码记录在 `result.txt`。强制终止进程或 Docker 引擎失联可能使自动清理无法执行；此时按该次证据目录中的项目名执行 `docker compose -p <项目名> down --volumes`，不得清理其他项目。
+
+## B5 跨侧集成验证
+
+```bash
+bash scripts/verify-integration.sh
+```
+
+该脚本以 `compose.yaml` 加 `compose.integration.yaml` 启动隔离项目，模型边界由独立的 OpenAI-compatible HTTP stub 提供，业务数据库使用真实 PostgreSQL。验证请求全部经前端 Nginx `/api` 代理进入后端，覆盖匿名启动与 Cookie 连续消息、错误 Cookie 的 404 不可见性、Bearer 不提升既有访客会话、两访客共享额度的并发 CAS、登录读者的 L2 续借预填及现行续借提交，并在重启 backend/frontend 后复核事件与额度留存。stub 同时拒绝非 `thinking={type:disabled}` 请求。
+
+脚本自行生成临时数据库口令、Cookie 签名键、随机宿主端口和唯一 Compose 项目名；原始 Cookie、Bearer token 与签名秘密只存在于临时目录，不写入证据。证据保存在被 Git 忽略的 `artifacts/integration-<运行号>/`，成功或失败都会脱敏日志并清理隔离容器、网络和卷。该门禁不调用真实模型服务，也不替代 Windows 原生浏览器场景。
 
 ## 观测验证入口（C1 测量脚手架）
 
@@ -81,6 +91,7 @@ docker compose -p mls-dev down
 
 | 日期       | 内容                                                                                                                                                          |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-18 | 新增 B5 跨侧 Compose/API 门禁与脚本化 OpenAI-compatible HTTP stub；根验证现包含匿名所有权、共享额度并发、L2 续借预填/提交及重启留存验证。                    |
 | 2026-09-10 | 新增 C1 观测验证入口：观测 overlay、固定摘要镜像、Micrometer/OTel 后端接线与 `verify-observability.sh` 七项验证；CI 增加 observability 作业（保留原三作业）。 |
 | 2026-09-10 | 项目入口已链接本文，补齐反向引用登记。                                                                                                                        |
 | 2026-09-09 | 干净检出发现数据库初始化期 socket 健康误报；检查改为 TCP 并加入直接执行 Compose 健康命令的回归测试。                                                          |

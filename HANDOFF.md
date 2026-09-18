@@ -144,6 +144,14 @@
 - CONTRACT-001 与源 CONTRACT-003 六项结构检查通过。前端类型/operations/样例副本未同步，后端仍绑定旧 9 样例且未登记 `MLS-AI-005`，因此 CONTRACT-002 与完整 CONTRACT-003 继续失败并阻塞合并；批准不表示迁移或匿名 AI 已实现。
 - 文档治理阶段已将提交 `489572e`、`45f3258` 以 `--ff-only` 纳入 `codex/unified-implementation`。原 `main` 的 25 项未提交文档修改保存在具名 stash `stage1-pre-anonymous-ai-governance-20260917`（创建时为 `stash@{0}`，对象 `0da7e6f20458eec01a2f391da2ea59979301c2e4`；原补丁 SHA-256 `927b531742fb09270d7bd9abc797d34bf847478eaeaa98a7d7f611b3bb78cc8b`），未删除或应用；15 个文件与候选树一致，其余 10 个为被后续候选/批准内容取代的较旧状态，未发现独立语义。
 
+### 2026-09-18 后端 B5、匿名前端接合与自动化集成收口
+
+- 后端 B5 提交链为 `cdde35f`、`bf6a718`、`319c208`、`9bca05e`：V8 匿名所有权与访客全局额度、V9 闭馆全局种子、AI 深模块、Cookie/模型 Adapter、14 个共同场景及契约加固均已实现；`./mvnw -B -ntp clean verify` 最终 127 项通过、失败 0、错误 0、跳过 0，包含真实 PostgreSQL、V1～V9、B3 结算/复核、B4 闭馆恢复和 B5 权限/额度/事件测试。
+- 前端匿名接合提交 `0d35b1c` 已重建 OpenAPI 2.0 生成物、同步 14 个共同样例并开放匿名 `/assistant`；architecture、contracts、lint、Vitest（37 文件、193 项）和生产 build 五门禁通过。
+- 新增 `compose.integration.yaml` 与 `scripts/verify-integration.sh`：经前端 Nginx 代理、真实 PostgreSQL 和独立 OpenAI-compatible HTTP stub 验证匿名启动及 Cookie 连续消息、错误 Cookie 404、Bearer 不提升访客、两访客共享额度 CAS（并发结果 200/429）、登录读者 L2 续借预填与现行续借提交，以及 backend/frontend 重启后的事件和额度留存；stub 观测到的请求均为 `thinking={type:disabled}`。
+- 基础 Compose 空库、保留卷和第二空库三阶段均通过，迁移历史为 V1～V9 且保留卷重建前后一致；修复了旧脚本的 V1～V9 SQL 引号和已失效的 B1 占位文案断言。根 `scripts/verify.sh` 已纳入 B5 跨侧集成门禁。
+- 集成证据不保存原始访客 Cookie、Bearer token 或 Cookie 签名秘密；真实 Cookie 只在一次性临时目录中使用，清理时删除。Windows `E2E-001`、`E2E-AI-001`、Grafana 实页和真实模型端点 smoke 未执行，不构成产品验收完成。
+
 ## 未完成责任
 
 本表与 [TODO.md](TODO.md) 当前待办按类别对应，逐项完成条件以 TODO.md 和 REV-0005 §3 为准：
@@ -151,13 +159,13 @@
 | 类别 | 未完成责任 |
 | ---- | ---------- |
 | Windows 验证 | Grafana 实页取证；功能实现后的 `E2E-001` 与 `E2E-AI-001` |
-| 后端 | 追加迁移、AI/ModelEndpoint、访客 Cookie Adapter、账户/访客所有权与全局访客额度；复跑 B3/B4 和全量门禁 |
-| 前端 | 批准后重建 OpenAPI 2.0 类型/operations、同步 14 样例并接合匿名 `/assistant`；恢复 CONTRACT-002 |
-| 集成与验收 | 全业务闭环联调、M5 检查、M6 系统测试和产品验收 |
+| 集成与验收 | M6 系统测试和产品验收 |
 
 原型及 `artifacts/` 取证目录不入库；历史交接原文可经提交 `3181a9f` 恢复，不意味着本地证据已随 git 发布。
 
 ## 修订记录
+
+- 2026-09-18：登记后端 B5、匿名前端接合与自动化集成收口：后端 127 项、前端 193 项、基础 Compose 三阶段与 B5 跨侧 HTTP 门禁通过；Windows 实页、Grafana 实页、真实模型端点及 M6 产品验收保持未完成。
 
 - 2026-09-17：登记匿名 AI 契约文档治理完成：批准提交安全快进至统一实现分支，原未提交文档修改以具名 stash 保留；确认 OpenAPI `info.version=2.0.0`、45 个唯一 operationId、14 个共同样例，且 CONTRACT-002 与完整 CONTRACT-003 按批准记录保持预期失败，统一实现分支仍不得进入 `main`。
 

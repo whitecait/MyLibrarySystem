@@ -17,3 +17,4 @@ docker info >/dev/null
   ./mvnw -B -ntp clean verify
 )
 bash scripts/verify-compose.sh
+bash scripts/verify-integration.sh

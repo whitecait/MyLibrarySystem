@@ -59,16 +59,16 @@ check() {
   done
   address="$(dc port frontend 80)"
   curl --fail --silent --show-error --connect-timeout 3 --max-time 15 "http://$address/" > "$evidence/$phase-index.html"
-  # Check that the delivered HTML references a real JS bundle containing the state page.
+  # Check that the delivered HTML references the current application shell bundle.
   asset="$(python3 -c 'import re,sys; print(re.search(r"src=\"([^\"]+\.js)\"",open(sys.argv[1]).read())[1])' "$evidence/$phase-index.html")"
   curl --fail --silent --show-error --connect-timeout 3 --max-time 15 "http://$address$asset" > "$evidence/$phase-app.js"
-  python3 -c 'import sys; assert "工程基础准备中" in open(sys.argv[1]).read()' "$evidence/$phase-app.js"
+  python3 -c 'import sys; assert "MyLibrarySystem" in open(sys.argv[1]).read()' "$evidence/$phase-app.js"
   curl --fail --silent --show-error --connect-timeout 3 --max-time 15 "http://$address/api/health" > "$evidence/$phase-health.json"
   python3 -c 'import json,sys; assert json.load(open(sys.argv[1])) == {"status":"UP"}' "$evidence/$phase-health.json"
   test "$(sql 'SELECT 1')" = 1
   test "$(sql "SELECT count(*) FROM flyway_schema_history WHERE script = 'R__infrastructure_probe.sql' AND success")" = 1
   test "$(sql 'SELECT count(*) FROM flyway_schema_history WHERE version IS NOT NULL AND success')" = 9
-  test "$(sql \"SELECT string_agg(version, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE version IS NOT NULL AND success\")" = "1,2,3,4,5,6,7,8,9"
+  test "$(sql "SELECT string_agg(version, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE version IS NOT NULL AND success")" = "1,2,3,4,5,6,7,8,9"
   sql 'SELECT installed_rank, version, description, type, script, checksum, installed_by, installed_on, execution_time, success FROM flyway_schema_history ORDER BY installed_rank' > "$evidence/$phase-history.txt"
   sql 'SHOW server_version' > "$evidence/$phase-postgres-version.txt"
   printf '%s: three healthy services; page, proxy, SQL and migration assertions passed\n' "$phase"

@@ -1,0 +1,24 @@
+services:
+  model-stub:
+    image: mls-model-stub:integration
+    build: ./scripts/integration/model-stub
+    healthcheck:
+      test: [CMD-SHELL, 'curl --fail --silent http://127.0.0.1:8081/health']
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  backend:
+    environment:
+      AI_ENDPOINT_URL: http://model-stub:8081/v1/chat/completions
+      AI_MODEL: scripted-integration-model
+      AI_API_KEY: integration-only-key
+      AI_VISITOR_DAILY_LIMIT: 3
+      AI_ACCOUNT_DAILY_LIMIT: 3
+    depends_on:
+      model-stub:
+        condition: service_healthy
+
+  frontend:
+    volumes:
+      - ./scripts/integration/nginx.conf:/etc/nginx/conf.d/default.conf:ro
