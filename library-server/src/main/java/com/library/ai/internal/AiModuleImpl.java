@@ -165,7 +165,7 @@ public class AiModuleImpl implements AiModule {
                     "L2".equals(tool.level())?"打开并核对表单":"打开办理页面"));
         }
         String result="{\"status\":\"ACTION_ONLY\"}";
-        if("L1".equals(tool.level())&&!"list_ai_events".equals(tool.name())) {
+        if("L1".equals(tool.level())) {
             try { result=toolExecutor.execute(tool.name(),call.arguments(),actor); }
             catch(RuntimeException failure){ return rejectTool(sessionId,"工具参数或查询失败"); }
         }

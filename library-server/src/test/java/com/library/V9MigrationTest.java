@@ -23,6 +23,8 @@ class V9MigrationTest {
         var database=createDatabase();var source=source(database);
         Flyway.configure().dataSource(source).locations("classpath:db/migration").target("8").load().migrate();
         var jdbc=new JdbcTemplate(source);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM closing_control",Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM closing_admission",Integer.class)).isZero();
         jdbc.update("DELETE FROM closing_admission");jdbc.update("DELETE FROM closing_control");
         var latest=Flyway.configure().dataSource(source).locations("classpath:db/migration").load();
         assertThat(latest.migrate().migrationsExecuted).isOne();
@@ -37,8 +39,8 @@ class V9MigrationTest {
         var database=createDatabase();var source=source(database);
         Flyway.configure().dataSource(source).locations("classpath:db/migration").target("8").load().migrate();
         var jdbc=new JdbcTemplate(source);
-        jdbc.update("UPDATE closing_control SET status='ISOLATED',version=7 WHERE scope='GLOBAL'");
-        jdbc.update("UPDATE closing_admission SET draining=true WHERE scope='GLOBAL'");
+        jdbc.update("INSERT INTO closing_control(scope,status,version) VALUES ('GLOBAL','ISOLATED',7)");
+        jdbc.update("INSERT INTO closing_admission(scope,draining) VALUES ('GLOBAL',true)");
         Flyway.configure().dataSource(source).locations("classpath:db/migration").load().migrate();
         assertThat(jdbc.queryForMap("SELECT status,version FROM closing_control WHERE scope='GLOBAL'"))
                 .containsEntry("status","ISOLATED").containsEntry("version",7L);

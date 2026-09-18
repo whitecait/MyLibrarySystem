@@ -26,11 +26,3 @@ CREATE TABLE ai_visitor_quota_usage (
     version BIGINT NOT NULL DEFAULT 0,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
--- Existing migrations define the mandatory fail-closed GLOBAL control row but
--- do not seed it on a fresh database. Preserve an existing row and make a new
--- V8 installation operational without weakening the closing gate.
-INSERT INTO closing_control(scope,status) VALUES ('GLOBAL','OPEN')
-ON CONFLICT(scope) DO NOTHING;
-INSERT INTO closing_admission(scope,draining)
-SELECT 'GLOBAL',false WHERE NOT EXISTS (SELECT 1 FROM closing_admission WHERE scope='GLOBAL');
