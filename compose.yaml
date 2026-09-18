@@ -20,6 +20,7 @@ services:
       DB_URL: jdbc:postgresql://database:5432/library
       DB_USERNAME: library
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env or the environment}
+      AI_VISITOR_COOKIE_SIGNING_KEY: ${AI_VISITOR_COOKIE_SIGNING_KEY:?Set AI_VISITOR_COOKIE_SIGNING_KEY in .env or the environment}
     depends_on:
       database:
         condition: service_healthy

@@ -7,6 +7,9 @@ import com.library.contract.error.StableErrorCode;
 import com.library.contract.model.PageCursor;
 import com.library.web.support.ApiResponses;
 import com.library.web.support.Actors;
+import com.library.contract.idempotency.IdempotencyService;
+import com.library.contract.idempotency.IdempotencyScope;
+import com.library.contract.idempotency.JdbcIdempotencyService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -18,17 +21,19 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/v1/ai/sessions")
 public class AiController {
-    private final AssistantUseCases assistant; private final AiVisitorCookieAdapter cookies; private final ApiResponses responses;
-    public AiController(AssistantUseCases assistant,AiVisitorCookieAdapter cookies,ApiResponses responses){this.assistant=assistant;this.cookies=cookies;this.responses=responses;}
+    private final AssistantUseCases assistant; private final AiVisitorCookieAdapter cookies; private final ApiResponses responses; private final IdempotencyService idempotency;
+    public AiController(AssistantUseCases assistant,AiVisitorCookieAdapter cookies,ApiResponses responses,IdempotencyService idempotency){this.assistant=assistant;this.cookies=cookies;this.responses=responses;this.idempotency=idempotency;}
 
     @PostMapping
     public ResponseEntity<Envelope> start(@RequestHeader("Idempotency-Key") String idempotencyKey,HttpServletRequest request){
         var actor=Actors.actor(request);
         AiVisitorCookieAdapter.Issued issued=null;
         AiSessionOwner owner;
-        if(actor==null){issued=cookies.issue();owner=new VisitorAiOwner(issued.digest());}
+        if(actor==null){var existing=cookies.rawFrom(request.getCookies());issued=existing==null?cookies.recoverable(idempotencyKey):new AiVisitorCookieAdapter.Issued(existing,cookies.digest(existing));owner=new VisitorAiOwner(issued.digest());}
         else owner=new AccountAiOwner(actor.accountId());
-        var response=responses.forResult(assistant.start(owner,actor),"MLS-AI-S001",this::sessionData);
+        var outcome=idempotency.execute(new IdempotencyScope(owner.persistenceKey(),"POST","/api/v1/ai/sessions"),idempotencyKey,
+                JdbcIdempotencyService.sha256("start:"+owner.persistenceKey()),"MLS-AI-S001",AiSession.class,()->assistant.start(owner,actor));
+        var response=responses.forResult(outcome.result(),outcome.code(),this::sessionData);
         if(issued==null||!response.getStatusCode().is2xxSuccessful())return response;
         var cookie=ResponseCookie.from(AiVisitorCookieAdapter.NAME,issued.raw()).path("/").secure(true).httpOnly(true).sameSite("Strict").build();
         return ResponseEntity.status(response.getStatusCode()).header(HttpHeaders.SET_COOKIE,cookie.toString()).body(response.getBody());
@@ -38,7 +43,11 @@ public class AiController {
     public ResponseEntity<Envelope> message(@PathVariable long sessionId,@RequestHeader("Idempotency-Key") String idempotencyKey,@RequestBody MessageRequest body,HttpServletRequest request){
         var owner=owner(sessionId,request);
         if(owner==null)return unauthenticated();
-        return responses.forResult(assistant.turn(sessionId,body.message(),owner,Actors.actor(request)),"MLS-AI-S001",
+        var path="/api/v1/ai/sessions/"+sessionId+"/messages";
+        var outcome=idempotency.execute(new IdempotencyScope(owner.persistenceKey(),"POST",path),idempotencyKey,
+                JdbcIdempotencyService.sha256(body.message()==null?"":body.message()),"MLS-AI-S001",AiTurn.class,
+                ()->assistant.turn(sessionId,body.message(),owner,Actors.actor(request)));
+        return responses.forResult(outcome.result(),outcome.code(),
                 Actors.actorId(request), request.getRequestURI(),
                 turn->Map.of("messageId",String.valueOf(turn.messageId()),"answer",turn.answer(),"citations",turn.citations(),
                         "actions",turn.actions().stream().map(this::actionData).toList(),"quota",Map.of("remaining",turn.quota().remaining())),

@@ -49,7 +49,7 @@ class V8MigrationTest {
         var old=new JdbcTemplate(source);
         var account=old.queryForObject("INSERT INTO account(username,password_hash,display_name,role) VALUES ('old-ai','x','old','READER') RETURNING id",Long.class);
         var session=old.queryForObject("INSERT INTO ai_session(account_id,status) VALUES (?,'ACTIVE') RETURNING id",Long.class,account);
-        var upgraded=Flyway.configure().dataSource(source).locations("classpath:db/migration").load();
+        var upgraded=Flyway.configure().dataSource(source).locations("classpath:db/migration").target("8").load();
         upgraded.migrate();
         assertThat(old.queryForObject("SELECT account_id FROM ai_session WHERE id=? AND visitor_owner_digest IS NULL",Long.class,session)).isEqualTo(account);
         assertThat(upgraded.validateWithResult().validationSuccessful).isTrue();

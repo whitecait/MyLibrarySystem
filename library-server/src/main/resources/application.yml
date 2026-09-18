@@ -45,3 +45,4 @@ library:
     max-rounds: ${AI_MAX_ROUNDS:4}
     retry-budget: ${AI_RETRY_BUDGET:2}
     endpoint-timeout: ${AI_ENDPOINT_TIMEOUT:8s}
+    visitor-cookie-signing-key: ${AI_VISITOR_COOKIE_SIGNING_KEY}

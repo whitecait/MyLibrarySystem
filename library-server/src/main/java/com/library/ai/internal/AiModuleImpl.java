@@ -1,5 +1,6 @@
 package com.library.ai.internal;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.library.ai.contract.*;
 import com.library.ai.internal.adapter.persistence.AiSessionStore;
 import com.library.contract.ModuleResult;
@@ -20,6 +21,7 @@ import java.util.*;
 /** AI 深模块：所有权、额度、模型循环、工具授权与事件事实由一个公共接口封装。 */
 @Component
 public class AiModuleImpl implements AiModule {
+    private static final ObjectMapper JSON = new ObjectMapper();
     private final AiSessionStore sessions;
     private final ModelEndpoint model;
     private final AuthorizationCheck authorization;
@@ -78,6 +80,7 @@ public class AiModuleImpl implements AiModule {
         var citations = new ArrayList<String>();
         String answer = "";
         int successfulRounds=0;
+        boolean awaitingToolResults=false;
         while (successfulRounds < maxRounds) {
             var response = invokeWithRetries(command.sessionId(), owner, command.actor(), conversation);
             if (response instanceof ModuleResult.Rejected<ModelEndpoint.ModelResponse> rejected)
@@ -86,15 +89,25 @@ public class AiModuleImpl implements AiModule {
             successfulRounds++;
             answer = value.answer() == null ? "" : value.answer();
             citations.addAll(value.citations());
-            if (value.toolCalls().isEmpty()) break;
+            awaitingToolResults=!value.toolCalls().isEmpty();
+            if (!awaitingToolResults) break;
+            for(var call:value.toolCalls())if(!validToolCallId(call)){
+                var rejected=(ModuleResult.Rejected<String>)rejectTool(command.sessionId(),"模型工具调用 ID 非法");
+                return ModuleResult.Rejected.propagate(rejected);
+            }
+            var providerCalls=value.toolCalls().stream().map(call->Map.of(
+                    "id",requireToolCallId(call),"type","function","function",Map.of(
+                            "name",call.name(),"arguments",json(call.arguments())))).toList();
+            conversation.add(Map.of("role","assistant","content",answer,"tool_calls",providerCalls));
             for (var call : value.toolCalls()) {
                 var result = executeTool(command.sessionId(), owner, command.actor(), call, actions);
                 if (result instanceof ModuleResult.Rejected<String> rejected)
                     return ModuleResult.Rejected.propagate(rejected);
-                conversation.add(Map.of("role","tool","name",call.name(),"content",((ModuleResult.Accepted<String>)result).value()));
+                conversation.add(Map.of("role","tool","name",call.name(),"tool_call_id",requireToolCallId(call),
+                        "content",((ModuleResult.Accepted<String>)result).value()));
             }
         }
-        if (successfulRounds == maxRounds) {
+        if (successfulRounds == maxRounds && awaitingToolResults) {
             sessions.status(command.sessionId(), "MAX_TURNS", clock.now());
             sessions.appendEvent(command.sessionId(), "TERMINATED", Map.of("reason","MAX_TURNS"), clock.now());
         }
@@ -137,9 +150,9 @@ public class AiModuleImpl implements AiModule {
         final AiTool tool;
         try { tool=tools.require(call.name()); }
         catch (ToolRegistry.ToolRejected rejected) { return rejectTool(sessionId,"未登记工具"); }
+        try { tools.validate(tool,call.arguments()); }
+        catch (ToolRegistry.ToolRejected rejected) { return rejectTool(sessionId,rejected.getMessage()); }
         if (!tools.availableTo(owner,actor).contains(tool)) return rejectTool(sessionId,"工具越权");
-        if (call.arguments().keySet().stream().anyMatch(Set.of("role","accountId","readerId","amountCents","version")::contains))
-            return rejectTool(sessionId,"模型参数包含服务端受控字段");
         if (!"SESSION_OWNER_OR_ADMIN".equals(tool.requiredCapability())) {
             var auth=authorization.authorize(actor,new Capability(tool.requiredCapability()),
                     actor == null ? SubjectRef.system() : actor.subjectRef());
@@ -176,6 +189,11 @@ public class AiModuleImpl implements AiModule {
         return ModuleResult.Accepted.of(new AiEventPage(items,more?String.valueOf(items.getLast().eventId()):null));
     }
     private int limit(AiSessionOwner owner){ return owner instanceof VisitorAiOwner?visitorDailyLimit:accountDailyLimit; }
+    private String requireToolCallId(ModelEndpoint.ToolCall call){
+        return call.id();
+    }
+    private boolean validToolCallId(ModelEndpoint.ToolCall call){return call.id()!=null&&!call.id().isBlank()&&call.id().length()<=128;}
+    private String json(Map<String,Object> value){try{return JSON.writeValueAsString(value);}catch(Exception failure){throw new ToolRegistry.ToolRejected("工具参数编码失败");}}
     private String safe(String s){ return s==null?"failure":s.substring(0,Math.min(120,s.length())); }
     private String actionType(String tool) {
         return switch(tool) {

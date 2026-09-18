@@ -7,7 +7,7 @@
 > - [工程文档唯一入口](../docs/README.md)
 > - [B1-A/B1-B 工程基础行动计划](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-B1-PLAN.md)
 
-本目录当前只包含 Java 21、Spring Boot Web/JDBC、PostgreSQL JDBC 与 Flyway 的最小后端骨架。唯一应用接口是工程健康探针 `GET /api/health`；旧认证、馆藏、流通和罚款实现已从构建输入中移除。该接口属于工程验证入口，不表示业务 API 已设计或批准。
+当前实现事实（2026-09-17）：B0–B5 后端模块已经接入同一 Java 21 / Spring Boot 应用，包含身份、书目、流通、结算、复核、闭馆、通知/审计和匿名/账户 AI 助手接口；`GET /api/health` 保留为工程健康探针。正式迁移位于 `db/migration`：V8 固化 AI 所有权、事件与额度事实，V9 以幂等 forward migration 保障闭馆 `GLOBAL` 基线且不覆盖既有运行状态。
 
 ## 工具和配置
 
@@ -15,7 +15,7 @@
 - Maven Wrapper 3.9.9。
 - Spring Boot 3.5.0。
 - `application.yml` 不包含真实凭据，通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 和 `SERVER_PORT` 覆盖本地默认值。
-- Flyway location 固定为 `classpath:db/infra-migration`；已包含 `R__infrastructure_probe.sql`（`SELECT 1;`），不占用正式 V1。
+- Flyway locations 包含正式 `classpath:db/migration` 与工程探针 `classpath:db/infra-migration`；`R__infrastructure_probe.sql`（`SELECT 1;`）不占用版本号。
 
 ## 构建与测试
 
@@ -37,6 +37,7 @@
 DB_URL=jdbc:postgresql://localhost:5432/library \
 DB_USERNAME=library \
 DB_PASSWORD=library \
+AI_VISITOR_COOKIE_SIGNING_KEY='<at-least-32-random-bytes>' \
 ./mvnw spring-boot:run
 ```
 
@@ -50,6 +51,7 @@ DB_PASSWORD=library \
 
 | 日期 | 内容 |
 | --- | --- |
+| 2026-09-17 | 登记 B0–B5 当前实现事实、V8 AI 迁移与 V9 闭馆基线 forward-fix；真实 PostgreSQL 回归覆盖 V7→V8、V8→V9 缺失修复、状态保留和重复执行。AI 访客 Cookie 签名密钥为必填外部配置。 |
 | 2026-09-10 | 登记 P4/P5 完成与同提交本地/远端验收证据。 |
 | 2026-09-09 | 增加容器与完整验证入口，关联 P4/P5 配置和证据说明。 |
 | 2026-09-09 | P3 验收通过：记录固定镜像摘要、Testcontainers 兼容版本、5/5 测试结果与测试夹具隔离；移除闲置 Mockito 依赖。 |

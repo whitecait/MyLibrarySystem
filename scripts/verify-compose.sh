@@ -11,6 +11,7 @@ project_a="mls-check-${run_id}-a"
 project_b="mls-check-${run_id}-b"
 project="$project_a"
 export DB_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
+export AI_VISITOR_COOKIE_SIGNING_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 export FRONTEND_PORT=0
 # Ignore any local .env; all inputs used by this check are defined above.
 dc() { docker compose --env-file /dev/null -p "$project" -f compose.yaml "$@"; }
@@ -22,7 +23,7 @@ cleanup() {
   trap - EXIT
   set +e
   for project in "$project_a" "$project_b"; do
-    dc logs --no-color 2>&1 | python3 -c 'import os,sys; sys.stdout.write(sys.stdin.read().replace(os.environ["DB_PASSWORD"], "[REDACTED]"))' > "$evidence/$project.log"
+    dc logs --no-color 2>&1 | python3 -c 'import os,sys; data=sys.stdin.read(); data=data.replace(os.environ["DB_PASSWORD"], "[REDACTED]"); data=data.replace(os.environ["AI_VISITOR_COOKIE_SIGNING_KEY"], "[REDACTED]"); sys.stdout.write(data)' > "$evidence/$project.log"
     dc ps -a > "$evidence/$project-services.txt" 2>&1
     dc down --volumes --remove-orphans --timeout 20 >> "$evidence/cleanup.log" 2>&1
     cleanup_result=$?
@@ -66,7 +67,8 @@ check() {
   python3 -c 'import json,sys; assert json.load(open(sys.argv[1])) == {"status":"UP"}' "$evidence/$phase-health.json"
   test "$(sql 'SELECT 1')" = 1
   test "$(sql "SELECT count(*) FROM flyway_schema_history WHERE script = 'R__infrastructure_probe.sql' AND success")" = 1
-  test "$(sql 'SELECT count(*) FROM flyway_schema_history')" = 1
+  test "$(sql 'SELECT count(*) FROM flyway_schema_history WHERE version IS NOT NULL AND success')" = 9
+  test "$(sql \"SELECT string_agg(version, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE version IS NOT NULL AND success\")" = "1,2,3,4,5,6,7,8,9"
   sql 'SELECT installed_rank, version, description, type, script, checksum, installed_by, installed_on, execution_time, success FROM flyway_schema_history ORDER BY installed_rank' > "$evidence/$phase-history.txt"
   sql 'SHOW server_version' > "$evidence/$phase-postgres-version.txt"
   printf '%s: three healthy services; page, proxy, SQL and migration assertions passed\n' "$phase"

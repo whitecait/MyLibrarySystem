@@ -12,8 +12,9 @@ public interface ModelEndpoint {
                         Map<String, String> thinking, Duration timeout) {
         public ModelRequest { messages = List.copyOf(messages); tools = List.copyOf(tools); thinking = Map.copyOf(thinking); }
     }
-    record ToolCall(String name, Map<String, Object> arguments) {
+    record ToolCall(String id, String name, Map<String, Object> arguments) {
         public ToolCall { arguments = Map.copyOf(arguments); }
+        public ToolCall(String name, Map<String, Object> arguments) { this("scripted-" + name, name, arguments); }
     }
     record ModelResponse(String answer, List<String> citations, List<ToolCall> toolCalls) {
         public ModelResponse { citations = List.copyOf(citations); toolCalls = List.copyOf(toolCalls); }

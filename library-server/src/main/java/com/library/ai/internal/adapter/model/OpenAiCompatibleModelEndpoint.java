@@ -43,7 +43,7 @@ public class OpenAiCompatibleModelEndpoint implements ModelEndpoint {
             JsonNode message=json.readTree(response.body()).at("/choices/0/message");
             var calls=new ArrayList<ToolCall>();
             message.path("tool_calls").forEach(call->{
-                try { calls.add(new ToolCall(call.at("/function/name").asText(),
+                try { calls.add(new ToolCall(call.path("id").asText(null), call.at("/function/name").asText(),
                         json.convertValue(json.readTree(call.at("/function/arguments").asText("{}")),Map.class))); }
                 catch(Exception e){ throw new ModelFailure("模型工具参数非法",e); }
             });
