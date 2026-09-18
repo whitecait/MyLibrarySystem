@@ -1098,15 +1098,14 @@ export interface components {
             items: components["schemas"]["AuditEvent"][];
             nextCursor: string | null;
         };
-        AiSessionRequest: {
-            clientSessionId?: string;
-        };
         Quota: {
             remaining: number;
         };
+        /** @enum {string} */
+        AiRole: "VISITOR" | "READER" | "LIBRARIAN" | "ADMIN";
         AiSessionData: {
             sessionId: components["schemas"]["Id"];
-            role: components["schemas"]["Role"];
+            role: components["schemas"]["AiRole"];
             quota: components["schemas"]["Quota"];
         };
         AiMessageRequest: {
@@ -1877,9 +1876,11 @@ export interface components {
                 "application/json": components["schemas"]["AuditPageEnvelope"];
             };
         };
-        /** @description OK */
+        /** @description OK; anonymous creation also sets the visitor credential */
         AiSessionResponse: {
             headers: {
+                /** @description Present only for anonymous creation: __Host-mls-ai-visitor=<opaque>; Path=/; Secure; HttpOnly; SameSite=Strict */
+                "Set-Cookie"?: string;
                 [name: string]: unknown;
             };
             content: {
@@ -2047,11 +2048,6 @@ export interface components {
         ReviewDecision: {
             content: {
                 "application/json": components["schemas"]["ReviewDecisionRequest"];
-            };
-        };
-        AiSession: {
-            content: {
-                "application/json": components["schemas"]["AiSessionRequest"];
             };
         };
         AiMessage: {
@@ -2765,7 +2761,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: components["requestBodies"]["AiSession"];
+        requestBody?: never;
         responses: {
             200: components["responses"]["AiSession"];
             default: components["responses"]["Error"];

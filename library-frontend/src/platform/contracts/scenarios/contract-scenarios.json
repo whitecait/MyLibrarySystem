@@ -45,14 +45,44 @@
       "expect": ["target-not-modified", "review-can-be-reinitiated"]
     },
     {
+      "id": "AI-VISITOR-SESSION-START",
+      "request": {"method": "POST", "path": "/api/v1/ai/sessions", "headers": {"Idempotency-Key": "sample-ai-visitor-start-1"}},
+      "response": {"httpStatus": 200, "headers": {"Set-Cookie": "__Host-mls-ai-visitor=<opaque>; Path=/; Secure; HttpOnly; SameSite=Strict"}, "body": {"code": "MLS-AI-S001", "message": "started", "data": {"sessionId": "7001", "role": "VISITOR", "quota": {"remaining": 10}}}},
+      "expect": ["cookie-secret-not-in-response-body", "visitor-role-is-fixed", "visitor-uses-global-quota"]
+    },
+    {
+      "id": "AI-VISITOR-COOKIE-CONTINUES-SESSION",
+      "request": {"method": "POST", "path": "/api/v1/ai/sessions/7001/messages", "headers": {"Cookie": "__Host-mls-ai-visitor=<opaque>", "Idempotency-Key": "sample-ai-visitor-turn-1"}, "body": {"message": "查询开放馆藏"}},
+      "response": {"httpStatus": 200, "body": {"code": "MLS-AI-S001", "message": "ok", "data": {"messageId": "7100", "answer": "以下为公开馆藏结果", "citations": ["title:2001"], "actions": [], "quota": {"remaining": 9}}}},
+      "expect": ["cookie-digest-proves-session-ownership", "visitor-tools-remain-l1-only", "subsequent-idempotency-scope-uses-visitor-digest"]
+    },
+    {
+      "id": "AI-VISITOR-WRONG-COOKIE-INVISIBLE",
+      "request": {"method": "GET", "path": "/api/v1/ai/sessions/7001/events?limit=20", "headers": {"Cookie": "__Host-mls-ai-visitor=<wrong>"}},
+      "response": {"httpStatus": 404, "body": {"code": "MLS-AI-005", "message": "session not found", "data": {}}},
+      "expect": ["credential-mismatch-does-not-reveal-session", "missing-credential-is-401"]
+    },
+    {
+      "id": "AI-VISITOR-LOGIN-DOES-NOT-UPGRADE",
+      "request": {"method": "POST", "path": "/api/v1/ai/sessions/7001/messages", "headers": {"Authorization": "Bearer account-token", "Cookie": "__Host-mls-ai-visitor=<opaque>", "Idempotency-Key": "sample-ai-visitor-turn-2"}, "body": {"message": "查询我的借阅"}},
+      "response": {"httpStatus": 200, "body": {"code": "MLS-AI-S001", "message": "visitor answer", "data": {"messageId": "7102", "answer": "访客会话不能查询本人借阅", "citations": [], "actions": [], "quota": {"remaining": 8}}}},
+      "expect": ["stored-session-owner-selects-visitor-cookie", "bearer-does-not-upgrade-existing-visitor-session", "new-session-with-bearer-is-account-owned"]
+    },
+    {
+      "id": "AI-VISITORS-SHARE-GLOBAL-QUOTA",
+      "request": {"method": "POST", "path": "/api/v1/ai/sessions/7002/messages", "headers": {"Cookie": "__Host-mls-ai-visitor=<second-opaque>", "Idempotency-Key": "sample-ai-visitor-turn-3"}, "body": {"message": "查询开放馆藏"}},
+      "response": {"httpStatus": 429, "body": {"code": "MLS-AI-002", "message": "quota exhausted", "data": {"remaining": 0}}},
+      "expect": ["visitor-a-usage-consumes-visitor-b-pool", "visitor-quota-is-one-row-per-usage-date", "no-model-call"]
+    },
+    {
       "id": "AI-L2-PREFILL",
-      "request": {"method": "POST", "path": "/api/v1/ai/sessions/7001/messages", "headers": {"Idempotency-Key": "sample-ai-turn-1"}, "body": {"message": "帮我预填续借"}},
+      "request": {"method": "POST", "path": "/api/v1/ai/sessions/7010/messages", "headers": {"Authorization": "Bearer account-token", "Idempotency-Key": "sample-ai-turn-1"}, "body": {"message": "帮我预填续借"}},
       "response": {"httpStatus": 200, "body": {"code": "MLS-AI-S001", "message": "ok", "data": {"messageId": "7101", "answer": "请核对后提交", "citations": [], "actions": [{"actionType": "RENEW_LOAN", "level": "L2", "prefill": {"txId": "4001"}, "draftId": "7201", "label": "打开续借表单"}], "quota": {"remaining": 9}}}},
       "expect": ["opens-current-page-modal", "does-not-submit-business-action", "authorization-rechecked-on-submit"]
     },
     {
       "id": "AI-QUOTA-EXHAUSTED",
-      "request": {"method": "POST", "path": "/api/v1/ai/sessions/7001/messages", "headers": {"Idempotency-Key": "sample-ai-turn-2"}, "body": {"message": "查询我的借阅"}},
+      "request": {"method": "POST", "path": "/api/v1/ai/sessions/7010/messages", "headers": {"Authorization": "Bearer account-token", "Idempotency-Key": "sample-ai-turn-2"}, "body": {"message": "查询我的借阅"}},
       "response": {"httpStatus": 429, "body": {"code": "MLS-AI-002", "message": "quota exhausted", "data": {"remaining": 0}}},
       "expect": ["no-model-call", "quota-event-recorded"]
     }

@@ -30,6 +30,32 @@ describe('mock transport', () => {
     expect(failure.data).toEqual({ remaining: 0 })
   })
 
+  it('replays the anonymous session sample with the VISITOR role and shared quota', async () => {
+    const transport = createMockTransport({ scenarioId: 'AI-VISITOR-SESSION-START' })
+    const envelope = await transport.request('startAiSession')
+    expect(envelope.data).toEqual({ sessionId: '7001', role: 'VISITOR', quota: { remaining: 10 } })
+    expect(JSON.stringify(envelope.data)).not.toContain('__Host-mls-ai-visitor')
+  })
+
+  it('replays wrong-cookie invisibility and visitor-global quota failures', async () => {
+    const invisible = createMockTransport({ scenarioId: 'AI-VISITOR-WRONG-COOKIE-INVISIBLE' })
+    const invisibleFailure = await invisible.request('listAiEvents').catch((error) => error)
+    expect(invisibleFailure.kind).toBe(FailureKind.NOT_FOUND)
+    expect(invisibleFailure.code).toBe('MLS-AI-005')
+
+    const exhausted = createMockTransport({ scenarioId: 'AI-VISITORS-SHARE-GLOBAL-QUOTA' })
+    const quotaFailure = await exhausted.request('sendAiMessage').catch((error) => error)
+    expect(quotaFailure.kind).toBe(FailureKind.QUOTA_EXHAUSTED)
+    expect(quotaFailure.data).toEqual({ remaining: 0 })
+  })
+
+  it('replays a login on an existing visitor session without changing its owner semantics', async () => {
+    const transport = createMockTransport({ scenarioId: 'AI-VISITOR-LOGIN-DOES-NOT-UPGRADE' })
+    const envelope = await transport.request('sendAiMessage')
+    expect(envelope.message).toBe('visitor answer')
+    expect(envelope.data.answer).toContain('访客会话不能查询本人借阅')
+  })
+
   it('falls back to explicitly registered fixtures outside the selected scenario', async () => {
     const transport = createMockTransport({
       scenarioId: 'CATALOG-PUBLIC-SEARCH',

@@ -3,8 +3,8 @@
 // 仅作呈现与预填，业务事实一律经 B1～B4 现行接口提交并重新鉴权。
 import { apiRequest } from '@/platform/http'
 
-export function startAiSession({ clientSessionId } = {}, options = {}) {
-  return apiRequest('startAiSession', { body: { clientSessionId }, ...options })
+export function startAiSession(options = {}) {
+  return apiRequest('startAiSession', options)
 }
 
 export function sendAiMessage({ sessionId, message }, options = {}) {

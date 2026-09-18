@@ -10,14 +10,19 @@ const EXPECTED_IDS = [
   'RETURN-WITH-FINE',
   'ORDER-CONCURRENT-CONFLICT',
   'REVIEW-TARGET-CHANGED',
+  'AI-VISITOR-SESSION-START',
+  'AI-VISITOR-COOKIE-CONTINUES-SESSION',
+  'AI-VISITOR-WRONG-COOKIE-INVISIBLE',
+  'AI-VISITOR-LOGIN-DOES-NOT-UPGRADE',
+  'AI-VISITORS-SHARE-GLOBAL-QUOTA',
   'AI-L2-PREFILL',
   'AI-QUOTA-EXHAUSTED',
 ]
 
 describe('contract scenario samples', () => {
-  it('exposes the nine approved scenarios', () => {
+  it('exposes the fourteen approved scenarios', () => {
     expect(listScenarioIds()).toEqual(EXPECTED_IDS)
-    expect(listScenarios()).toHaveLength(9)
+    expect(listScenarios()).toHaveLength(14)
     expect(CONTRACT_SAMPLE_SCHEMA_VERSION).toBe('0.2')
   })
 

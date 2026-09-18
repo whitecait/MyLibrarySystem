@@ -39,11 +39,11 @@ describe('ai module facade', () => {
         return { code: 'MLS-T-S001', message: 'ok', data: {} }
       },
     })
-    await ai.startAiSession({ clientSessionId: 'abc' })
+    await ai.startAiSession()
     await ai.listAiEvents({ limit: 20 })
 
     expect(calls.map((call) => call.operationId)).toEqual(['startAiSession', 'listAiEvents'])
-    expect(calls[0].options.body).toEqual({ clientSessionId: 'abc' })
+    expect(calls[0].options).toEqual({})
   })
 
   it('passes caller headers through for draft attribution', async () => {

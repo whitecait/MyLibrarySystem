@@ -2,7 +2,9 @@
   <section class="ai-assistant-view">
     <h1>AI 助手</h1>
     <p class="quota" data-testid="ai-quota">
-      会话 <span data-testid="ai-session-id">{{ sessionId ?? '—' }}</span> · 剩余额度
+      会话 <span data-testid="ai-session-id">{{ sessionId ?? '—' }}</span> · 身份
+      <span data-testid="ai-role">{{ role ?? '—' }}</span> ·
+      <span data-testid="ai-quota-scope">{{ role === 'VISITOR' ? '访客共享额度' : '账户额度' }}</span>
       <span data-testid="ai-quota-remaining">{{ quota ?? '—' }}</span>
     </p>
 
@@ -88,6 +90,7 @@ const props = defineProps({ canApplyPrefill: { type: Boolean, default: false } }
 const emit = defineEmits(['prefill'])
 
 const sessionId = ref(null)
+const role = ref(null)
 const quota = ref(null)
 const turns = ref([])
 const draft = ref('')
@@ -106,6 +109,7 @@ onMounted(async () => {
   const envelope = await sessionState.run(() => startAiSession())
   if (!envelope) return
   sessionId.value = envelope.data.sessionId
+  role.value = envelope.data.role
   quota.value = envelope.data.quota.remaining
 })
 

@@ -46,7 +46,7 @@ export async function executeRequest({
     requestHeaders.set('Idempotency-Key', idempotencyKey ?? newIdempotencyKey())
   }
 
-  const init = { method: operation.method, headers: requestHeaders }
+  const init = { method: operation.method, headers: requestHeaders, credentials: 'same-origin' }
   if (body !== undefined) {
     requestHeaders.set('Content-Type', 'application/json')
     init.body = JSON.stringify(body)

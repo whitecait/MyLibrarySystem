@@ -36,6 +36,11 @@ function hasIdempotencyKey(operation) {
   )
 }
 
+function allowsAnonymous(security) {
+  return Array.isArray(security) &&
+    (security.length === 0 || security.some((requirement) => requirement && Object.keys(requirement).length === 0))
+}
+
 const operations = []
 const seen = new Set()
 for (const [route, pathItem] of Object.entries(doc.paths ?? {})) {
@@ -54,7 +59,7 @@ for (const [route, pathItem] of Object.entries(doc.paths ?? {})) {
       path: route,
       tag: operation.tags?.[0] ?? 'Uncategorized',
       permission: operation['x-permission'] ?? pathItem['x-permission'] ?? null,
-      public: Array.isArray(security) && security.length === 0,
+      public: allowsAnonymous(security),
       requiresIdempotencyKey: hasIdempotencyKey(operation),
     })
   }

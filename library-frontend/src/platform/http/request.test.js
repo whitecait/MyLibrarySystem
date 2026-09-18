@@ -29,7 +29,9 @@ describe('http request core', () => {
     expect(envelope.code).toBe('MLS-CAT-S001')
     expect(calls[0].url).toBe('/api/v1/titles?q=database&limit=20')
     expect(calls[0].init.method).toBe('GET')
+    expect(calls[0].init.credentials).toBe('same-origin')
     expect(calls[0].init.headers.get('Authorization')).toBeNull()
+    expect(calls[0].init.headers.get('Cookie')).toBeNull()
     expect(calls[0].init.headers.get('Idempotency-Key')).toBeNull()
   })
 

@@ -2,12 +2,16 @@ import { flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { login, logout } from '@/platform/auth/session'
+import { setTransport } from '@/platform/http'
 import sharedFixtures from '@/platform/http/mock/fixtures'
 import { installMockTransport, mountView } from '../../../tests/helpers'
 import AiAssistantView from './AiAssistantView.vue'
 
 beforeEach(() => login({ accessToken: 't', actor: { accountId: '1001', role: 'READER' } }))
-afterEach(() => logout())
+afterEach(() => {
+  logout()
+  setTransport(null)
+})
 
 async function mountAssistant(props = {}) {
   const wrapper = await mountView(AiAssistantView, { props })
@@ -28,6 +32,51 @@ describe('AiAssistantView', () => {
 
     expect(wrapper.find('[data-testid="ai-session-id"]').text()).toBe('7001')
     expect(wrapper.find('[data-testid="ai-quota-remaining"]').text()).toBe('10')
+  })
+
+  it('shows the server-issued VISITOR role and labels its quota as shared', async () => {
+    logout()
+    installMockTransport({
+      fixtures: {
+        startAiSession: {
+          code: 'MLS-AI-S001',
+          message: 'started',
+          data: { sessionId: '7001', role: 'VISITOR', quota: { remaining: 10 } },
+        },
+      },
+    })
+    const wrapper = await mountAssistant()
+
+    expect(wrapper.find('[data-testid="ai-role"]').text()).toBe('VISITOR')
+    expect(wrapper.find('[data-testid="ai-quota-scope"]').text()).toContain('访客共享额度')
+    expect(wrapper.find('[data-testid="ai-quota-remaining"]').text()).toBe('10')
+  })
+
+  it('keeps an existing visitor session after account login instead of starting an upgraded session', async () => {
+    logout()
+    const calls = []
+    setTransport({
+      mode: 'mock',
+      async request(operationId) {
+        calls.push(operationId)
+        if (operationId === 'startAiSession') {
+          return { code: 'MLS-AI-S001', message: 'started', data: { sessionId: '7001', role: 'VISITOR', quota: { remaining: 10 } } }
+        }
+        return {
+          code: 'MLS-AI-S001',
+          message: 'visitor answer',
+          data: { messageId: '7102', answer: '访客会话不能查询本人借阅', citations: [], actions: [], quota: { remaining: 9 } },
+        }
+      },
+    })
+    const wrapper = await mountAssistant()
+
+    login({ accessToken: 'account-token', actor: { accountId: '1001', role: 'READER' } })
+    await sendMessage(wrapper, '查询我的借阅')
+
+    expect(calls).toEqual(['startAiSession', 'sendAiMessage'])
+    expect(wrapper.find('[data-testid="ai-role"]').text()).toBe('VISITOR')
+    expect(wrapper.text()).toContain('访客会话不能查询本人借阅')
   })
 
   it('renders answers, citations and the L2 card, updating the quota', async () => {
@@ -104,5 +153,42 @@ describe('AiAssistantView', () => {
     const rows = wrapper.findAll('[data-testid="ai-events-table"] tbody tr')
     expect(rows).toHaveLength(2)
     expect(wrapper.text()).toContain('QUOTA_CONSUMED')
+  })
+
+  it('presents a wrong visitor cookie as an invisible session when events return 404', async () => {
+    installMockTransport({
+      fixtures: {
+        startAiSession: sharedFixtures.startAiSession,
+        listAiEvents: { status: 404, code: 'MLS-AI-005', message: 'session not found', data: {} },
+      },
+    })
+    const wrapper = await mountAssistant()
+
+    await wrapper.find('[data-testid="ai-events-toggle"]').trigger('click')
+    await flushPromises()
+
+    const alert = wrapper.find('[data-testid="error-alert"]')
+    expect(alert.text()).toContain('对象不存在或不可见')
+    expect(alert.text()).toContain('MLS-AI-005')
+  })
+
+  it('presents a missing visitor credential as unauthenticated when a turn returns 401', async () => {
+    logout()
+    installMockTransport({
+      fixtures: {
+        startAiSession: {
+          code: 'MLS-AI-S001',
+          message: 'started',
+          data: { sessionId: '7001', role: 'VISITOR', quota: { remaining: 10 } },
+        },
+        sendAiMessage: { status: 401, code: 'MLS-ID-001', message: 'visitor credential required', data: {} },
+      },
+    })
+    const wrapper = await mountAssistant()
+    await sendMessage(wrapper, '查询开放馆藏')
+
+    const alert = wrapper.find('[data-testid="error-alert"]')
+    expect(alert.text()).toContain('请先登录')
+    expect(alert.text()).toContain('MLS-ID-001')
   })
 })

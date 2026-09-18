@@ -1,14 +1,14 @@
 {
   "basePath": "/api/v1",
   "openapiVersion": "3.1.0",
-  "sourceSha256": "eb2b8cb399f8348d2418f4fda61ba2aa4064fe6d1c9b52d905a43f1626e6722e",
+  "sourceSha256": "143e83a652499b4dbbaa4ccfc370500cd1834c6bf8696de3d4e46ff3b6e3a0c0",
   "operations": [
     {
       "operationId": "listAiEvents",
       "method": "GET",
       "path": "/ai/sessions/{sessionId}/events",
       "tag": "AI",
-      "permission": "SESSION_OWNER_OR_ADMIN",
+      "permission": "AI_SESSION_OWNER_OR_ADMIN",
       "public": false,
       "requiresIdempotencyKey": false
     },
@@ -17,7 +17,7 @@
       "method": "POST",
       "path": "/ai/sessions/{sessionId}/messages",
       "tag": "AI",
-      "permission": "SESSION_OWNER",
+      "permission": "AI_SESSION_OWNER",
       "public": false,
       "requiresIdempotencyKey": true
     },

@@ -20,6 +20,7 @@ describe('application shell', () => {
     const wrapper = await mountApp()
     expect(wrapper.text()).toContain('MyLibrarySystem')
     expect(wrapper.find('[data-testid="app-nav"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="assistant-link"]').attributes('href')).toBe('/assistant')
     expect(wrapper.find('[data-testid="login-link"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('适配器模式')
   })

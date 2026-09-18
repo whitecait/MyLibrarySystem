@@ -7,7 +7,7 @@
 > - [工程文档唯一入口](../docs/README.md)
 > - [B1-A/B1-B 工程基础行动计划](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-B1-PLAN.md)
 
-本目录当前只包含 Vue 3、Vite 和 Vitest 的最小工程状态页。旧业务页面、路由和 API 已从构建输入中移除；业务功能尚未实现，当前构建和测试通过不表示需求验收通过。
+本目录包含 Vue 3、Vite 和 Vitest 正式工程，以及 B1～B5 的页面、模块门面、生成契约和 HTTP Adapter。构建和自动化测试通过只表示工程门禁通过，不表示浏览器端产品验收完成。
 
 ## 工具版本
 
@@ -21,6 +21,8 @@
 
 ```bash
 npm ci
+npm run architecture:check
+npm run contracts:check
 npm run lint:check
 npm run test:ci
 npm run build
@@ -33,6 +35,8 @@ npm run dev
 ```
 
 默认入口为 `http://localhost:5173`。
+
+`/assistant` 允许匿名访问。匿名访客凭据由服务端写入 `Secure; HttpOnly; SameSite=Strict; Path=/` Cookie，HTTP Adapter 使用 `credentials: 'same-origin'` 交由浏览器携带；前端 JavaScript 不读取或保存该凭据。AI 的 L2 动作只预填现行业务表单，最终提交继续调用现行业务接口并重新鉴权。
 
 ## 本地原型
 
@@ -56,6 +60,7 @@ node prototypes/tech-verification/agent-sim.mjs
 
 | 日期 | 内容 |
 | --- | --- |
+| 2026-09-18 | 完成匿名 AI 前端接合：无请求体启动、公开助手路由、浏览器 Cookie 管理、VISITOR/共享额度呈现、14 个共同样例及可重复生成契约。 |
 | 2026-09-09 | 增加容器与完整验证入口，关联 P4/P5 配置和证据说明。 |
 | 2026-09-09 | P2 遗漏修订：Node 支持范围由过宽的 `22.x` 收紧为 `>=22.12.0 <23`；补充 AI 原型必须使用专用启动命令的入口边界。 |
 | 2026-09-09 | P2 将正式工程收敛为单一状态页，新增非修改式 lint、Vitest DOM 挂载测试和明确的正式测试发现范围；旧业务页面/API/路由移除，原型保持独立。 |

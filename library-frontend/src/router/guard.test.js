@@ -49,4 +49,11 @@ describe('router guards', () => {
     await router.push('/')
     expect(router.currentRoute.value.name).toBe('home')
   })
+
+  it('lets an anonymous visitor open the AI assistant without creating a login continuation', async () => {
+    const router = buildRouter()
+    await router.push('/assistant')
+    expect(router.currentRoute.value.name).toBe('ai-assistant')
+    expect(peekContinuation()).toBeNull()
+  })
 })
