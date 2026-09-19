@@ -39,9 +39,43 @@ class AiModuleTest {
     @BeforeEach void reset(){model.reset();jdbc.update("TRUNCATE ai_event,ai_message,ai_session,ai_visitor_quota_usage,ai_quota_usage RESTART IDENTITY CASCADE");}
 
     @Test void utAi001_visitorReceivesAndExecutesOnlyPublicL1Tools(){jdbc.update("INSERT INTO book_title(title,price_cents) VALUES ('Open Catalog',100)");var owner=visitor('a');var session=accepted(assistant.start(owner,null));model.then(new ModelEndpoint.ModelResponse("",List.of(),List.of(new ModelEndpoint.ToolCall("provider-call-1","search_titles",Map.of("q","Open")))));model.then(ModelEndpoint.ModelResponse.answer("found"));accepted(assistant.turn(session.sessionId(),"开放馆藏",owner,null));assertThat(model.requests().getFirst().tools()).extracting(AiTool::name).containsExactlyInAnyOrder("search_titles","get_title","get_reading_content","get_reservation_calendar");assertThat(model.requests().getFirst().tools()).allMatch(t->t.level().equals("L1"));assertThat(model.requests().getFirst().tools()).allSatisfy(t->assertThat(t.inputSchema()).contains("\"additionalProperties\":false"));var messages=model.requests().get(1).messages();assertThat(messages.toString()).contains("Open Catalog","provider-call-1","tool_call_id");var assistant=(Map<String,Object>)messages.get(1);var function=(Map<String,Object>)((Map<String,Object>)((List<?>)assistant.get("tool_calls")).getFirst()).get("function");assertThat(function.get("arguments")).isInstanceOf(String.class).isEqualTo("{\"q\":\"Open\"}");}
-    @Test void utAi002_eachAccountRoleReceivesItsApprovedMatrix(){var reader=actor(Role.READER);var librarian=actor(Role.LIBRARIAN);var admin=actor(Role.ADMIN);turn(reader);turn(librarian);turn(admin);assertThat(model.requests().get(0).tools()).extracting(AiTool::name).contains("get_my_business","prefill_reservation","prefill_renewal").doesNotContain("list_accounts","list_ai_events");assertThat(model.requests().get(1).tools()).extracting(AiTool::name).contains("list_copies","prefill_walk_in_loan","prefill_return").doesNotContain("list_accounts","list_ai_events");assertThat(model.requests().get(2).tools()).extracting(AiTool::name).contains("list_accounts","list_audit_events","open_review").doesNotContain("prefill_renewal","list_ai_events");}
+    @Test void utAi002_eachAccountRoleReceivesItsCompleteApprovedMatrix(){
+        var reader=actor(Role.READER);var librarian=actor(Role.LIBRARIAN);var admin=actor(Role.ADMIN);
+        turn(reader);turn(librarian);turn(admin);
+        assertThat(model.requests().get(0).tools()).extracting(AiTool::name).containsExactlyInAnyOrder(
+                "search_titles","get_title","get_reading_content","get_reservation_calendar",
+                "list_fines","get_order","get_my_business","list_notifications",
+                "prefill_reservation","prefill_walk_in_loan","prefill_renewal",
+                "open_reservation_cancellation","open_order_creation","open_order_close","open_notification_read");
+        assertThat(model.requests().get(1).tools()).extracting(AiTool::name).containsExactlyInAnyOrder(
+                "search_titles","get_title","get_reading_content","get_reservation_calendar",
+                "list_copies","list_fines","get_order","list_reviews","get_arrival_dashboard",
+                "list_notifications","list_audit_events",
+                "prefill_reservation","prefill_walk_in_loan","prefill_return",
+                "open_account_change","open_password_reset","open_reader_status_change",
+                "open_title_creation","open_title_update","open_title_removal",
+                "open_copy_creation","open_copy_state_change","open_reservation_cancellation",
+                "open_pickup_claim","open_manual_action","open_order_close","open_refund_request",
+                "open_review_request","open_notification_read");
+        assertThat(model.requests().get(2).tools()).extracting(AiTool::name).containsExactlyInAnyOrder(
+                "search_titles","get_title","get_reading_content","get_reservation_calendar",
+                "list_accounts","list_reviews","list_notifications","list_audit_events",
+                "open_password_reset","open_reader_status_change","open_closing_reopen",
+                "open_reconciliation","open_review_decision","open_notification_read");
+        assertThat(model.requests()).allSatisfy(request -> {
+            assertThat(request.tools()).extracting(AiTool::name)
+                    .doesNotContain("list_ai_events","start_ai_session","send_ai_message");
+            request.tools().forEach(tool -> {
+                if (tool.name().startsWith("prefill_")) assertThat(tool.level()).isEqualTo("L2");
+                else if (tool.name().startsWith("open_")) {
+                    assertThat(tool.level()).isEqualTo("L3");
+                    assertThat(tool.inputSchema()).contains("\"properties\":{}");
+                } else assertThat(tool.level()).isEqualTo("L1");
+            });
+        });
+    }
     @Test void utAi003_l2CreatesPrefillWithoutBusinessWrite(){var actor=actor(Role.READER);var owner=new AccountAiOwner(actor.accountId());var s=accepted(assistant.start(owner,actor));model.then(new ModelEndpoint.ModelResponse("核对",List.of(),List.of(new ModelEndpoint.ToolCall("prefill_renewal",Map.of("txId","4001")))));model.then(ModelEndpoint.ModelResponse.answer("请核对后提交"));var turn=accepted(assistant.turn(s.sessionId(),"预填续借",owner,actor));assertThat(turn.actions()).singleElement().satisfies(a->{assertThat(a.level()).isEqualTo("L2");assertThat(a.prefill()).containsEntry("txId","4001");});assertThat(eventTypes(s.sessionId(),owner,null)).contains("ACTION_DRAFT").doesNotContain("BUSINESS_WRITE");}
-    @Test void utAi004_nonPrefillWritesBecomeL3Navigation(){var actor=actor(Role.ADMIN);var owner=new AccountAiOwner(actor.accountId());var s=accepted(assistant.start(owner,actor));model.then(new ModelEndpoint.ModelResponse("",List.of(),List.of(new ModelEndpoint.ToolCall("open_account_maintenance",Map.of()))));model.then(ModelEndpoint.ModelResponse.answer("请前往页面办理"));assertThat(accepted(assistant.turn(s.sessionId(),"停用账户",owner,actor)).actions()).singleElement().extracting(AiAction::level).isEqualTo("L3");}
+    @Test void utAi004_nonPrefillWritesBecomeL3NavigationWithoutBusinessValues(){var actor=actor(Role.ADMIN);var owner=new AccountAiOwner(actor.accountId());var s=accepted(assistant.start(owner,actor));model.then(new ModelEndpoint.ModelResponse("",List.of(),List.of(new ModelEndpoint.ToolCall("open_reader_status_change",Map.of()))));model.then(ModelEndpoint.ModelResponse.answer("请前往页面办理"));assertThat(accepted(assistant.turn(s.sessionId(),"停用账户",owner,actor)).actions()).singleElement().satisfies(action->{assertThat(action.level()).isEqualTo("L3");assertThat(action.prefill()).isEmpty();});}
     @Test void utAi005_unknownToolIsRejectedBeforeExecution(){assertToolRejected(new ModelEndpoint.ToolCall("drop_database",Map.of()));}
     @Test void utAi006_roleForbiddenToolIsRejectedBeforeExecution(){var owner=visitor('b');var s=accepted(assistant.start(owner,null));model.then(new ModelEndpoint.ModelResponse("",List.of(),List.of(new ModelEndpoint.ToolCall("get_my_business",Map.of()))));assertThat(code(assistant.turn(s.sessionId(),"我的借阅",owner,null))).isEqualTo("MLS-AI-004");}
     @Test void utAi007_modelControlledSubjectAmountAndVersionAreRejected(){var actor=actor(Role.READER);var owner=new AccountAiOwner(actor.accountId());var s=accepted(assistant.start(owner,actor));model.then(new ModelEndpoint.ModelResponse("",List.of(),List.of(new ModelEndpoint.ToolCall("prefill_renewal",Map.of("accountId","999","amountCents",1,"version",9)))));assertThat(code(assistant.turn(s.sessionId(),"绕过",owner,actor))).isEqualTo("MLS-AI-004");}

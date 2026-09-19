@@ -42,13 +42,29 @@ public final class ToolRegistry {
                 l1("get_my_business", "READER", Set.of("READER"), fields(text("kind"),text("status"),cursor(),limit()), none()),
                 l1("list_notifications", "AUTHENTICATED_SELF", Set.of("READER", "LIBRARIAN", "ADMIN"), fields(bool("unreadOnly"),cursor(),limit()), none()),
                 l1("list_audit_events", "LIBRARIAN_OR_ADMIN", Set.of("LIBRARIAN", "ADMIN"), fields(id("relatedId"),text("eventType"),cursor(),limit()), none()),
-                action("prefill_reservation", "READER", "L2", Set.of("READER"), fields(id("titleId"),date("reservationDate"),text("pickupSlot"),text("channel")), required("titleId")),
-                action("prefill_renewal", "READER", "L2", Set.of("READER"), fields(id("txId")), required("txId")),
-                action("prefill_walk_in_loan", "LIBRARIAN", "L2", Set.of("LIBRARIAN"), fields(id("titleId"),id("copyId"),text("channel")), required("titleId")),
+                action("prefill_reservation", "READER_SELF_OR_LIBRARIAN", "L2", Set.of("READER", "LIBRARIAN"), fields(id("titleId"),date("reservationDate"),text("pickupSlot"),text("channel")), required("titleId")),
+                action("prefill_renewal", "READER_SELF", "L2", Set.of("READER"), fields(id("txId")), required("txId")),
+                action("prefill_walk_in_loan", "READER_SELF_OR_LIBRARIAN", "L2", Set.of("READER", "LIBRARIAN"), fields(id("titleId"),id("copyId"),text("channel")), required("titleId")),
                 action("prefill_return", "LIBRARIAN", "L2", Set.of("LIBRARIAN"), fields(id("copyId"),text("condition")), required("copyId")),
-                action("open_account_maintenance", "ADMIN", "L3", Set.of("ADMIN"), fields(), none()),
-                action("open_settlement", "READER", "L3", Set.of("READER", "LIBRARIAN"), fields(id("fineId")), none()),
-                action("open_review", "LIBRARIAN_OR_ADMIN", "L3", Set.of("LIBRARIAN", "ADMIN"), fields(id("reviewId")), none())));
+                navigation("open_account_change", "LIBRARIAN", Set.of("LIBRARIAN")),
+                navigation("open_password_reset", "LIBRARIAN_OR_ADMIN", Set.of("LIBRARIAN", "ADMIN")),
+                navigation("open_reader_status_change", "LIBRARIAN_OR_ADMIN", Set.of("LIBRARIAN", "ADMIN")),
+                navigation("open_title_creation", "LIBRARIAN", Set.of("LIBRARIAN")),
+                navigation("open_title_update", "LIBRARIAN", Set.of("LIBRARIAN")),
+                navigation("open_title_removal", "LIBRARIAN", Set.of("LIBRARIAN")),
+                navigation("open_copy_creation", "LIBRARIAN", Set.of("LIBRARIAN")),
+                navigation("open_copy_state_change", "LIBRARIAN", Set.of("LIBRARIAN")),
+                navigation("open_reservation_cancellation", "READER_SELF_OR_LIBRARIAN", Set.of("READER", "LIBRARIAN")),
+                navigation("open_pickup_claim", "LIBRARIAN", Set.of("LIBRARIAN")),
+                navigation("open_manual_action", "LIBRARIAN", Set.of("LIBRARIAN")),
+                navigation("open_closing_reopen", "ADMIN", Set.of("ADMIN")),
+                navigation("open_order_creation", "READER_SELF", Set.of("READER")),
+                navigation("open_order_close", "READER_SELF_OR_LIBRARIAN_OR_SYSTEM", Set.of("READER", "LIBRARIAN")),
+                navigation("open_refund_request", "LIBRARIAN_THEN_ADMIN_REVIEW", Set.of("LIBRARIAN")),
+                navigation("open_reconciliation", "SYSTEM_OR_ADMIN", Set.of("ADMIN")),
+                navigation("open_review_request", "LIBRARIAN", Set.of("LIBRARIAN")),
+                navigation("open_review_decision", "ADMIN", Set.of("ADMIN")),
+                navigation("open_notification_read", "AUTHENTICATED_SELF", Set.of("READER", "LIBRARIAN", "ADMIN"))));
     }
 
     private static AiTool l1(String name, String capability, Set<String> roles, String properties, String required) {
@@ -56,6 +72,9 @@ public final class ToolRegistry {
     }
     private static AiTool action(String name, String capability, String level, Set<String> roles, String properties, String required) {
         return new AiTool(name, capability, schema(properties,required), "action:" + name, level, roles);
+    }
+    private static AiTool navigation(String name, String capability, Set<String> roles) {
+        return action(name, capability, "L3", roles, fields(), none());
     }
 
     private static String schema(String properties,String required){return "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{"+properties+"},\"required\":"+required+"}";}
