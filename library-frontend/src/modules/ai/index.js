@@ -11,8 +11,8 @@ export function sendAiMessage({ sessionId, message }, options = {}) {
   return apiRequest('sendAiMessage', { params: { sessionId }, body: { message }, ...options })
 }
 
-export function listAiEvents({ cursor, limit } = {}, options = {}) {
-  return apiRequest('listAiEvents', { query: { cursor, limit }, ...options })
+export function listAiEvents({ sessionId, cursor, limit } = {}, options = {}) {
+  return apiRequest('listAiEvents', { params: { sessionId }, query: { cursor, limit }, ...options })
 }
 
 export { default as AiAssistantView } from './internal/AiAssistantView.vue'

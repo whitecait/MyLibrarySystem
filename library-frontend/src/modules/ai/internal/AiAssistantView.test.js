@@ -155,6 +155,24 @@ describe('AiAssistantView', () => {
     expect(wrapper.text()).toContain('QUOTA_CONSUMED')
   })
 
+  it('requests the event stream for the session returned at startup', async () => {
+    const calls = []
+    setTransport({
+      mode: 'mock',
+      async request(operationId, options = {}) {
+        calls.push({ operationId, options })
+        return sharedFixtures[operationId]
+      },
+    })
+    const wrapper = await mountAssistant()
+
+    await wrapper.find('[data-testid="ai-events-toggle"]').trigger('click')
+    await flushPromises()
+
+    const eventRequest = calls.find((call) => call.operationId === 'listAiEvents')
+    expect(eventRequest.options.params.sessionId).toBe('7001')
+  })
+
   it('presents a wrong visitor cookie as an invisible session when events return 404', async () => {
     installMockTransport({
       fixtures: {

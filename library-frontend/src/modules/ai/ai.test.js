@@ -40,10 +40,28 @@ describe('ai module facade', () => {
       },
     })
     await ai.startAiSession()
-    await ai.listAiEvents({ limit: 20 })
+    await ai.listAiEvents({ sessionId: '7001', limit: 20 })
 
     expect(calls.map((call) => call.operationId)).toEqual(['startAiSession', 'listAiEvents'])
     expect(calls[0].options).toEqual({})
+  })
+
+  it('builds the real event-stream URL with the owned session id', async () => {
+    const urls = []
+    await ai.listAiEvents(
+      { sessionId: '7001', cursor: 'cursor-1', limit: 20 },
+      {
+        fetchImpl: async (url) => {
+          urls.push(url)
+          return new Response(
+            JSON.stringify({ code: 'MLS-AI-S001', message: 'ok', data: { items: [], nextCursor: null } }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          )
+        },
+      },
+    )
+
+    expect(urls).toEqual(['/api/v1/ai/sessions/7001/events?cursor=cursor-1&limit=20'])
   })
 
   it('passes caller headers through for draft attribution', async () => {

@@ -131,7 +131,7 @@ function openPrefill(action) {
 async function toggleEvents() {
   eventsVisible.value = !eventsVisible.value
   if (eventsVisible.value && events.value.length === 0) {
-    const envelope = await runEvents(() => listAiEvents({ limit: 20 }))
+    const envelope = await runEvents(() => listAiEvents({ sessionId: sessionId.value, limit: 20 }))
     if (envelope) events.value = envelope.data.items
   }
 }
