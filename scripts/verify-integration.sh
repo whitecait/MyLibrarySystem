@@ -17,10 +17,26 @@ evidence="${EVIDENCE_DIR:-$PWD/artifacts/integration-$run_id}"
 mkdir -p "$evidence"
 evidence="$(cd "$evidence" && pwd)"
 scratch="$(mktemp -d)"
+secrets="$scratch/secrets.txt"
+touch "$secrets"
+chmod 600 "$secrets"
+
+remember_secret() {
+  printf '%s\n' "$1" >> "$secrets"
+}
+remember_secret "$DB_PASSWORD"
+remember_secret "$AI_VISITOR_COOKIE_SIGNING_KEY"
 
 dc() { docker compose --env-file /dev/null -p "$project" -f compose.yaml -f compose.integration.yaml "$@"; }
 redact() {
-  python3 -c 'import os,sys; d=sys.stdin.read(); d=d.replace(os.environ["DB_PASSWORD"],"[REDACTED]"); d=d.replace(os.environ["AI_VISITOR_COOKIE_SIGNING_KEY"],"[REDACTED]"); sys.stdout.write(d)'
+  python3 -c 'import sys
+d = sys.stdin.read()
+with open(sys.argv[1], encoding="utf-8") as values:
+    for value in values:
+        value = value.rstrip("\n")
+        if value:
+            d = d.replace(value, "[REDACTED]")
+sys.stdout.write(d)' "$secrets"
 }
 cleanup() {
   result=$?
@@ -30,6 +46,10 @@ cleanup() {
   dc ps -a > "$evidence/services.txt" 2>&1
   dc down --volumes --remove-orphans --timeout 20 >> "$evidence/cleanup.log" 2>&1
   cleanup_result=$?
+  if ! scripts/check-sensitive-evidence.sh "$evidence" "$secrets"; then
+    echo 'sensitive credential leaked into integration evidence' >&2
+    result=1
+  fi
   rm -rf "$scratch"
   if (( cleanup_result != 0 && result == 0 )); then result=$cleanup_result; fi
   printf 'exit_code=%s\n' "$result" > "$evidence/result.txt"
@@ -53,12 +73,19 @@ PY
 request() {
   local name="$1" method="$2" path="$3" expected="$4"
   shift 4
+  local retain=true
+  if [[ "${1:-}" == "--private-response" ]]; then
+    retain=false
+    shift
+  fi
   local status
   status="$(curl --silent --show-error --connect-timeout 3 --max-time 30 \
     --request "$method" "$base$path" --output "$scratch/$name.json" \
     --write-out '%{http_code}' "$@")"
   test "$status" = "$expected"
-  cp "$scratch/$name.json" "$evidence/$name.json"
+  if [[ "$retain" == true ]]; then
+    cp "$scratch/$name.json" "$evidence/$name.json"
+  fi
 }
 
 {
@@ -91,6 +118,8 @@ assert m and 'Secure' in h and 'HttpOnly' in h and 'SameSite=Strict' in h and 'P
 print(m.group(1))
 PY
 )"
+remember_secret "$visitor_a_cookie"
+printf 'Cookie: __Host-mls-ai-visitor=%s\n' "$visitor_a_cookie" > "$scratch/visitor-a-auth.headers"
 python3 - "$scratch/visitor-a.json" "$visitor_a_cookie" <<'PY'
 import sys
 assert sys.argv[2] not in open(sys.argv[1], encoding="utf-8").read()
@@ -99,7 +128,7 @@ cp "$scratch/visitor-a.json" "$evidence/visitor-start.json"
 
 request visitor-continuity POST "/api/v1/ai/sessions/$visitor_a_id/messages" 200 \
   -H 'Content-Type: application/json' -H 'Idempotency-Key: integration-visitor-turn-1' \
-  -H "Cookie: __Host-mls-ai-visitor=$visitor_a_cookie" --data '{"message":"查询开放馆藏"}'
+  -H "@$scratch/visitor-a-auth.headers" --data '{"message":"查询开放馆藏"}'
 assert_json "$scratch/visitor-continuity.json" 'value["code"] == "MLS-AI-S001" and value["data"]["quota"]["remaining"] == 2'
 
 request wrong-cookie GET "/api/v1/ai/sessions/$visitor_a_id/events?limit=20" 404 \
@@ -109,19 +138,26 @@ assert_json "$scratch/wrong-cookie.json" 'value["code"] == "MLS-AI-005"'
 # Create a real reader session through the public API.
 username="integration-reader-$run_id"
 password='Integration-Pass-42!'
+printf '{"username":"%s","password":"%s","displayName":"Integration Reader"}\n' \
+  "$username" "$password" > "$scratch/register-body.json"
 request register POST /api/v1/auth/registrations 200 -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: integration-register' \
-  --data "{\"username\":\"$username\",\"password\":\"$password\",\"displayName\":\"Integration Reader\"}"
+  --data-binary "@$scratch/register-body.json"
 reader_id="$(json_at "['data']['accountId']" < "$scratch/register.json")"
-request login POST /api/v1/auth/sessions 200 -H 'Content-Type: application/json' \
+printf '{"username":"%s","password":"%s"}\n' "$username" "$password" > "$scratch/login-body.json"
+request login POST /api/v1/auth/sessions 200 --private-response -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: integration-login' \
-  --data "{\"username\":\"$username\",\"password\":\"$password\"}"
+  --data-binary "@$scratch/login-body.json"
 reader_token="$(json_at "['data']['accessToken']" < "$scratch/login.json")"
+remember_secret "$reader_token"
+printf 'Authorization: Bearer %s\n' "$reader_token" > "$scratch/reader-auth.headers"
+printf 'Authorization: Bearer %s\nCookie: __Host-mls-ai-visitor=%s\n' \
+  "$reader_token" "$visitor_a_cookie" > "$scratch/visitor-a-bearer-auth.headers"
 
 # A bearer accompanying the visitor cookie must not upgrade the stored visitor session.
 request visitor-with-bearer POST "/api/v1/ai/sessions/$visitor_a_id/messages" 200 \
   -H 'Content-Type: application/json' -H 'Idempotency-Key: integration-visitor-turn-2' \
-  -H "Authorization: Bearer $reader_token" -H "Cookie: __Host-mls-ai-visitor=$visitor_a_cookie" \
+  -H "@$scratch/visitor-a-bearer-auth.headers" \
   --data '{"message":"查询我的借阅"}'
 assert_json "$scratch/visitor-with-bearer.json" 'value["code"] == "MLS-AI-S001" and value["data"]["quota"]["remaining"] == 1'
 
@@ -138,15 +174,19 @@ PY
 }
 mapfile -t vb < <(start_visitor visitor-b integration-visitor-b)
 mapfile -t vc < <(start_visitor visitor-c integration-visitor-c)
+remember_secret "${vb[1]}"
+remember_secret "${vc[1]}"
+printf 'Cookie: __Host-mls-ai-visitor=%s\n' "${vb[1]}" > "$scratch/visitor-b-auth.headers"
+printf 'Cookie: __Host-mls-ai-visitor=%s\n' "${vc[1]}" > "$scratch/visitor-c-auth.headers"
 concurrent_turn() {
-  local name="$1" session="$2" cookie="$3"
+  local name="$1" session="$2" header_file="$3"
   curl --silent --show-error --request POST "$base/api/v1/ai/sessions/$session/messages" \
     -H 'Content-Type: application/json' -H "Idempotency-Key: integration-$name-turn" \
-    -H "Cookie: __Host-mls-ai-visitor=$cookie" --data '{"message":"查询开放馆藏"}' \
+    -H "@$header_file" --data '{"message":"查询开放馆藏"}' \
     -o "$scratch/$name-turn.json" -w '%{http_code}' > "$scratch/$name.status"
 }
-concurrent_turn visitor-b "${vb[0]}" "${vb[1]}" & pid_b=$!
-concurrent_turn visitor-c "${vc[0]}" "${vc[1]}" & pid_c=$!
+concurrent_turn visitor-b "${vb[0]}" "$scratch/visitor-b-auth.headers" & pid_b=$!
+concurrent_turn visitor-c "${vc[0]}" "$scratch/visitor-c-auth.headers" & pid_c=$!
 wait "$pid_b"; wait "$pid_c"
 statuses="$(sort "$scratch/visitor-b.status" "$scratch/visitor-c.status" | paste -sd, -)"
 test "$statuses" = "200,429"
@@ -165,17 +205,17 @@ SELECT 'fixture-ready';
 SQL
 
 request account-ai-start POST /api/v1/ai/sessions 200 -H 'Idempotency-Key: integration-account-ai' \
-  -H "Authorization: Bearer $reader_token"
+  -H "@$scratch/reader-auth.headers"
 account_session="$(json_at "['data']['sessionId']" < "$scratch/account-ai-start.json")"
 request l2-prefill POST "/api/v1/ai/sessions/$account_session/messages" 200 \
   -H 'Content-Type: application/json' -H 'Idempotency-Key: integration-account-turn' \
-  -H "Authorization: Bearer $reader_token" --data '{"message":"帮我预填续借"}'
+  -H "@$scratch/reader-auth.headers" --data '{"message":"帮我预填续借"}'
 assert_json "$scratch/l2-prefill.json" 'value["data"]["actions"][0]["level"] == "L2" and value["data"]["actions"][0]["prefill"]["txId"] == "4001"'
 
 due_date="$(date -u -d '+10 days' +%F)"
 request renewal-submit POST /api/v1/loans/4001/renewals 200 \
   -H 'Content-Type: application/json' -H 'Idempotency-Key: integration-renewal-submit' \
-  -H "Authorization: Bearer $reader_token" --data "{\"requestedDueDate\":\"$due_date\"}"
+  -H "@$scratch/reader-auth.headers" --data "{\"requestedDueDate\":\"$due_date\"}"
 assert_json "$scratch/renewal-submit.json" 'value["data"]["outcome"] == "RENEWED" and value["data"]["txId"] == "4001"'
 
 # Recreate the application/model containers while preserving PostgreSQL, then observe prior facts through HTTP.
@@ -183,20 +223,17 @@ dc stop backend frontend
 dc up -d --wait --wait-timeout 180
 address="$(dc port frontend 80)"; base="http://$address"
 request events-after-restart GET "/api/v1/ai/sessions/$visitor_a_id/events?limit=100" 200 \
-  -H "Cookie: __Host-mls-ai-visitor=$visitor_a_cookie"
+  -H "@$scratch/visitor-a-auth.headers"
 assert_json "$scratch/events-after-restart.json" '[item for item in value["data"]["items"] if item["type"] == "MODEL_RESPONSE"] != []'
 request quota-after-restart POST "/api/v1/ai/sessions/$visitor_a_id/messages" 429 \
   -H 'Content-Type: application/json' -H 'Idempotency-Key: integration-after-restart' \
-  -H "Cookie: __Host-mls-ai-visitor=$visitor_a_cookie" --data '{"message":"查询开放馆藏"}'
+  -H "@$scratch/visitor-a-auth.headers" --data '{"message":"查询开放馆藏"}'
 assert_json "$scratch/quota-after-restart.json" 'value["code"] == "MLS-AI-002" and value["data"]["remaining"] == 0'
 
 request model-stats GET /model-stub/stats 200
 assert_json "$scratch/model-stats.json" 'value["invalidThinking"] == 0 and value["requests"] >= 5 and value["renewalToolCalls"] == 1'
 
-# Evidence must not contain the raw visitor credential, account token, or signing secrets.
-if rg -F "$visitor_a_cookie" "$evidence" || rg -F "$reader_token" "$evidence"; then
-  echo 'sensitive credential leaked into integration evidence' >&2
-  exit 1
-fi
+# The same scanner runs again from cleanup after logs and result metadata are written.
+scripts/check-sensitive-evidence.sh "$evidence" "$secrets"
 printf 'HTTP integration passed: proxy, anonymous ownership, global quota race, L2 renewal, restart durability.\n' \
   | tee "$evidence/summary.txt"

@@ -48,7 +48,7 @@ bash scripts/verify-integration.sh
 
 该脚本以 `compose.yaml` 加 `compose.integration.yaml` 启动隔离项目，模型边界由独立的 OpenAI-compatible HTTP stub 提供，业务数据库使用真实 PostgreSQL。验证请求全部经前端 Nginx `/api` 代理进入后端，覆盖匿名启动与 Cookie 连续消息、错误 Cookie 的 404 不可见性、Bearer 不提升既有访客会话、两访客共享额度的并发 CAS、登录读者的 L2 续借预填及现行续借提交，并在重启 backend/frontend 后复核事件与额度留存。stub 同时拒绝非 `thinking={type:disabled}` 请求。
 
-脚本自行生成临时数据库口令、Cookie 签名键、随机宿主端口和唯一 Compose 项目名；原始 Cookie、Bearer token 与签名秘密只存在于临时目录，不写入证据。证据保存在被 Git 忽略的 `artifacts/integration-<运行号>/`，成功或失败都会脱敏日志并清理隔离容器、网络和卷。该门禁不调用真实模型服务，也不替代 Windows 原生浏览器场景。
+脚本自行生成临时数据库口令、Cookie 签名键、随机宿主端口和唯一 Compose 项目名；原始 Cookie、Bearer token 与签名秘密只存在于临时目录，不写入证据或命令参数。成功或失败退出时，脚本都会动态脱敏日志，并以 `rg --no-ignore --hidden` 显式扫描被 Git 忽略的证据目录。证据保存在 `artifacts/integration-<运行号>/`，退出时清理隔离容器、网络和卷。该门禁不调用真实模型服务，也不替代 Windows 原生浏览器场景。
 
 ## 观测验证入口（C1 测量脚手架）
 
@@ -88,6 +88,8 @@ docker compose -p mls-dev down
 原型仍为本地资产，不进入 CI、镜像或干净检出的测试输入。远端通过证据及对应提交记录在行动计划中；工作流存在不代表运行通过，也不代表已配置 GitHub 分支保护。
 
 ## 修订记录
+
+- 2026-09-18：加固 B5 集成证据边界：敏感响应不再复制到证据，Cookie 与 Bearer 改由临时文件传给 curl，退出时显式扫描 ignored evidence。
 
 | 日期       | 内容                                                                                                                                                          |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |

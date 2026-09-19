@@ -75,6 +75,8 @@ library-server/src/main/resources/application-*.yml
 !scripts/k6-health.js
 !scripts/verify-observability.sh
 !scripts/verify-integration.sh
+!scripts/check-sensitive-evidence.sh
+!scripts/test-sensitive-evidence.sh
 !scripts/integration/
 !scripts/integration/**
 !.github/
