@@ -199,11 +199,17 @@ test('E2E-001/03 人工复核：账户变更提交复核→复核拒绝→账户
   const username = `e2e-rev-r-${Date.now()}`
   await registerReader(page, username, 'E2E复核读者')
 
-  // 管理员在账户管理页定位该读者并取得账户号（列表查询为 ADMIN 能力）
+  // 管理员在账户管理页定位该读者并取得账户号（列表查询为 ADMIN 能力；
+  // 新注册账户按序排在尾页，翻页加载直到出现）
   await login(page, ADMIN_USERNAME, ADMIN_PASSWORD)
   await page.goto('/admin/accounts')
   await page.getByTestId('account-filter-submit').click()
   const readerRow = page.locator('[data-testid="account-table"] tbody tr', { hasText: username }).first()
+  for (let i = 0; i < 12 && (await readerRow.count()) === 0; i++) {
+    const loadMore = page.getByTestId('account-load-more')
+    if ((await loadMore.count()) === 0) break
+    await loadMore.click()
+  }
   await expect(readerRow).toBeVisible()
   const accountId = (await readerRow.locator('[data-testid^="account-select-"]').first().getAttribute('data-testid')).replace('account-select-', '')
   expect(accountId).toBeTruthy()
