@@ -26,12 +26,12 @@
       "id": "chrome-previous",
       "family": "chrome",
       "slot": "previous-stable-major",
-      "version": null,
-      "installSource": null,
-      "executablePath": null,
+      "version": "152.0.7977.82",
+      "installSource": "Chrome for Testing public archive, unpacked to e2e/browsers/installs/chrome-152 (untracked, no updater)",
+      "executablePath": "C:\\home\\lingzz\\src\\MyLibrarySystem\\e2e\\browsers\\installs\\chrome-152\\chrome-win64\\chrome.exe",
       "playwrightChannel": null,
       "profileDir": "artifacts/m6-acceptance/browser-profiles/chrome-previous",
-      "autoUpdateDisabled": null,
+      "autoUpdateDisabled": true,
       "drivable": null,
       "verifiedAt": null
     },
@@ -59,7 +59,8 @@
       "profileDir": "artifacts/m6-acceptance/browser-profiles/edge-previous",
       "autoUpdateDisabled": null,
       "drivable": null,
-      "verifiedAt": null
+      "verifiedAt": null,
+      "note": "previous-major Edge has no portable official archive; obtain the enterprise offline package for the 146 line before the AT-0017 round, or execute this slot via the e2e/README.md manual fallback procedure"
     },
     {
       "id": "firefox-current",
@@ -71,19 +72,20 @@
       "playwrightChannel": null,
       "profileDir": "artifacts/m6-acceptance/browser-profiles/firefox-current",
       "autoUpdateDisabled": false,
-      "drivable": null,
-      "verifiedAt": null
+      "drivable": false,
+      "verifiedAt": "2026-09-20",
+      "note": "system Firefox lacks the Playwright juggler build, so automation cannot drive it (verify 2026-09-20T08-07-02Z); executed by the e2e/README.md manual fallback procedure with its own evidence"
     },
     {
       "id": "firefox-previous",
       "family": "firefox",
       "slot": "previous-stable-major",
-      "version": null,
-      "installSource": null,
+      "version": "155.0 (playwright firefox build v1543)",
+      "installSource": "Playwright build, ms-playwright/firefox-1543 (Env-W host)",
       "executablePath": null,
-      "playwrightChannel": null,
+      "playwrightChannel": "firefox",
       "profileDir": "artifacts/m6-acceptance/browser-profiles/firefox-previous",
-      "autoUpdateDisabled": null,
+      "autoUpdateDisabled": true,
       "drivable": null,
       "verifiedAt": null
     }

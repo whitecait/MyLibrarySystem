@@ -99,6 +99,8 @@ e2e/test-results/
 e2e/playwright-report/
 e2e/perf/out/
 e2e/data/out/
+# unpacked previous-major browsers (Chrome for Testing etc.), re-downloadable
+e2e/browsers/installs/
 !scripts/prepare-acceptance-env.sh
 !scripts/collect-ai-connection-evidence.sh
 !scripts/collect-evidence-secret-values.sh
