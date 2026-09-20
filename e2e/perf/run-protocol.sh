@@ -18,14 +18,35 @@ evidence="${2:?usage: RUN=n run-protocol.sh <compose-project> <evidence-dir>}"
 run="${RUN:?set RUN=n (independent run number)}"
 mkdir -p "$evidence/run-${run}"
 
-compose() { docker compose -p "$project" --profile perf "$@"; }
+# The k6 service exists only in compose.perf-quota.yaml (profile [perf]) and
+# the quota ceiling must actually be part of the measured stack, so every
+# compose call pins the full overlay set explicitly. ENV_FILE (optional)
+# carries the required DB_PASSWORD / AI_VISITOR_COOKIE_SIGNING_KEY etc.;
+# without it `compose config` fails variable validation on the base file.
+compose_base=(-p "$project"
+  -f compose.yaml -f compose.observability.yaml -f compose.perf-quota.yaml
+  ${ENV_FILE:+--env-file "$ENV_FILE"})
+compose() { docker compose "${compose_base[@]}" --profile perf "$@"; }
 k6run() { # k6run <scenario.js> <label> [env...]
   local script="$1" label="$2"; shift 2
   echo "[$(date -u +%H:%M:%S)] k6 ${label}"
-  env "$@" docker compose -p "$project" --profile perf run --rm \
+  env "$@" docker compose "${compose_base[@]}" --profile perf run --rm \
     k6 run --summary-export "/scripts/out/${label}-summary.json" "/scripts/scenarios/${script}" \
     > "$evidence/run-${run}/${label}-stdout.log" 2>&1
 }
+
+# Preflight: fail fast on wiring mistakes instead of mid-protocol.
+services="$(compose config --services 2>/dev/null || true)"
+if ! grep -qx k6 <<<"$services"; then
+  echo "preflight: k6 service not found under the pinned overlay set (compose.perf-quota.yaml, profile perf). Check ENV_FILE for required vars." >&2
+  exit 2
+fi
+for f in warmup steady retrieval peak recovery; do
+  [[ -f "e2e/perf/scenarios/${f}.js" ]] || { echo "preflight: missing e2e/perf/scenarios/${f}.js" >&2; exit 2; }
+done
+for set in hot tail; do
+  [[ -f "e2e/perf/out/queries-${set}.json" ]] || { echo "preflight: missing e2e/perf/out/queries-${set}.json (run the dataset generator first)" >&2; exit 2; }
+done
 
 # k6 reaches the stack through the project network (frontend Nginx entry).
 export BASE_URL="http://frontend:80"

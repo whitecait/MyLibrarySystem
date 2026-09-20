@@ -15,7 +15,13 @@ out_dir="${2:?usage: sample-resources.sh <compose-project> <out-dir> [interval-s
 interval="${3:-5}"
 mkdir -p "$out_dir"
 
-compose() { docker compose -p "$project" "$@"; }
+compose() {
+  # Same pinned overlay set + optional ENV_FILE as run-protocol.sh: exec
+  # needs the base file's required vars (DB_PASSWORD...) to pass validation.
+  docker compose -p "$project" \
+    -f compose.yaml -f compose.observability.yaml -f compose.perf-quota.yaml \
+    ${ENV_FILE:+--env-file "$ENV_FILE"} "$@"
+}
 
 echo "timestamp,container,cpu_pct,mem_used,mem_limit" > "$out_dir/docker-stats.csv"
 echo "timestamp,lock_waiters,deadlocks" > "$out_dir/db-samples.csv"

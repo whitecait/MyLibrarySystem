@@ -38,10 +38,18 @@ export function classify(res, className, expected = false) {
 }
 
 export function req(method, url, className, body = null, expected = false, headers = {}) {
-  const params = { tags: { class: className, expected: String(expected) }, headers }
+  // Every mutating endpoint declares Idempotency-Key as a required header
+  // (including login); a missing key is a 400 before any business logic runs.
+  const h = { ...headers }
+  if (method !== 'GET' && !h['Idempotency-Key']) h['Idempotency-Key'] = idemKey()
+  const params = { tags: { class: className, expected: String(expected) }, headers: h }
   const res = body === null ? http.request(method, url, null, params) : http.request(method, url, JSON.stringify(body), params)
   classify(res, className, expected)
   return res
+}
+
+export function idemKey() {
+  return `${RUN_ID}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 export function login(username, password) {
@@ -56,3 +64,9 @@ export const auth = (token) => ({ Authorization: `Bearer ${token}` })
 export const PROBE_PREFIX = `perf-${RUN_ID}`
 export const readerName = (n) => `${PROBE_PREFIX}-reader-${String(n).padStart(3, '0')}`
 export const probePassword = 'Perf-Probe-2026!'
+
+// Environment staff injected by e2e/data/load-dataset.sh (not part of the
+// versioned dataset): the steady load needs an authenticated LIBRARIAN for
+// audit queries and the damaged-return leg of the payment chain.
+export const librarianName = 'perf-probe-librarian'
+export const librarianPassword = 'Perf-Librarian-2026!'
