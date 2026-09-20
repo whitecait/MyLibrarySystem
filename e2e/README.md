@@ -30,6 +30,8 @@
 
 用法不变：仓库根目录 `node --env-file=.env e2e/ai-endpoint/verify-endpoint.mjs`；自测 `node --test e2e/ai-endpoint/verify-endpoint.test.mjs` 无需凭据。URL 语义：`.env` 的 `BASE_URL` 是提供方基址（含 `/v1` 等真实前缀、不带尾斜杠），脚本自行拼接操作路径；后端 `AI_ENDPOINT_URL` 则是完整 `chat/completions` 地址，由 `scripts/prepare-acceptance-env.sh` 生成，两套语义不得混用。
 
+执行口径：须以 `THINKING_MODE=disabled` 运行。后端线格式固定 `thinking.type=disabled`（`OpenAiCompatibleModelEndpoint`），2026-09-20 Env-W 端点实测：该配置下 S1~S6 全绿；provider 默认（请求无 thinking 字段）时强制 tool_choice 返回 400，S3 必败——那不是产品缺陷，是运行口径不同。
+
 ## 浏览器矩阵（AT-0017）
 
 1. Env-W 准备六项安装：Chrome/Edge/Firefox 各当前稳定版与前一稳定大版本；前一稳定大版本安装到隔离目录并关闭自动更新（当前稳定版经 Playwright channel 驱动，前一版经 `executablePath` 指向隔离安装）。
@@ -57,3 +59,4 @@
 ## 修订记录
 
 - 2026-09-19：初建；ai-endpoint 自 verification/ai-endpoint 字节级吸收并登记哈希。
+- 2026-09-20：登记端点验证执行口径（THINKING_MODE=disabled，与应用线格式一致）；scenarios 目录随 E2E-001/E2E-AI-001 纳入。
