@@ -2,12 +2,15 @@
 // RETRIEVAL_SET=hot|tail selects the popular or long-tail query set produced
 // by the dataset generator; the cold/hot cache pairing is orchestrated by
 // run-protocol.sh (cold = database container restarted immediately before).
-import { open } from 'k6'
 import { check } from 'k6'
 import { api, req, thresholds } from '../lib/common.js'
 
 const SET = __ENV.RETRIEVAL_SET || 'hot'
-const queries = JSON.parse(open(`../out/queries-${SET}.json`))
+// The pinned k6 image (2.2.0) does not export open from the 'k6' module
+// (the import binds null); the file-reading global is used instead. Absolute
+// in-container path: the k6 service mounts ./e2e/perf at /scripts
+// (compose.perf-quota.yaml).
+const queries = JSON.parse(open(`/scripts/out/queries-${SET}.json`))
 
 export const options = {
   scenarios: {
