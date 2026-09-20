@@ -36,13 +36,13 @@ services:
       # outputs are written through a writable submount (k6 summary exports)
       - ./e2e/perf/out:/scripts/out
     # Output files land in e2e/perf/out (gitignored); K6_OUTPUT_DIR is the
-    # in-container path.
-    # Scenario vars are list-style passthrough: compose only forwards host
-    # variables that are declared on the service, so run-protocol.sh's
-    # `env KEY=... docker compose run` reaches the container only via these
-    # entries (BASE_URL/RUN_ID default inside e2e/perf/lib/common.js).
+    # in-container path. Scenario vars are list-style passthrough: compose
+    # only forwards host variables that are declared on the service, so
+    # run-protocol.sh's `env KEY=... docker compose run` reaches the
+    # container only via these entries (BASE_URL/RUN_ID default inside
+    # e2e/perf/lib/common.js).
     environment:
-      K6_OUTPUT_DIR: /scripts/out
+      - K6_OUTPUT_DIR=/scripts/out
       - BASE_URL
       - RUN_ID
       - RETRIEVAL_SET
