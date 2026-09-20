@@ -52,7 +52,9 @@ public class PostgresQueryStore implements QueryStore {
                 statuses.addAll(List.of("LENT", "RETURNED", "RETURN_ABNORMAL"));
             }
             rows.addAll(jdbc.query("""
-                    SELECT 'RESERVATION' AS kind, t.id, t.status, bt.title AS title,
+                    SELECT CASE WHEN t.status IN ('LENT', 'RETURNED', 'RETURN_ABNORMAL')
+                                THEN 'LOAN' ELSE 'RESERVATION' END AS kind,
+                           t.id, t.status, bt.title AS title,
                            t.reservation_date AS business_date, NULL::bigint AS amount_cents
                     FROM borrow_transaction t
                     LEFT JOIN book_title bt ON bt.id = t.title_id

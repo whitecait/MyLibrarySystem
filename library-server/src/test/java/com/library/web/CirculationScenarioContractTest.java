@@ -97,11 +97,13 @@ class CirculationScenarioContractTest {
         var readerToken = registerAndLogin("waitlist-reader");
         var emptyTitle = seedTitleWithCopies("无副本预约书", 0);
         var scenario = scenarios.byId("RESERVATION-WAITLIST-CONFIRMATION");
+        // 候补路径只对非当日预约成立：当日无副本走 MANUAL_HANDLING（CirculationModuleImpl 分界）
+        var futureDate = java.time.LocalDate.now().plusDays(2).toString();
 
         var body = """
-                {"titleId":"%d","reservationDate":"2026-09-20","pickupSlot":"AM",
+                {"titleId":"%d","reservationDate":"%s","pickupSlot":"AM",
                  "channel":"ONLINE","confirmWaitlist":false}
-                """.formatted(emptyTitle);
+                """.formatted(emptyTitle, futureDate);
         var response = post("/api/v1/reservations", readerToken, key(), body);
         assertThat(response.getStatusCode().value())
                 .isEqualTo(scenario.at("/response/httpStatus").asInt());
@@ -115,7 +117,7 @@ class CirculationScenarioContractTest {
                 Integer.class, emptyTitle)).isZero();
 
         var confirm = post("/api/v1/reservations", readerToken, key(),
-                "{\"titleId\":\"" + emptyTitle + "\",\"reservationDate\":\"2026-09-20\","
+                "{\"titleId\":\"" + emptyTitle + "\",\"reservationDate\":\"" + futureDate + "\","
                         + "\"pickupSlot\":\"AM\",\"channel\":\"ONLINE\",\"confirmWaitlist\":true}");
         var confirmed = json.readTree(confirm.getBody());
         assertThat(confirmed.at("/data/outcome").asText())
@@ -205,14 +207,25 @@ class CirculationScenarioContractTest {
         var librarianId = seedLibrarian();
         var librarianToken = loginLibrarian(librarianId);
         var titleId = seedTitleWithCopies("查询口径书", 2);
-        var copyId = jdbc.queryForObject(
-                "SELECT id FROM book_copy WHERE title_id = ? LIMIT 1", Long.class, titleId);
+        var copyIds = jdbc.queryForList(
+                "SELECT id FROM book_copy WHERE title_id = ? ORDER BY id", Long.class, titleId);
+        var copyId = copyIds.get(0);
         // 当日 CONFIRMED 预约 → expected/pending
         jdbc.update("""
                 INSERT INTO borrow_transaction (reader_id, title_id, copy_id, status, reservation_date)
                 VALUES (?, ?, ?, 'CONFIRMED', current_date)
                 """, readerId, titleId, copyId);
         jdbc.update("UPDATE book_copy SET status = 'RESERVED' WHERE id = ?", copyId);
+        // DEF-M6-002 回归锚点：LENT 行 kind 必须为 LOAN。
+        // 在途状态 (reader_id,title_id) 唯一，LENT 行需挂另一书目。
+        var lentTitleId = seedTitleWithCopies("查询口径书-借出", 1);
+        var lentCopyId = jdbc.queryForObject(
+                "SELECT id FROM book_copy WHERE title_id = ? LIMIT 1", Long.class, lentTitleId);
+        jdbc.update("""
+                INSERT INTO borrow_transaction (reader_id, title_id, copy_id, status, reservation_date)
+                VALUES (?, ?, ?, 'LENT', current_date)
+                """, readerId, lentTitleId, lentCopyId);
+        jdbc.update("UPDATE book_copy SET status = 'LENT' WHERE id = ?", lentCopyId);
 
         var today = java.time.LocalDate.now().toString();
         var dashboard = get("/api/v1/dashboard/arrivals?businessDate=" + today, librarianToken);
@@ -227,8 +240,13 @@ class CirculationScenarioContractTest {
         var myBusiness = get("/api/v1/me/business", readerToken);
         assertThat(myBusiness.getStatusCode().value()).isEqualTo(200);
         var items = json.readTree(myBusiness.getBody()).at("/data/items");
-        assertThat(items.size()).isGreaterThanOrEqualTo(1);
-        assertThat(items.get(0).path("kind").asText()).isEqualTo("RESERVATION");
+        assertThat(items.size()).isGreaterThanOrEqualTo(2);
+        // 行按 id 倒序：LENT 行后插入，居首
+        assertThat(items.get(0).path("kind").asText()).isEqualTo("LOAN");
+        assertThat(items.get(0).path("status").asText()).isEqualTo("LENT");
+        var kinds = new java.util.ArrayList<String>();
+        items.forEach(i -> kinds.add(i.path("kind").asText()));
+        assertThat(kinds).contains("RESERVATION");
     }
 
     // ---- helpers ----------------------------------------------------------------
