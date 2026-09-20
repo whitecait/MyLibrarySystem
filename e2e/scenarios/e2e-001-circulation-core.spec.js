@@ -131,7 +131,7 @@ test('E2E-001/02 模拟支付闭环：损毁归还→罚款→建单→模拟成
   const username = `e2e-pay-r-${Date.now()}`
   await registerReader(page, username, 'E2E支付读者')
 
-  // 读者借出第二副本（800002），供损毁归还产生罚款
+  // 读者借出第二副本（800002）并记下借出事务号，供人工处置引用
   await login(page, username, READER_PASSWORD)
   await page.goto('/walk-in')
   await page.getByTestId('walkin-channel').selectOption('SELF_SERVICE')
@@ -139,16 +139,28 @@ test('E2E-001/02 模拟支付闭环：损毁归还→罚款→建单→模拟成
   await page.getByTestId('walkin-copy-0').fill(DAMAGED_COPY_ID)
   await page.getByTestId('walkin-submit').click()
   await expect(page.getByTestId('walkin-results')).toContainText('LENT')
+  await page.goto('/me/business')
+  await page.getByTestId('my-business-kind').selectOption('LOAN')
+  await page.getByTestId('my-business-submit').click()
+  const renewButton = page.locator('[data-testid^="renew-"]').first()
+  await expect(renewButton).toBeVisible()
+  const loanTxId = (await renewButton.getAttribute('data-testid')).replace('renew-', '')
+  expect(loanTxId).toBeTruthy()
   await logoutViaUi(page)
 
-  // 馆员按损坏归还：罚款按书价全额产生（ReturnUseCases 罚款规则）
+  // 馆员按损坏归还：不直接完成，转人工处置（确认入账后按书价全额产生罚款）
   await login(page, LIBRARIAN_USERNAME, LIBRARIAN_PASSWORD)
   await page.goto('/desk')
   await page.getByTestId('return-copy-id').fill(DAMAGED_COPY_ID)
   await page.getByTestId('return-condition').selectOption('DAMAGED')
   await page.getByTestId('return-submit').click()
-  await expect(page.getByTestId('return-returned')).toBeVisible()
-  await safeShot(page, shot('08-damaged-return.png'), secrets)
+  await expect(page.getByTestId('return-abnormal')).toBeVisible()
+  await page.getByTestId('manual-tx-id').fill(loanTxId)
+  await page.getByTestId('manual-action').selectOption('CONFIRM_ENTRY')
+  await page.getByTestId('manual-reason').fill('E2E 支付链路：损毁归还确认入账')
+  await page.getByTestId('manual-submit').click()
+  await expect(page.getByTestId('manual-success')).toBeVisible()
+  await safeShot(page, shot('08-damaged-manual-entry.png'), secrets)
   await logoutViaUi(page)
 
   // 读者对未支付罚款建单
