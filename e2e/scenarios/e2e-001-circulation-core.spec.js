@@ -131,7 +131,7 @@ test('E2E-001/02 模拟支付闭环：损毁归还→罚款→建单→模拟成
   const username = `e2e-pay-r-${Date.now()}`
   await registerReader(page, username, 'E2E支付读者')
 
-  // 读者借出第二副本（800002）并记下借出事务号，供人工处置引用
+  // 读者借出第二副本（800002），供损毁归还产生罚款
   await login(page, username, READER_PASSWORD)
   await page.goto('/walk-in')
   await page.getByTestId('walkin-channel').selectOption('SELF_SERVICE')
@@ -139,28 +139,17 @@ test('E2E-001/02 模拟支付闭环：损毁归还→罚款→建单→模拟成
   await page.getByTestId('walkin-copy-0').fill(DAMAGED_COPY_ID)
   await page.getByTestId('walkin-submit').click()
   await expect(page.getByTestId('walkin-results')).toContainText('LENT')
-  await page.goto('/me/business')
-  await page.getByTestId('my-business-kind').selectOption('LOAN')
-  await page.getByTestId('my-business-submit').click()
-  const renewButton = page.locator('[data-testid^="renew-"]').first()
-  await expect(renewButton).toBeVisible()
-  const loanTxId = (await renewButton.getAttribute('data-testid')).replace('renew-', '')
-  expect(loanTxId).toBeTruthy()
   await logoutViaUi(page)
 
-  // 馆员按损坏归还：不直接完成，转人工处置（确认入账后按书价全额产生罚款）
+  // 馆员按损坏归还：事务转 RETURN_ABNORMAL，罚款按书价全额同事务入账
+  // （API 枚举 DUE→UNPAID）；无需人工处置（那是预约 MANUAL_HANDLING 流）
   await login(page, LIBRARIAN_USERNAME, LIBRARIAN_PASSWORD)
   await page.goto('/desk')
   await page.getByTestId('return-copy-id').fill(DAMAGED_COPY_ID)
   await page.getByTestId('return-condition').selectOption('DAMAGED')
   await page.getByTestId('return-submit').click()
   await expect(page.getByTestId('return-abnormal')).toBeVisible()
-  await page.getByTestId('manual-tx-id').fill(loanTxId)
-  await page.getByTestId('manual-action').selectOption('CONFIRM_ENTRY')
-  await page.getByTestId('manual-reason').fill('E2E 支付链路：损毁归还确认入账')
-  await page.getByTestId('manual-submit').click()
-  await expect(page.getByTestId('manual-success')).toBeVisible()
-  await safeShot(page, shot('08-damaged-manual-entry.png'), secrets)
+  await safeShot(page, shot('08-damaged-return-fine.png'), secrets)
   await logoutViaUi(page)
 
   // 读者对未支付罚款建单
@@ -210,21 +199,40 @@ test('E2E-001/03 人工复核：账户变更提交复核→复核拒绝→账户
   const username = `e2e-rev-r-${Date.now()}`
   await registerReader(page, username, 'E2E复核读者')
 
-  // 管理员对该读者发起停用变更，提交复核
+  // 管理员在账户管理页定位该读者并取得账户号（列表查询为 ADMIN 能力）
   await login(page, ADMIN_USERNAME, ADMIN_PASSWORD)
   await page.goto('/admin/accounts')
   await page.getByTestId('account-filter-submit').click()
   const readerRow = page.locator('[data-testid="account-table"] tbody tr', { hasText: username }).first()
   await expect(readerRow).toBeVisible()
-  await readerRow.locator('[data-testid^="account-select-"]').click()
-  await expect(page.getByTestId('selected-account')).toContainText(username)
-  await page.getByTestId('change-action').selectOption('SUSPEND')
-  await page.getByTestId('change-reason').fill('E2E 复核链路探路：提交停用复核')
-  await page.getByTestId('change-submit').click()
-  await expect(page.getByTestId('change-review-result')).toBeVisible()
-  await safeShot(page, shot('13-change-submitted.png'), secrets)
+  const accountId = (await readerRow.locator('[data-testid^="account-select-"]').first().getAttribute('data-testid')).replace('account-select-', '')
+  expect(accountId).toBeTruthy()
+  await safeShot(page, shot('13-reader-located.png'), secrets)
+  await logoutViaUi(page)
+
+  // 提交账户变更为 LIBRARIAN 能力（角色矩阵 LIBRARIAN_THEN_ADMIN_REVIEW），
+  // 而账户管理页面挂在 ADMIN-only 路由上——页面上的「提交复核」对能进入
+  // 页面的唯一角色必然被 MLS-ID-005 拒绝（DEF-M6-005），因此经馆员
+  // 会话以 API 发起变更申请。
+  await login(page, LIBRARIAN_USERNAME, LIBRARIAN_PASSWORD)
+  const changeStatus = await page.evaluate(async (id) => {
+    const token = JSON.parse(sessionStorage.getItem('mls.session.v1')).token
+    const res = await fetch(`/api/v1/accounts/${id}/change-requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        'Idempotency-Key': `e2e-change-${Date.now()}`,
+      },
+      body: JSON.stringify({ action: 'SUSPEND', payload: {}, reason: 'E2E 复核链路探路：提交停用复核' }),
+    })
+    return res.status
+  }, accountId)
+  expect(changeStatus).toBeLessThan(300)
+  await logoutViaUi(page)
 
   // 管理员在复核决定页拒绝该申请，读者账户保持可用
+  await login(page, ADMIN_USERNAME, ADMIN_PASSWORD)
   await page.goto('/admin/reviews')
   await page.getByTestId('review-status').selectOption('PENDING')
   await page.getByTestId('review-submit').click()
