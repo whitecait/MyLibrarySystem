@@ -51,12 +51,14 @@ const isLibrarian = computed(() => getRole() === 'LIBRARIAN')
 const isReader = computed(() => getRole() === 'READER')
 
 async function onLogout() {
+  // 本地清理先行（DEF-M6-004）：服务端注销为在途请求时用户可能已离开页面，
+  // 残留的过期令牌会让后续请求被拦截器按 MLS-ID-001 拒绝。
+  logout()
   try {
     await endCurrentSession()
   } catch {
     // 服务端会话已不可用时以本地清理为准
   }
-  logout()
   router.push({ name: 'home' })
 }
 </script>

@@ -1,5 +1,6 @@
 // HTTP/Mock Adapter 的唯一选择缝：模块门面只经 getTransport()/apiRequest() 发请求。
 // 默认模式由构建环境 VITE_API_MODE 决定；测试可经 setTransport() 覆盖。
+import { getToken } from '../auth/session'
 import { createHttpTransport } from './adapter.js'
 import { createMockTransport } from './mock/mockAdapter.js'
 
@@ -15,7 +16,8 @@ export function createTransport({ mode = resolveDefaultMode(), getToken = null, 
 let currentTransport = null
 
 export function getTransport() {
-  if (!currentTransport) currentTransport = createTransport()
+  // 默认接线会话令牌：真实请求按当前登录态携带 Bearer（DEF-M6-001）。
+  if (!currentTransport) currentTransport = createTransport({ getToken })
   return currentTransport
 }
 
