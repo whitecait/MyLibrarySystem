@@ -45,7 +45,7 @@ export function setup() {
 let queryCursor = 0
 export function reads(data) {
   const token = data.tokens[queryCursor % data.tokens.length]
-  const res = req('GET', api('/titles?search=&limit=10'), 'public_read')
+  const res = req('GET', api('/titles?q=&limit=10'), 'public_read')
   check(res, { 'search 2xx': (r) => r.status === 200 })
   const items = res.json()?.data?.items ?? []
   if (items.length > 0 && queryCursor % 3 === 0) {
@@ -57,23 +57,26 @@ export function reads(data) {
   queryCursor++
 }
 
+
 let writeCursor = 0
 export function writes(data) {
   const token = data.tokens[writeCursor % data.tokens.length]
   writeCursor++
-  // find a borrowable long-tail title (hot-set copies are all occupied in
-  // the fixed dataset), then create+cancel a reservation (two circulation
-  // writes; conflicts are expected rejections)
+  // Find a borrowable long-tail title via the contract query parameter (q=)
+  // — hot-set copies are fully occupied in the fixed dataset — then create
+  // and cancel a reservation (two circulation writes; capacity conflicts
+  // are controlled business rejections and tagged expected).
   const q = tailQueries[(writeCursor * 7) % tailQueries.length]
-  const res = req('GET', api(`/titles?search=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
+  const res = req('GET', api(`/titles?q=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
   const items = res.json()?.data?.items ?? []
   const borrowable = items.find((t) => t.availability === 'AVAILABLE')
   if (!borrowable) return
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
-  const create = req('POST', api('/reservations'), 'circulation', { titleId: String(borrowable.titleId), reservationDate: tomorrow, pickupSlot: '10:00-10:30' }, true, auth(token))
-  const txId = create.json()?.data?.txId ?? create.json()?.data?.id
+  const create = req('POST', api('/reservations'), 'circulation',
+    { titleId: String(borrowable.titleId), reservationDate: tomorrow, pickupSlot: 'PM', channel: 'ONLINE' }, true, auth(token))
+  const txId = create.json()?.data?.txId
   if (txId) {
-    req('POST', api(`/reservations/${txId}/cancel`), 'circulation', {}, true, auth(token))
+    req('POST', api(`/reservations/${txId}/cancel`), 'circulation', { reason: 'perf-load-release' }, true, auth(token))
   }
 }
 
@@ -89,20 +92,26 @@ let payCursor = 0
 export function paymentChain(data) {
   // End-to-end payment class at low rate (2/min): a reader borrows a
   // shelf-ready copy self-service, the librarian returns it DAMAGED (fine),
-  // the reader opens an order on the fine and schedules a SUCCESS simulated
-  // payment. Lost races (copy taken between list and borrow) are expected.
+  // the reader opens an order on the fine and a SUCCESS simulated payment is
+  // scheduled. Lost races (copy taken between list and borrow) are expected.
+  // Copy listing is a LIBRARIAN capability, so the staff token performs the
+  // lookup (and the simulator call); business writes stay with the reader.
   const token = data.tokens[payCursor % data.tokens.length]
   payCursor++
   const q = tailQueries[(payCursor * 11) % tailQueries.length]
-  const res = req('GET', api(`/titles?search=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
+  const res = req('GET', api(`/titles?q=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
   const items = res.json()?.data?.items ?? []
-  const title = items.find((t) => t.availability === 'AVAILABLE')
-  if (!title) return
-  const copies = req('GET', api(`/copies?titleId=${title.titleId}&status=SHELF_READY&limit=5`), 'normal_read', null, false, auth(token))
-    .json()?.data?.items ?? []
-  const copy = copies[0]
+  const candidates = items.filter((t) => t.availability === 'AVAILABLE').slice(0, 3)
+  let copy = null
+  let titleId = null
+  for (const t of candidates) {
+    const copies = req('GET', api(`/copies?titleId=${t.titleId}&status=AVAILABLE&limit=3`), 'normal_read', null, false, auth(data.librarianToken))
+      .json()?.data?.items ?? []
+    if (copies.length > 0) { copy = copies[0]; titleId = t.titleId; break }
+  }
   if (!copy) return
-  const loan = req('POST', api('/walk-in-loans'), 'circulation', { items: [{ titleId: String(title.titleId), copyId: String(copy.copyId) }], channel: 'SELF_SERVICE' }, true, auth(token))
+  const loan = req('POST', api('/walk-in-loans'), 'circulation',
+    { items: [{ titleId: String(titleId), copyId: String(copy.copyId) }], channel: 'SELF_SERVICE' }, true, auth(token))
   const lent = (loan.json()?.data?.items ?? []).some((i) => i.outcome === 'LENT')
   if (!lent) return
   req('POST', api('/returns'), 'circulation', { copyId: String(copy.copyId), condition: 'DAMAGED' }, true, auth(data.librarianToken))
@@ -113,5 +122,6 @@ export function paymentChain(data) {
   const order = req('POST', api(`/fines/${fine.fineId}/orders`), 'payment', {}, true, auth(token))
   const orderId = order.json()?.data?.orderId
   if (!orderId) return
-  req('POST', api('/payment-simulator/results'), 'payment', { orderId: String(orderId), result: 'SUCCESS', delayMs: 0, duplicateCount: 0 }, true, auth(token))
+  req('POST', api('/payment-simulator/results'), 'payment',
+    { orderId: String(orderId), result: 'SUCCESS', delayMs: 0, duplicateCount: 0 }, true, auth(data.librarianToken))
 }

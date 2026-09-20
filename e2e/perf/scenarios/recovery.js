@@ -15,8 +15,8 @@ export const options = {
 let cursor = 0
 export default function () {
   cursor++
-  req('GET', api('/titles?search=&limit=5'), 'public_read')
+  req('GET', api('/titles?q=&limit=5'), 'public_read')
   if (cursor % 5 === 0) {
-    req('GET', api('/titles?search=&limit=10'), 'public_read')
+    req('GET', api('/titles?q=&limit=10'), 'public_read')
   }
 }

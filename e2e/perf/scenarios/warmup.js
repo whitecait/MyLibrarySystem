@@ -15,7 +15,7 @@ const READERS = Number(__ENV.PROBE_READERS || 10)
 let provisioned = false
 
 export default function () {
-  req('GET', api(`/titles?search=${encodeURIComponent(RUN_ID)}&limit=5`), 'public_read')
+  req('GET', api(`/titles?q=${encodeURIComponent(RUN_ID)}&limit=5`), 'public_read')
   if (provisioned) return
   // Probe accounts come from the public registration path (dataset accounts
   // are not for login — see generate-dataset.mjs).

@@ -23,7 +23,7 @@ let cursor = 0
 export default function () {
   const q = queries[cursor % queries.length]
   cursor++
-  const res = req('GET', api(`/titles?search=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
+  const res = req('GET', api(`/titles?q=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
   check(res, { 'retrieval 2xx': (r) => r.status === 200 })
   if (cursor % 5 === 0) {
     const items = res.json()?.data?.items ?? []

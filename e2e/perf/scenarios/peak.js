@@ -21,7 +21,7 @@ export const options = {
 let cursor = 0
 export default function () {
   cursor++
-  const res = req('GET', api('/titles?search=&limit=10'), 'public_read')
+  const res = req('GET', api('/titles?q=&limit=10'), 'public_read')
   check(res, { 'peak search 2xx': (r) => r.status === 200 })
   const items = res.json()?.data?.items ?? []
   if (items.length > 0 && cursor % 4 === 0) {

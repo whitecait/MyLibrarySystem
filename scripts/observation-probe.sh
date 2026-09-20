@@ -48,7 +48,7 @@ echo "probing ${base_url} every ${interval}s -> ${out}"
 while true; do
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   health="$(probe health "${base_url}/api/health")"
-  search="$(probe search "${base_url}/api/v1/titles?search=${search_word}&limit=5")"
+  search="$(probe search "${base_url}/api/v1/titles?q=${search_word}&limit=5")"
   login="$(probe login -X POST -H 'Content-Type: application/json' --data-binary "@${body_scratch}" "${base_url}/api/v1/auth/sessions")"
   if [[ "$health" == *'"ok":true'* && "$search" == *'"ok":true'* && "$login" == *'"ok":true'* ]]; then
     ok=true
