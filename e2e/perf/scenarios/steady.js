@@ -22,6 +22,12 @@ export const options = {
 
 const READERS = Number(__ENV.PROBE_READERS || 10)
 const probePasswordLocal = probePassword
+// Long-tail query fragments: the default catalog page is dominated by the
+// hot set (top 10% titles), whose copies are fully occupied in the fixed
+// dataset — write and payment chains must target tail titles to find
+// AVAILABLE ones. Loaded via the file-reading global with the absolute
+// in-container path (the pinned k6 image does not export open from 'k6').
+const tailQueries = JSON.parse(open('/scripts/out/queries-tail.json'))
 let tokens = []
 
 export function setup() {
@@ -43,7 +49,7 @@ export function reads(data) {
   check(res, { 'search 2xx': (r) => r.status === 200 })
   const items = res.json()?.data?.items ?? []
   if (items.length > 0 && queryCursor % 3 === 0) {
-    const titleId = items[queryCursor % items.length]?.id
+    const titleId = items[queryCursor % items.length]?.titleId
     if (titleId) req('GET', api(`/titles/${titleId}`), 'public_read')
   }
   // keep some authenticated reads in the mix (normal_read class)
@@ -55,14 +61,16 @@ let writeCursor = 0
 export function writes(data) {
   const token = data.tokens[writeCursor % data.tokens.length]
   writeCursor++
-  // find a borrowable title from public availability, then create+cancel a
-  // reservation (two circulation writes; conflicts are expected rejections)
-  const res = req('GET', api('/titles?search=&limit=10'), 'public_read')
+  // find a borrowable long-tail title (hot-set copies are all occupied in
+  // the fixed dataset), then create+cancel a reservation (two circulation
+  // writes; conflicts are expected rejections)
+  const q = tailQueries[(writeCursor * 7) % tailQueries.length]
+  const res = req('GET', api(`/titles?search=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
   const items = res.json()?.data?.items ?? []
   const borrowable = items.find((t) => t.availability === 'AVAILABLE')
   if (!borrowable) return
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
-  const create = req('POST', api('/reservations'), 'circulation', { titleId: borrowable.id, reservationDate: tomorrow, pickupSlot: '10:00-10:30' }, true, auth(token))
+  const create = req('POST', api('/reservations'), 'circulation', { titleId: String(borrowable.titleId), reservationDate: tomorrow, pickupSlot: '10:00-10:30' }, true, auth(token))
   const txId = create.json()?.data?.txId ?? create.json()?.data?.id
   if (txId) {
     req('POST', api(`/reservations/${txId}/cancel`), 'circulation', {}, true, auth(token))
@@ -85,15 +93,16 @@ export function paymentChain(data) {
   // payment. Lost races (copy taken between list and borrow) are expected.
   const token = data.tokens[payCursor % data.tokens.length]
   payCursor++
-  const res = req('GET', api('/titles?search=&limit=10'), 'public_read')
+  const q = tailQueries[(payCursor * 11) % tailQueries.length]
+  const res = req('GET', api(`/titles?search=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
   const items = res.json()?.data?.items ?? []
   const title = items.find((t) => t.availability === 'AVAILABLE')
   if (!title) return
-  const copies = req('GET', api(`/copies?titleId=${title.id}&status=SHELF_READY&limit=5`), 'normal_read', null, false, auth(token))
+  const copies = req('GET', api(`/copies?titleId=${title.titleId}&status=SHELF_READY&limit=5`), 'normal_read', null, false, auth(token))
     .json()?.data?.items ?? []
   const copy = copies[0]
   if (!copy) return
-  const loan = req('POST', api('/walk-in-loans'), 'circulation', { items: [{ titleId: String(title.id), copyId: String(copy.copyId) }], channel: 'SELF_SERVICE' }, true, auth(token))
+  const loan = req('POST', api('/walk-in-loans'), 'circulation', { items: [{ titleId: String(title.titleId), copyId: String(copy.copyId) }], channel: 'SELF_SERVICE' }, true, auth(token))
   const lent = (loan.json()?.data?.items ?? []).some((i) => i.outcome === 'LENT')
   if (!lent) return
   req('POST', api('/returns'), 'circulation', { copyId: String(copy.copyId), condition: 'DAMAGED' }, true, auth(data.librarianToken))

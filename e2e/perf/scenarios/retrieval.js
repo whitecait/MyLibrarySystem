@@ -27,6 +27,6 @@ export default function () {
   check(res, { 'retrieval 2xx': (r) => r.status === 200 })
   if (cursor % 5 === 0) {
     const items = res.json()?.data?.items ?? []
-    if (items.length > 0) req('GET', api(`/titles/${items[0].id}`), 'public_read')
+    if (items.length > 0) req('GET', api(`/titles/${items[0].titleId}`), 'public_read')
   }
 }

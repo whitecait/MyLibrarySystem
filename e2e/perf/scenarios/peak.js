@@ -25,7 +25,7 @@ export default function () {
   check(res, { 'peak search 2xx': (r) => r.status === 200 })
   const items = res.json()?.data?.items ?? []
   if (items.length > 0 && cursor % 4 === 0) {
-    req('GET', api(`/titles/${items[cursor % items.length].id}`), 'public_read')
+    req('GET', api(`/titles/${items[cursor % items.length].titleId}`), 'public_read')
   }
   if (cursor % 20 === 0) {
     // occasional login keeps the normal_read class represented under peak

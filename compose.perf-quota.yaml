@@ -31,6 +31,10 @@ services:
   k6:
     image: grafana/k6:${K6_IMAGE_TAG:?Capture tag@digest at first pull and pin K6_IMAGE_TAG}
     profiles: [perf]
+    # The k6 image defaults to uid 12345, which cannot write the summary
+    # exports into the host-owned ./e2e/perf/out bind mount; match the host
+    # user that owns the checkout.
+    user: '1000:1000'
     volumes:
       - ./e2e/perf:/scripts:ro
       # outputs are written through a writable submount (k6 summary exports)
