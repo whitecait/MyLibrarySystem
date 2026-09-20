@@ -40,8 +40,11 @@ export function classify(res, className, expected = false) {
 export function req(method, url, className, body = null, expected = false, headers = {}) {
   // Every mutating endpoint declares Idempotency-Key as a required header
   // (including login); a missing key is a 400 before any business logic runs.
+  // JSON bodies need the content type spelled out — k6 does not set it for
+  // pre-serialized strings, and Spring rejects the parse in ~1ms.
   const h = { ...headers }
   if (method !== 'GET' && !h['Idempotency-Key']) h['Idempotency-Key'] = idemKey()
+  if (body !== null && !h['Content-Type']) h['Content-Type'] = 'application/json'
   const params = { tags: { class: className, expected: String(expected) }, headers: h }
   const res = body === null ? http.request(method, url, null, params) : http.request(method, url, JSON.stringify(body), params)
   classify(res, className, expected)
