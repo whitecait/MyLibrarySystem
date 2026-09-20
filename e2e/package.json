@@ -1,0 +1,21 @@
+{
+  "name": "mls-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "M6 acceptance harness: Playwright + axe-core browser matrix, k6 performance scenarios, datasets and AI endpoint verification.",
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
+  "scripts": {
+    "browsers:verify": "node browsers/verify-matrix.mjs",
+    "endpoint:selftest": "node ai-endpoint/verify-endpoint.test.mjs",
+    "dataset:generate": "node data/generate-dataset.mjs",
+    "fixtures:render": "node data/functional/render-fixtures.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "^1.49.0",
+    "bcryptjs": "^2.4.3"
+  }
+}

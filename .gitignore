@@ -87,3 +87,23 @@ library-frontend/reports/
 !scripts/test-database-readiness.sh
 !scripts/check-review-docs.py
 !scripts/audit-g34-review.py
+# --- M6 acceptance harness (2026-09-19) ---
+!compose.acceptance.yaml
+!compose.perf-quota.yaml
+!compose.payment-egress.yaml
+!e2e/
+!e2e/**
+# re-ignore within e2e (whitelisted above)
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/perf/out/
+e2e/data/out/
+!scripts/prepare-acceptance-env.sh
+!scripts/collect-ai-connection-evidence.sh
+!scripts/collect-evidence-secret-values.sh
+!scripts/check-sensitive-evidence-deep.sh
+!scripts/observation-probe.sh
+!scripts/observation-report.mjs
+!scripts/drill-backup-restore.sh
+!scripts/payment-egress-audit.sh

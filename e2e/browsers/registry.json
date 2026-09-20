@@ -1,0 +1,91 @@
+{
+  "registeredAt": "2026-09-19",
+  "policy": {
+    "scope": "NFR-CMP-0001: desktop Chrome/Edge/Firefox current stable and previous stable major version. No native mobile apps, no screen-reader matrix.",
+    "registration": "Every entry must record version, install source, isolated profile dir, executable path and auto-update policy before execution. Entries are filled during Env-W preparation; null fields mean not yet registered.",
+    "autoUpdate": "Browser auto-update is disabled for the acceptance window (per-browser policy field); the six installs stay frozen while AT-0017 runs.",
+    "isolation": "Each browser uses its own persistent profile directory under artifacts/m6-acceptance/browser-profiles/<id> (untracked) so evidence cannot leak session state between entries.",
+    "axe": "axe-core is auxiliary only; keyboard, focus, layout and contrast are judged per NFR-CMP-0001 by Playwright assertions plus manual inspection.",
+    "fallback": "A combination Playwright cannot drive is executed by the manual procedure in e2e/README.md §Manual fallback and registered with its evidence."
+  },
+  "browsers": [
+    {
+      "id": "chrome-current",
+      "family": "chrome",
+      "slot": "current-stable",
+      "version": null,
+      "installSource": null,
+      "executablePath": null,
+      "playwrightChannel": "chrome",
+      "profileDir": null,
+      "autoUpdateDisabled": null,
+      "drivable": null,
+      "verifiedAt": null
+    },
+    {
+      "id": "chrome-previous",
+      "family": "chrome",
+      "slot": "previous-stable-major",
+      "version": null,
+      "installSource": null,
+      "executablePath": null,
+      "playwrightChannel": null,
+      "profileDir": null,
+      "autoUpdateDisabled": null,
+      "drivable": null,
+      "verifiedAt": null
+    },
+    {
+      "id": "edge-current",
+      "family": "edge",
+      "slot": "current-stable",
+      "version": null,
+      "installSource": null,
+      "executablePath": null,
+      "playwrightChannel": "msedge",
+      "profileDir": null,
+      "autoUpdateDisabled": null,
+      "drivable": null,
+      "verifiedAt": null
+    },
+    {
+      "id": "edge-previous",
+      "family": "edge",
+      "slot": "previous-stable-major",
+      "version": null,
+      "installSource": null,
+      "executablePath": null,
+      "playwrightChannel": null,
+      "profileDir": null,
+      "autoUpdateDisabled": null,
+      "drivable": null,
+      "verifiedAt": null
+    },
+    {
+      "id": "firefox-current",
+      "family": "firefox",
+      "slot": "current-stable",
+      "version": null,
+      "installSource": null,
+      "executablePath": null,
+      "playwrightChannel": "firefox",
+      "profileDir": null,
+      "autoUpdateDisabled": null,
+      "drivable": null,
+      "verifiedAt": null
+    },
+    {
+      "id": "firefox-previous",
+      "family": "firefox",
+      "slot": "previous-stable-major",
+      "version": null,
+      "installSource": null,
+      "executablePath": null,
+      "playwrightChannel": null,
+      "profileDir": null,
+      "autoUpdateDisabled": null,
+      "drivable": null,
+      "verifiedAt": null
+    }
+  ]
+}

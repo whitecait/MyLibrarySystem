@@ -1,0 +1,16 @@
+# Payment-batch egress isolation (NFR-SEC-0001 / AT-0001 §4 zero real
+# payment-network evidence). While this overlay is applied, the project's
+# default network is internal: containers get no external route at all, so a
+# real payment call cannot succeed silently — the isolation itself is the
+# evidence, recorded by scripts/payment-egress-audit.sh over the actual
+# payment execution window.
+#
+# Do NOT run the real-model AI cases under this overlay: the AI endpoint also
+# becomes unreachable. Payment batches and AI batches use separate windows.
+#
+#   docker compose -f compose.yaml -f compose.payment-egress.yaml \
+#     -f compose.observability.yaml -p <payment-project> up -d
+services: {}
+networks:
+  default:
+    internal: true

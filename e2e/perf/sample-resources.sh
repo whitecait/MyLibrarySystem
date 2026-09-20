@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Resource sampler for the M6 performance protocol (RA-0013 §11 saturation
+# criteria; six dimensions: CPU, memory, GC, thread pool, connection pool,
+# database lock waits). Samples every INTERVAL seconds until SIGTERM:
+#   docker-stats.csv    per-container CPU% and memory (docker stats)
+#   metrics-<ts>.log    backend /actuator/prometheus extracts (GC, pools)
+#   db-samples.csv      lock waiters + deadlocks (pg_locks/pg_stat_database)
+#
+#   bash e2e/perf/sample-resources.sh <compose-project> <out-dir> [interval-s]
+set -Eeuo pipefail
+cd "$(dirname "$0")/../.."
+
+project="${1:?usage: sample-resources.sh <compose-project> <out-dir> [interval-s]}"
+out_dir="${2:?usage: sample-resources.sh <compose-project> <out-dir> [interval-s]}"
+interval="${3:-5}"
+mkdir -p "$out_dir"
+
+compose() { docker compose -p "$project" "$@"; }
+
+echo "timestamp,container,cpu_pct,mem_used,mem_limit" > "$out_dir/docker-stats.csv"
+echo "timestamp,lock_waiters,deadlocks" > "$out_dir/db-samples.csv"
+
+while true; do
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  docker stats --no-stream --format '{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}' \
+    | grep "^${project}-" | while IFS=$'\t' read -r name cpu mem; do
+        mem_used="${mem%%/*}"
+        mem_limit="${mem##*/}"
+        printf '%s,%s,%s,%s,%s\n' "$ts" "$name" "$cpu" "$mem_used" "$mem_limit"
+      done >> "$out_dir/docker-stats.csv"
+
+  compose exec -T database psql -U library -d library -tA -c \
+    "SELECT (SELECT count(*) FROM pg_locks WHERE NOT granted), (SELECT deadlocks FROM pg_stat_database WHERE datname='library');" \
+    2>/dev/null | { IFS='|' read -r waiters deadlocks || true; printf '%s,%s,%s\n' "$ts" "${waiters:-}" "${deadlocks:-}" >> "$out_dir/db-samples.csv"; } || true
+
+  {
+    echo "# SAMPLE $ts"
+    compose exec -T backend curl -s http://localhost:8080/actuator/prometheus 2>/dev/null \
+      | grep -E '^(jvm_gc_pause_seconds|hikaricp_connections_(active|max)|tomcat_threads_(busy|config_max))' || true
+  } >> "$out_dir/metrics-samples.log" 2>/dev/null || true
+
+  sleep "$interval" &
+  wait "$!" || true
+done

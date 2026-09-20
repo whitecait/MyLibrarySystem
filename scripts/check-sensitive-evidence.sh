@@ -6,6 +6,9 @@ if (( $# < 2 )); then
   exit 2
 fi
 
+# Exit gate: a missing scan tool must fail loudly, never read as a clean scan.
+command -v rg >/dev/null 2>&1 || { echo 'rg is not available; scanner cannot run' >&2; exit 2; }
+
 evidence="$1"
 shift
 test -d "$evidence"

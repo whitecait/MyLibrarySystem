@@ -1,0 +1,31 @@
+# M6 acceptance overlay: wires the backend to the real OpenAI-compatible
+# endpoint. Prepare the environment first, then stack up:
+#
+#   bash scripts/prepare-acceptance-env.sh            # validates .env, writes .env.acceptance
+#   docker compose --env-file .env --env-file .env.acceptance \
+#     -f compose.yaml -f compose.acceptance.yaml \
+#     [-f compose.observability.yaml] -p <project> up -d
+#
+# URL semantics, resolved explicitly (acceptance plan 2026-09-19, item 2.2):
+#   - .env BASE_URL is the PROVIDER BASE address including the API prefix
+#     (for example https://host/v1, no trailing slash). The endpoint-level
+#     smoke (e2e/ai-endpoint/verify-endpoint.mjs) consumes BASE_URL directly
+#     and appends operation paths itself.
+#   - The backend AI_ENDPOINT_URL is the FULL chat/completions address; the
+#     application does not append any path (compose.integration.yaml wires
+#     the stub with a full path the same way).
+#   - scripts/prepare-acceptance-env.sh rejects a BASE_URL with a trailing
+#     slash and writes AI_ENDPOINT_URL=<BASE_URL>/chat/completions into the
+#     ignored .env.acceptance, which this overlay consumes.
+#
+# Run-evidence requirement (same plan item): endpoint smoke passing is not
+# sufficient. scripts/collect-ai-connection-evidence.sh must record, from the
+# running stack, the model name, the redacted endpoint host, AI request
+# counts (ai_event/ai_visitor_quota_usage) and tool-call events, proving the
+# application actually reached the real model.
+services:
+  backend:
+    environment:
+      AI_ENDPOINT_URL: ${AI_ENDPOINT_URL:?Run scripts/prepare-acceptance-env.sh first}
+      AI_MODEL: ${AI_MODEL:?Set MODEL in .env and run scripts/prepare-acceptance-env.sh}
+      AI_API_KEY: ${AI_API_KEY:?Set API_KEY in .env and run scripts/prepare-acceptance-env.sh}

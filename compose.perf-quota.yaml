@@ -1,0 +1,64 @@
+# RA-0013 §11 environment [E] per-container quotas (MLS-DEC-0025, 2026-09-10).
+# Quotas are ceilings, not runtime requirements; totals are 4 CPU and about
+# 7.25 GiB. Apply on top of the base and observability overlays:
+#
+#   docker compose -f compose.yaml -f compose.observability.yaml \
+#     -f compose.perf-quota.yaml -p <perf-project> up -d
+#
+# The k6 service is injected container-side (profiles [perf], so plain up
+# never starts it). Its image tag@digest is captured at first pull on the
+# execution host and pinned via K6_IMAGE_TAG, following the
+# compose.observability.yaml digest-freeze precedent.
+services:
+  backend:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2560m
+  database:
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2048m
+  frontend:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256m
+  k6:
+    image: grafana/k6:${K6_IMAGE_TAG:?Capture tag@digest at first pull and pin K6_IMAGE_TAG}
+    profiles: [perf]
+    volumes:
+      - ./e2e/perf:/scripts:ro
+      # outputs are written through a writable submount (k6 summary exports)
+      - ./e2e/perf/out:/scripts/out
+    # Output files land in e2e/perf/out (gitignored); K6_OUTPUT_DIR is the
+    # in-container path.
+    environment:
+      K6_OUTPUT_DIR: /scripts/out
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512m
+  prometheus:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1024m
+  grafana:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512m
+  otel-collector:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512m
