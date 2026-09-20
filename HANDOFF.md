@@ -14,7 +14,7 @@
 
 ## 已完成事实
 
-本节登记截至 2026-09-17 已确认的完成事实。被取代的历史过程细节已从本页删除，原文可依 git 提交历史追溯。
+本节登记截至 2026-09-18 已确认的完成事实。被取代的历史过程细节已从本页删除，原文可依 git 提交历史追溯。
 
 ### 需求与阶段评审
 
@@ -152,6 +152,12 @@
 - 基础 Compose 空库、保留卷和第二空库三阶段均通过，迁移历史为 V1～V9 且保留卷重建前后一致；修复了旧脚本的 V1～V9 SQL 引号和已失效的 B1 占位文案断言。根 `scripts/verify.sh` 已纳入 B5 跨侧集成门禁。
 - 集成证据不保存原始访客 Cookie、Bearer token 或 Cookie 签名秘密；真实 Cookie 只在一次性临时目录中使用，清理时删除。Windows `E2E-001`、`E2E-AI-001`、Grafana 实页和真实模型端点 smoke 未执行，不构成产品验收完成。
 
+### 2026-09-18 AI 事件会话绑定与 AI 工具矩阵补齐
+
+- 前端提交 `ee0ec24`（fix(frontend): bind AI events to active session）：`listAiEvents` 增加 `sessionId` 路径参数，AI 助手事件流展开时按当前活动会话加载（`src/modules/ai/index.js`、`internal/AiAssistantView.vue`），模块与组件测试补充会话绑定断言，防止事件流跨会话串读。
+- 后端提交 `e4eb4ee`（fix(backend): complete approved AI tool matrix）：`ToolRegistry` 按已批准角色能力矩阵补齐 L3 导航动作（19 项 `open_*`）并修正 L2 预填动作的能力归属（读者本人/馆员），`AiModuleTest` 扩展对应矩阵断言。
+- 两笔提交均为 M5 收口后的缺陷修复；门禁复跑与 M6 系统验收属后续执行事项，本节不登记验收结论。
+
 ## 未完成责任
 
 本表与 [TODO.md](TODO.md) 当前待办按类别对应，逐项完成条件以 TODO.md 和 REV-0005 §3 为准：
@@ -164,6 +170,8 @@
 原型及 `artifacts/` 取证目录不入库；历史交接原文可经提交 `3181a9f` 恢复，不意味着本地证据已随 git 发布。
 
 ## 修订记录
+
+- 2026-09-19：补登 2026-09-18 两笔 AI 修复提交（`ee0ec24`、`e4eb4ee`）小节；「已完成事实」日期戳修正至 2026-09-18。仅登记提交事实，不新增批准结论。
 
 - 2026-09-18：修复 B5 集成证据门禁：登录响应仅保留在一次性 scratch，curl 敏感头不进入命令参数，`rg --no-ignore --hidden` 覆盖 ignored evidence；补列真实模型端点 smoke 为 M6 后置项。
 
