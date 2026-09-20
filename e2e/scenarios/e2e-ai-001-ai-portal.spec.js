@@ -236,13 +236,16 @@ test('E2E-AI-001/05 额度触顶：访客共享池耗尽后明确告知并停发
   await page.goto('/assistant')
   await expect(page.getByTestId('ai-role')).toHaveText('VISITOR')
 
-  // Env-W 配置 AI_VISITOR_DAILY_LIMIT=3；本 spec 前序访客调用已消耗部分
-  // 池额，循环发送直至耗尽（上限保护避免死循环）。每次发送后与
-  // 「新回答出现 / 耗尽提示出现」竞速，超额失败不等模型回合。
+  // Env-W 配置 AI_VISITOR_DAILY_LIMIT=8；本 spec 前序访客调用已消耗部分
+  // 池额，循环发送直至耗尽（上限保护避免死循环）。每轮先等上一轮发送
+  // 退出 loading（在途请求期间按钮 disabled），再判断耗尽提示后发送；
+  // 超额失败不等模型回合，与「新回答出现 / 耗尽提示出现」竞速。
   let guard = 0
-  while (guard < 5) {
+  while (guard < 6) {
     guard++
+    await expect(page.getByTestId('ai-send')).not.toHaveClass(/is-loading/, { timeout: 180_000 }).catch(() => {})
     if (await page.getByTestId('ai-quota-exhausted').count() > 0) break
+    if (await page.getByTestId('ai-send').isDisabled()) break
     await page.getByTestId('ai-input').fill('请检索一本关于操作系统原理的书')
     await page.getByTestId('ai-send').click()
     await Promise.race([
