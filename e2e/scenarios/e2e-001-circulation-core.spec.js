@@ -1,8 +1,8 @@
 // @ts-check
 // E2E-001: circulation core flow on the real acceptance stack (acceptance
-// plan 2026-09-19). Three sequential scenarios over the seeded probe
-// dataset (artifacts/m6-acceptance/phase3/probe-seed.sql, Env-W project
-// m6-acceptance):
+// plan 2026-09-19). Three self-contained sequential scenarios over the
+// seeded probe dataset (artifacts/m6-acceptance/phase3/probe-seed.sql, Env-W
+// project m6-acceptance):
 //   01 register → login → search → detail → walk-in loan → renew →
 //      librarian return, plus server-side session teardown verification
 //      (the sign-out request must carry the Bearer token, and the old token
@@ -15,6 +15,9 @@
 //
 // Required seed: book_title 700001, book_copy 800001/800002 SHELF_READY,
 // throwaway accounts e2e-librarian (600001) and e2e-admin (600002).
+// Re-run prerequisite: bash artifacts/m6-acceptance/phase3/reset-probe-data.sh
+// (the DAMAGED return leaves copy 800002 in MAINTENANCE until reset).
+// Each scenario registers its own reader: no cross-test shared state.
 // Evidence policy: no HAR, no storageState; screenshots only via safe-shot.
 import { test, expect } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
@@ -37,7 +40,14 @@ const secrets = loadSecretValues([
   fileURLToPath(new URL('../../.env.acceptance', import.meta.url)),
 ])
 
-let readerUsername = null
+async function registerReader(page, username, displayName) {
+  await page.goto('/register')
+  await page.getByTestId('register-username').fill(username)
+  await page.getByTestId('register-password').fill(READER_PASSWORD)
+  await page.getByTestId('register-display-name').fill(displayName)
+  await page.getByTestId('register-submit').click()
+  await expect(page.getByTestId('register-success')).toBeVisible()
+}
 
 async function login(page, username, password) {
   await page.goto('/login')
@@ -56,17 +66,12 @@ test('E2E-001/01 流通主流程与登出会话终结：注册→登录→检索
   test.setTimeout(180_000)
   mkdirSync(evidenceDir, { recursive: true })
   const shot = (name) => join(evidenceDir, name)
-  readerUsername = `e2e-r-${Date.now()}`
+  const username = `e2e-r-${Date.now()}`
 
-  await page.goto('/register')
-  await page.getByTestId('register-username').fill(readerUsername)
-  await page.getByTestId('register-password').fill(READER_PASSWORD)
-  await page.getByTestId('register-display-name').fill('E2E探路读者')
-  await page.getByTestId('register-submit').click()
-  await expect(page.getByTestId('register-success')).toBeVisible()
+  await registerReader(page, username, 'E2E探路读者')
   await safeShot(page, shot('01-register-success.png'), secrets)
 
-  await login(page, readerUsername, READER_PASSWORD)
+  await login(page, username, READER_PASSWORD)
   // 抓取当前令牌：登出后必须验证该令牌在服务端已失效（DEF-M6-004 重开）
   const oldToken = await page.evaluate(() => JSON.parse(sessionStorage.getItem('mls.session.v1')).token)
   expect(oldToken).toBeTruthy()
@@ -123,10 +128,11 @@ test('E2E-001/01 流通主流程与登出会话终结：注册→登录→检索
 test('E2E-001/02 模拟支付闭环：损毁归还→罚款→建单→模拟成功→已支付', async ({ page }) => {
   test.setTimeout(180_000)
   const shot = (name) => join(evidenceDir, name)
-  expect(readerUsername).toBeTruthy()
+  const username = `e2e-pay-r-${Date.now()}`
+  await registerReader(page, username, 'E2E支付读者')
 
   // 读者借出第二副本（800002），供损毁归还产生罚款
-  await login(page, readerUsername, READER_PASSWORD)
+  await login(page, username, READER_PASSWORD)
   await page.goto('/walk-in')
   await page.getByTestId('walkin-channel').selectOption('SELF_SERVICE')
   await page.getByTestId('walkin-title-0').fill(TITLE_ID)
@@ -146,7 +152,7 @@ test('E2E-001/02 模拟支付闭环：损毁归还→罚款→建单→模拟成
   await logoutViaUi(page)
 
   // 读者对未支付罚款建单
-  await login(page, readerUsername, READER_PASSWORD)
+  await login(page, username, READER_PASSWORD)
   await page.goto('/fines')
   await page.getByTestId('fines-status').selectOption('UNPAID')
   await page.getByTestId('fines-submit').click()
@@ -177,7 +183,7 @@ test('E2E-001/02 模拟支付闭环：损毁归还→罚款→建单→模拟成
 
   // 回调落地后罚款转为已支付（近实时回调，留出落地余量再查）
   await page.waitForTimeout(2000)
-  await login(page, readerUsername, READER_PASSWORD)
+  await login(page, username, READER_PASSWORD)
   await page.goto('/fines')
   await page.getByTestId('fines-status').selectOption('PAID')
   await page.getByTestId('fines-submit').click()
@@ -189,16 +195,17 @@ test('E2E-001/02 模拟支付闭环：损毁归还→罚款→建单→模拟成
 test('E2E-001/03 人工复核：账户变更提交复核→复核拒绝→账户保持可用', async ({ page }) => {
   test.setTimeout(180_000)
   const shot = (name) => join(evidenceDir, name)
-  expect(readerUsername).toBeTruthy()
+  const username = `e2e-rev-r-${Date.now()}`
+  await registerReader(page, username, 'E2E复核读者')
 
   // 管理员对该读者发起停用变更，提交复核
   await login(page, ADMIN_USERNAME, ADMIN_PASSWORD)
   await page.goto('/admin/accounts')
   await page.getByTestId('account-filter-submit').click()
-  const readerRow = page.locator('[data-testid="account-table"] tbody tr', { hasText: readerUsername }).first()
+  const readerRow = page.locator('[data-testid="account-table"] tbody tr', { hasText: username }).first()
   await expect(readerRow).toBeVisible()
   await readerRow.locator('[data-testid^="account-select-"]').click()
-  await expect(page.getByTestId('selected-account')).toContainText(readerUsername)
+  await expect(page.getByTestId('selected-account')).toContainText(username)
   await page.getByTestId('change-action').selectOption('SUSPEND')
   await page.getByTestId('change-reason').fill('E2E 复核链路探路：提交停用复核')
   await page.getByTestId('change-submit').click()
@@ -220,7 +227,7 @@ test('E2E-001/03 人工复核：账户变更提交复核→复核拒绝→账户
   await logoutViaUi(page)
 
   // 复核被拒后读者仍可登录（停用未生效）
-  await login(page, readerUsername, READER_PASSWORD)
+  await login(page, username, READER_PASSWORD)
   await safeShot(page, shot('15-reader-still-active.png'), secrets)
   await logoutViaUi(page)
 })
