@@ -23,6 +23,8 @@
 
 - [ ] 使用真实 OpenAI-compatible 模型端点执行 smoke；该项不由脚本化模型 Adapter 的集成通过替代，并与 Windows 原生实页验证一并后置。
 - [ ] 执行系统测试与产品验收，按批准验收定义覆盖正常、权限拒绝、状态冲突、重复、并发、恢复与 AI 权限一致性。
+- [ ] DEF-M6-007 修复：复核三端点控制器层鉴权对齐契约（`GET /reviews`→LIBRARIAN_OR_ADMIN、`POST /reviews`→LIBRARIAN、`POST /reviews/{id}/decision`→ADMIN）＋READER/LIBRARIAN/ADMIN 交叉负例 403 测试；Sev-2，M6 收口前清零，优先于 005-b（2026-09-20 lingzz 裁定）。
+- [ ] DEF-M6-005-b 实施：identity 模块内独立馆员发起页面（新路由 `roles:['LIBRARIAN']`＋AppShell 导航入口、表单迁移、accountId 手工录入）；E2E-001/03 改回真实 UI 发起路径（2026-09-20 lingzz 裁定方向 b）。
 
 ## 已完成事实
 
@@ -30,6 +32,7 @@
 
 ## 修订记录
 
+- 2026-09-20：新增下一批次两项待办（DEF-M6-007 修复、DEF-M6-005-b 实施），来源为同日 lingzz grill 两轮裁定；均须 M6 收口前完成。
 - 2026-09-20：勾选两项 M5 后置验证（Grafana 实页取证、E2E-001/E2E-AI-001 实页场景），均在 Windows 原生环境完成并归档证据；M6 系统测试与产品验收待办不变。
 - 2026-09-18：补列真实 OpenAI-compatible 模型端点 smoke 为 M6 后置项；脚本化模型集成通过不等同于真实端点验证完成。
 

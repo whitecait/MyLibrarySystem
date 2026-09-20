@@ -37,7 +37,7 @@
 
 - 2026-09-20 阶段 3 补齐与修复轮（Windows 侧执行，双仓库 ff 同步，提交 dd43ea8…d57f4bd + a97b051）：登出回归修复（DEF-M6-004 重开后闭环：注销请求带令牌先行、本地清理入 finally，组件测试＋实栈旧令牌 401 断言）；观察统计工具补窗口完整性/缺测判定；性能 harness 接线修复（overlay 显式钉死、k6 变量透传、幂等键与 Content-Type 注入、稳态补 audit/payment 两类负载）并经 Env-W 60 秒校准（checks 100%、零意外失败）。
 - E2E 覆盖补齐并实跑全绿：E2E-001 三场景（主流程+登出会话终结、损毁归还→罚款→建单→模拟支付→PAID、账户变更复核发起/拒绝）；E2E-AI-001 五场景（访客基线、读者/馆员角色矩阵、跨访客会话所有权拒绝、L2 预填提交与取消＋L3 引导、额度触顶停发）。
-- 新缺陷登记与处置：DEF-M6-005（复核发起表单页面-权限错配，登记待 lingzz 裁定）；DEF-M6-006（模拟支付回调未投递，Sev-2，已修复并经实栈复测闭环）。缺陷台账与阶段 3 全部证据镜像至 `artifacts/m6-acceptance/`。
+- 新缺陷登记与处置：DEF-M6-005（复核发起表单页面-权限错配，2026-09-20 lingzz 裁定方向 b·表单迁移，排期下一批次实施）；DEF-M6-006（模拟支付回调未投递，Sev-2，已修复并经实栈复测闭环）；DEF-M6-007（复核三端点鉴权缺失，Sev-2，登记排期下一批次，见下文裁定落账节）。缺陷台账与阶段 3 全部证据镜像至 `artifacts/m6-acceptance/`。
 - 浏览器矩阵 precondition 就绪：Chrome 153/152、Edge 147、Firefox 155 四项 Playwright 驱动验证通过；Firefox 156 与 Edge 146 按人工规程登记（`e2e/browsers/registry.json`）。
 - lingzz 口头裁定（2026-09-20，过程记录）：个人开发项目，Env-O 七日观察不真实等待后虚拟签署；部署探针后持续运行、保持 devops 改进，正式签署时点由 lingzz 决定。
 
@@ -166,6 +166,12 @@
 - 后端提交 `e4eb4ee`（fix(backend): complete approved AI tool matrix）：`ToolRegistry` 按已批准角色能力矩阵补齐 L3 导航动作（19 项 `open_*`）并修正 L2 预填动作的能力归属（读者本人/馆员），`AiModuleTest` 扩展对应矩阵断言。
 - 两笔提交均为 M5 收口后的缺陷修复；门禁复跑与 M6 系统验收属后续执行事项，本节不登记验收结论。
 
+### 2026-09-20 M6 验收阻塞裁定落账（DEF-M6-005/007，阶段 4 前置）
+
+- DEF-M6-005 裁定（lingzz，2026-09-20，经 grill 两轮裁定）：方向 b·表单迁移——identity 模块内独立馆员页面（新路由 `roles:['LIBRARIAN']`＋AppShell 馆员导航入口），accountId 手工录入（沿用 `/walk-in` DESK 渠道 `walkin-reader-id` 先例），后端与契约零改动；实施时 E2E-001/03 改回真实 UI 发起路径。台账原引 "AT-0002 §2.12" 勘误为 §2.3（MLS-AT-0003）。
+- DEF-M6-007 新登记（Sev-2）：复核三端点（`GET /reviews`＝LIBRARIAN_OR_ADMIN、`POST /reviews`＝LIBRARIAN、`POST /reviews/{id}/decision`＝ADMIN）实现只查认证不查角色，任何登录角色（含读者）可直发复核、决定复核、列出待复核清单，违反 AT-0002 §2.3 R5。修复边界（lingzz 裁定）＝控制器层对齐契约补角色检查（循 `CirculationController.java:381,392`、`SettlementController.java:29` 先例）＋READER/LIBRARIAN/ADMIN 交叉负例 403 测试；复测要求＝负例绿＋读者经 decision approve 不落地账户变更核实＋`mvnw clean verify` 全绿。
+- 下一批次任务：DEF-M6-007 修复（先行，Sev-2 清零门禁）＋DEF-M6-005-b 实施（馆员页面、表单迁移、E2E 改真实路径），均须 M6 收口前完成；不阻塞阶段 4 Env-P/AT-0016 与 Env-O 上线（AT-0016 负载与 Env-O 可用率探针均不触达复核端点，窗口受影响情况在 007 修复落地时按窗口内变更规则另行做证据影响分析）。
+
 ## 未完成责任
 
 本表与 [TODO.md](TODO.md) 当前待办按类别对应，逐项完成条件以 TODO.md 和 REV-0005 §3 为准：
@@ -178,6 +184,8 @@
 原型及 `artifacts/` 取证目录不入库；历史交接原文可经提交 `3181a9f` 恢复，不意味着本地证据已随 git 发布。
 
 ## 修订记录
+
+- 2026-09-20：登记 M6 验收阻塞裁定落账（DEF-M6-005 裁定方向 b·表单迁移、DEF-M6-007 新登记 Sev-2）与下一批次排期；lingzz 经 grill 两轮裁定，本页仅登记过程事实。
 
 - 2026-09-19：补登 2026-09-18 两笔 AI 修复提交（`ee0ec24`、`e4eb4ee`）小节；「已完成事实」日期戳修正至 2026-09-18。仅登记提交事实，不新增批准结论。
 
