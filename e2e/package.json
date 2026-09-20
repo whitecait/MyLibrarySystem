@@ -5,7 +5,7 @@
   "type": "module",
   "description": "M6 acceptance harness: Playwright + axe-core browser matrix, k6 performance scenarios, datasets and AI endpoint verification.",
   "engines": {
-    "node": ">=22.12.0 <23"
+    "node": ">=22.12.0 <25"
   },
   "scripts": {
     "browsers:verify": "node browsers/verify-matrix.mjs",
