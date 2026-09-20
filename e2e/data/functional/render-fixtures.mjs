@@ -10,16 +10,18 @@
 //   at-0029-annotation.json  the DEC-0027-approved query annotation set v1.1
 //   manifest.json          SHA-256 checksums of the three files
 //
-// All fixture accounts share one bcrypt hash (fixed salt) of the documented
+// All fixture accounts share one password hash (fixed salt) of the documented
 // fixture password "M6-Fixture-2026!" — a controlled local learning
 // credential printed here because executors must log in as these readers;
-// the dataset instances are never exposed beyond Env-W/Env-P.
-import { createHash } from 'node:crypto'
+// the dataset instances are never exposed beyond Env-W/Env-P. The hash uses
+// the backend's own PBKDF2 format (PasswordHasher: PBKDF2WithHmacSHA256,
+// 210000 iterations, 16-byte hex salt, 256-bit hex key); bcrypt is not
+// readable by the backend and would make every fixture account unloginnable.
+import { createHash, pbkdf2Sync } from 'node:crypto'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import bcryptjs from 'bcryptjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const outDir = resolve(argValue('--out', join(here, '..', 'out')))
@@ -29,7 +31,10 @@ function argValue(name, fallback) {
   return i > -1 ? process.argv[i + 1] : fallback
 }
 const sha256 = (s) => createHash('sha256').update(s).digest('hex')
-const fixtureHash = bcryptjs.hashSync('M6-Fixture-2026!', '$2a$10$abcdefghijklmnopqrstuu')
+const FIXTURE_ITERATIONS = 210_000
+const FIXTURE_SALT_HEX = 'a1b2c3d4e5f60718293a4b5c6d7e8f90'
+const fixtureHash = 'pbkdf2$' + FIXTURE_ITERATIONS + '$' + FIXTURE_SALT_HEX + '$'
+  + pbkdf2Sync('M6-Fixture-2026!', Buffer.from(FIXTURE_SALT_HEX, 'hex'), FIXTURE_ITERATIONS, 32, 'sha256').toString('hex')
 
 // ---------------------------------------------------------------------------
 // AT-0024 arrival statistics (AT-0002 §2.24; business date D via psql -v D)

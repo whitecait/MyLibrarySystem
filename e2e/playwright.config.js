@@ -25,6 +25,10 @@ export default defineConfig({
   reporter: [['list'], ['json', { outputFile: process.env.E2E_REPORT ?? 'test-results/report.json' }]],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:8088',
+    // Env-W may pin the browser to a system installation (for example Chrome
+    // stable) when the bundled Chromium download is unavailable; AT-0017
+    // matrix executions still go through browsers/registry.json.
+    channel: process.env.E2E_CHANNEL || undefined,
     actionTimeout: 10_000,
     trace: 'retain-on-failure',
     screenshot: 'off',
