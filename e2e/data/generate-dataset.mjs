@@ -35,7 +35,7 @@ const outDir = resolve(argValue('--out', join(here, 'out')))
 const baseDate = argValue('--base-date', '2026-09-10')
 
 const SEED = 20260910
-const GENERATOR_VERSION = 'seed-20260910-v1'
+const GENERATOR_VERSION = 'seed-20260910-v2'
 
 function mulberry32(seed) {
   let a = seed >>> 0
@@ -268,12 +268,12 @@ for (let t = 1; t <= TITLES; t++) {
   }
 }
 const txRows = transactions.map((tx, i) => [
-  tx.readerId, tx.titleId, tx.copyId ?? N, tx.status,
-  tx.reservationDate ?? N, tx.pickupSlot ?? N, tx.due ?? N, tx.queued ? tsStr(tx.queued) : N,
-  tx.condition ?? N, 0, tsStr(tx.created), tsStr(tx.updated),
+  tx.readerId, tx.titleId, tx.copyId ?? null, tx.status,
+  tx.reservationDate ?? null, tx.pickupSlot ?? null, tx.due ?? null, tx.queued ? tsStr(tx.queued) : null,
+  tx.condition ?? null, 0, tsStr(tx.created), tsStr(tx.updated),
 ])
 const fineRows = fines.map((f) => [
-  f.readerId, f.txIndex + 1, f.amount, f.status, f.settledAt ?? N, 0, tsStr(f.created), tsStr(f.created),
+  f.readerId, f.txIndex + 1, f.amount, f.status, f.settledAt ?? null, 0, tsStr(f.created), tsStr(f.created),
 ])
 
 let sql = `-- MLS M6 performance dataset, generator ${GENERATOR_VERSION}, seed ${SEED}, base date ${baseDate}\n`
