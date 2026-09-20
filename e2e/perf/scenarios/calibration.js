@@ -27,7 +27,10 @@ export default function () {
   const token = login(USER, PASS)
   check(token, { 'login succeeded (idempotency key present)': (t) => t !== null })
   if (token) {
-    const mine = req('GET', api('/me/business?kind=LOAN&limit=5'), 'normal_read', null, false, auth(token))
-    check(mine, { 'authenticated read 2xx': (r) => r.status === 200 })
+    // role-matched authenticated read: the default account is a librarian,
+    // and /me/business is reader-scoped — audit listing is the librarian's
+    // own class and also calibrates the audit metric tags.
+    const audit = req('GET', api('/audit-events?limit=5'), 'audit', null, false, auth(token))
+    check(audit, { 'authenticated audit read 2xx': (r) => r.status === 200 })
   }
 }
