@@ -29,3 +29,8 @@ services:
       AI_ENDPOINT_URL: ${AI_ENDPOINT_URL:?Run scripts/prepare-acceptance-env.sh first}
       AI_MODEL: ${AI_MODEL:?Set MODEL in .env and run scripts/prepare-acceptance-env.sh}
       AI_API_KEY: ${AI_API_KEY:?Set API_KEY in .env and run scripts/prepare-acceptance-env.sh}
+      # AT-0002 §1.35/§2.34: the quota must be configurable to a low value to
+      # trigger exhaustion. Default stays the protocol value (10/day); the
+      # Env-W probe .env sets AI_VISITOR_DAILY_LIMIT=3 for the E2E-AI-001
+      # quota-exhaustion scenario (registered in the evidence).
+      AI_VISITOR_DAILY_LIMIT: ${AI_VISITOR_DAILY_LIMIT:-10}
