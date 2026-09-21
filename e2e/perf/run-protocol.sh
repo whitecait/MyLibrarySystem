@@ -27,8 +27,27 @@
 # (e2e/data/load-dataset.sh) and queries copied to e2e/perf/out/; K6_IMAGE_TAG
 # pinned. The host must run nothing beyond the environment containers during
 # the window (resource snapshots before/after are part of the evidence).
+#
+# Window environment evidence (D6/D7 of the W2 fix batch): the protocol owns
+# the window's docker environment/quota collection (plan 4.8) instead of
+# leaving it to the round driver. It starts scripts/collect-env-evidence.sh
+# detached (nohup/setsid, PID file, done marker) before the first k6 scenario
+# and stops it after the last one, so the collector cannot be cut off by the
+# round driver exiting (the W2a defect: SIGHUP left env-snapshot.json,
+# container-quotas.txt and the after-inventory missing). The outcome is
+# recorded in attempt.json under "window_env_collector". Knobs:
+# ENV_COLLECT=0 skips the collector, ENV_COLLECT_POLL_SECONDS (default 5400)
+# bounds its poll window, ENV_COLLECT_STOP_WAIT_SECONDS (default 60) bounds the
+# wait for its done marker. Everything that can render environment values —
+# ${attempt_dir}/compose-resolved.yaml above all — is written through
+# scripts/redact-evidence-values.sh against the value set built from ENV_FILE
+# and the repository .env files, and the attempt tree is scanned with
+# scripts/check-sensitive-evidence.sh before the attempt is declared complete:
+# a residual credential value invalidates the attempt (the W2a defect: a
+# rendered config written verbatim can carry DB_PASSWORD).
 set -Eeuo pipefail
 cd "$(dirname "$0")/../.."
+source e2e/perf/lib/window-env-collector.sh
 
 project="${1:?usage: RUN=n run-protocol.sh <compose-project> <evidence-root>}"
 evidence="${2:?usage: RUN=n run-protocol.sh <compose-project> <evidence-root>}"
@@ -76,10 +95,41 @@ json_str() { # minimal JSON string escaping for the controlled values below
   printf '"%s"' "$s"
 }
 
-attempt_write() { # attempt_write <ended-token> <valid-token> <basis-token>
-  # Tokens are raw JSON values: null / true / false / a quoted string (built
-  # with json_str). Called once at attempt start (all null) and once more on
-  # the single exit path (finalize) so attempt.json always reflects reality.
+json_number_or_str() { # json_number_or_str <value>: a numeric token when it is
+  # all digits, otherwise a quoted string — an env-var typo lands in attempt.json
+  # as a visible string instead of producing an unparseable file.
+  if [[ "$1" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$1"
+  else
+    json_str "$1"
+  fi
+}
+
+# --- window env collector state (D6) + redaction value set (D7) --------------
+# Both are declared before the first attempt.json write so the attempt file is
+# truthful from its first byte; both are updated as the protocol advances.
+env_collector_enabled="false"
+env_collector_dir=""
+env_collector_status="disabled"
+secret_values_file=""
+
+env_collector_json() { # env_collector_json <status-token> -> JSON object
+  local status="$1" dir_json="null"
+  if [[ -n "$env_collector_dir" ]]; then
+    dir_json="$(json_str "$env_collector_dir")"
+  fi
+  printf '{"enabled":%s,"status":%s,"dir":%s,"poll_seconds":%s,"stop_wait_seconds":%s}' \
+    "$env_collector_enabled" "$(json_str "$status")" "$dir_json" \
+    "$(json_number_or_str "${ENV_COLLECT_POLL_SECONDS:-5400}")" \
+    "$(json_number_or_str "${ENV_COLLECT_STOP_WAIT_SECONDS:-60}")"
+}
+
+attempt_write() { # attempt_write <ended-token> <valid-token> <basis-token> <env-collector-token>
+  # Tokens are raw JSON values, spliced in verbatim: null / true / false for the
+  # first two, an already quoted string (json_str) for the basis, and a JSON
+  # object (env_collector_json) for the window env collector. Called once at
+  # attempt start (all null) and once more on the single exit path (finalize)
+  # so attempt.json always reflects reality.
   {
     printf '{"attempt_id":%s,"run_label":%s,"candidate_commit":%s,"working_tree_dirty":%s,' \
       "$(json_str "$attempt_id")" "$(json_str "$run")" "$(json_str "$candidate_commit")" "$dirty"
@@ -87,12 +137,13 @@ attempt_write() { # attempt_write <ended-token> <valid-token> <basis-token>
       "$(json_str "$proto_sha")" "$(json_str "$sampler_sha")" "$(json_str "$sat_sha")"
     printf '"compose":{"project":%s,"files":["compose.yaml","compose.observability.yaml","compose.perf-quota.yaml"],"profile":"perf","env_file":%s,"resolved_config":"compose-resolved.yaml"},' \
       "$(json_str "$project")" "$(json_str "${ENV_FILE:-<unset>}")"
+    printf '"window_env_collector":%s,' "$4"
     printf '"started_at":%s,"ended_at":%s,"valid":%s,"basis":%s,' \
       "$(json_str "$started_at")" "$1" "$2" "$3"
     printf '"note":"valid=true means the protocol ran to completion inside this one attempt; whether the attempt is adopted as acceptance evidence is a separate decision recorded by the acceptance summary. An attempt.json left without valid=true marks an incomplete attempt: never merge its files with another attempt."}\n'
   } > "${attempt_dir}/attempt.json"
 }
-attempt_write null null null
+attempt_write null null null "$(env_collector_json "pending")"
 
 # Single exit path: close attempt.json according to what actually happened.
 completed="false"
@@ -103,11 +154,23 @@ sampler_pid=""
 finalize() {
   local code=$?
   [[ -z "$sampler_pid" ]] || kill "$sampler_pid" 2>/dev/null || true
+  [[ -z "$secret_values_file" ]] || rm -f -- "$secret_values_file"
+  # Whatever happened, the window collector must not outlive the attempt's
+  # window: the stop file ends its poll loop (the poll deadline is the second
+  # bound, so a forgotten call site cannot leave a poller running).
+  if [[ -n "$env_collector_dir" ]]; then
+    : >> "$env_collector_dir/collector.stop" 2>/dev/null || true
+    if [[ "$completed" != "true" && "$env_collector_status" == "started" ]]; then
+      env_collector_status="aborted-with-attempt:stop-file-touched"
+    fi
+  fi
   if [[ "$completed" == "true" ]]; then
-    attempt_write "\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"" true "$(json_str "$basis_final")"
+    attempt_write "\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"" true "$(json_str "$basis_final")" \
+      "$(env_collector_json "$env_collector_status")"
   else
     attempt_write "\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"" false \
-      "$(json_str "attempt invalid: ${err_info}; files in this attempt dir are partial evidence of one attempt and must never be read as one series with another attempt's files")"
+      "$(json_str "attempt invalid: ${err_info}; files in this attempt dir are partial evidence of one attempt and must never be read as one series with another attempt's files")" \
+      "$(env_collector_json "$env_collector_status")"
   fi
   exit "$code"
 }
@@ -117,9 +180,49 @@ trap finalize EXIT
 
 # Freeze the resolved compose configuration inside the attempt dir so the
 # compose section of attempt.json and the actually measured stack cannot
-# drift apart.
+# drift apart. The render carries the stack's environment values (DB_PASSWORD
+# and friends), so it is filtered through the value set while it is written:
+# nothing unredacted reaches the file, not even transiently.
 stage="compose config render"
-compose config > "${attempt_dir}/compose-resolved.yaml"
+secret_values_file="$(mktemp)"
+env_files_for_secrets=()
+if [[ -n "${ENV_FILE:-}" ]]; then
+  env_files_for_secrets+=("$ENV_FILE")
+fi
+for candidate in .env .env.observation .env.perf; do
+  if [[ -f "$candidate" ]]; then
+    env_files_for_secrets+=("$candidate")
+  fi
+done
+if (( ${#env_files_for_secrets[@]} == 0 )); then
+  err_info="no env file to derive the secret-value set from (ENV_FILE unset and no .env/.env.observation/.env.perf present), so the resolved compose config cannot be redacted"
+  exit 2
+fi
+if ! bash scripts/collect-evidence-secret-values.sh "${env_files_for_secrets[@]}" "$secret_values_file"; then
+  err_info="building the secret-value set failed; refusing to write a resolved compose config that cannot be redacted"
+  exit 2
+fi
+if [[ ! -s "$secret_values_file" ]]; then
+  err_info="the secret-value set derived from ${env_files_for_secrets[*]} is empty; refusing to write a resolved compose config that cannot be redacted"
+  exit 2
+fi
+compose config | bash scripts/redact-evidence-values.sh --stdin "$secret_values_file" \
+  > "${attempt_dir}/compose-resolved.yaml"
+resolved_scan_status=0
+bash scripts/check-sensitive-evidence.sh "${attempt_dir}/compose-resolved.yaml" "$secret_values_file" \
+  || resolved_scan_status=$?
+case "$resolved_scan_status" in
+  0)
+    ;;
+  1)
+    err_info="the rendered compose config still carries a credential value after redaction (scan of ${attempt_dir}/compose-resolved.yaml reported a hit); the attempt is invalid and its evidence must not be used"
+    exit 1
+    ;;
+  *)
+    err_info="the redaction self-check of ${attempt_dir}/compose-resolved.yaml could not run (scanner exit ${resolved_scan_status}); the attempt is invalid rather than unverified-but-claimed-clean"
+    exit 2
+    ;;
+esac
 
 # k6 reaches the stack through the project network (frontend Nginx entry).
 export BASE_URL="http://frontend:80"
@@ -128,6 +231,28 @@ export RUN_ID="run${run}-$(date -u +%Y%m%dT%H%M%S)"
 echo "frontend entry: ${BASE_URL} (from inside the compose network)"
 echo "attempt dir: ${attempt_dir}"
 docker stats --no-stream > "${attempt_dir}/resources-before.txt" 2>/dev/null || true
+
+# Window environment/quota evidence (plan 4.8): started detached before any
+# load, so it survives this script exiting and the round driver exiting with
+# it. A start failure does not abort the attempt — it is recorded as
+# start-failed in attempt.json and reported loudly — but the attempt then
+# carries no window env evidence, which the acceptance summary must see.
+stage="window env collector start"
+if [[ "${ENV_COLLECT:-1}" == "1" ]]; then
+  env_collector_enabled="true"
+  env_collector_status="pending"
+  if window_env_collector_start "$project" "$attempt_dir" "${ENV_COLLECT_POLL_SECONDS:-5400}"; then
+    env_collector_dir="$WINDOW_ENV_COLLECTOR_DIR"
+    env_collector_status="started"
+    echo "window env collector: detached, dir=${env_collector_dir}, poll=${ENV_COLLECT_POLL_SECONDS:-5400}s"
+  else
+    env_collector_status="start-failed"
+    echo "warning: the window env collector did not start; this attempt will carry no env-snapshot.json/container-quotas.txt" >&2
+  fi
+else
+  env_collector_status="disabled-by-env"
+  echo "window env collector: disabled (ENV_COLLECT=${ENV_COLLECT:-unset})"
+fi
 
 bash e2e/perf/sample-resources.sh "$project" "$attempt_dir" 5 &
 sampler_pid=$!
@@ -175,6 +300,19 @@ kill "$sampler_pid" 2>/dev/null || true
 sampler_pid=""
 sleep 2
 
+# The load window is over: end the detached env collector through its stop file
+# and wait (bounded) for its done marker. `done:<exit_code>` is the only outcome
+# that means the window env evidence is complete; anything else is recorded
+# verbatim in attempt.json rather than glossed over.
+if [[ -n "$env_collector_dir" ]]; then
+  stage="window env collector stop"
+  env_collector_status="$(window_env_collector_stop "$env_collector_dir" "${ENV_COLLECT_STOP_WAIT_SECONDS:-60}")"
+  echo "window env collector: ${env_collector_status} (dir=${env_collector_dir})"
+  if [[ "$env_collector_status" != "done:0" ]]; then
+    echo "warning: window env evidence is not complete (collector ${env_collector_status}); check ${env_collector_dir}" >&2
+  fi
+fi
+
 stage="saturation check"
 sat_note="saturation check FAILED (no verdict written)"
 node e2e/perf/check-saturation.mjs "$attempt_dir" --out "${attempt_dir}/saturation-verdict.json" \
@@ -195,7 +333,27 @@ if [[ -f e2e/perf/collect-verdicts.mjs ]]; then
     || echo "warning: collect-verdicts.mjs exited nonzero for ${evidence} (no run-N dirs staged yet, or gate not green)" >&2
 fi
 
-basis_final="protocol completed inside this attempt: warmup, steady, retrieval cold+hot for hot and tail sets, peak and recovery all ran; resources-before.txt, resources-after.txt, eight k6 stdout logs and ${sat_note}"
+# Final redaction self-check over the whole attempt tree (D7): the attempt is
+# declared complete only when its tree carries no credential value. A scan that
+# could not run leaves the tree unverified, which is not the same as clean.
+stage="attempt tree secret scan"
+tree_scan_status=0
+bash scripts/check-sensitive-evidence.sh "$attempt_dir" "$secret_values_file" || tree_scan_status=$?
+case "$tree_scan_status" in
+  0)
+    tree_scan_note="attempt tree secret scan: clean"
+    ;;
+  1)
+    err_info="credential value found in ${attempt_dir} (scanner exit 1); the attempt is invalid and its evidence must not be used"
+    exit 1
+    ;;
+  *)
+    err_info="the attempt tree secret scan could not run (scanner exit ${tree_scan_status}); the attempt is invalid rather than unverified-but-claimed-clean"
+    exit 2
+    ;;
+esac
+
+basis_final="protocol completed inside this attempt: warmup, steady, retrieval cold+hot for hot and tail sets, peak and recovery all ran; resources-before.txt, resources-after.txt, eight k6 stdout logs and ${sat_note}; window env collector: ${env_collector_status}; ${tree_scan_note}"
 completed="true"
 stage="done"
 echo "attempt ${attempt_id} complete; evidence in ${attempt_dir}"

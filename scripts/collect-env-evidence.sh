@@ -25,10 +25,17 @@
 #                            /name image=... NanoCpus=... Memory=... state=... first_seen=...
 #   env-snapshot.json        machine-readable aggregation of everything above
 #   run-log.txt              timestamped collector log
+#   redaction-selfcheck.txt  result of the in-tree secret scan (see "Redaction")
+#   collector.pid            PID of the collecting process
+#   collector-done.txt       final marker: exit_code, stop_reason, finished_at
+#                            and the authoritative post-write scan result; its
+#                            presence is the end condition callers wait for
+#   collector-console.log    stdout/stderr of a detached collector
 #
 # Usage:
 #   bash scripts/collect-env-evidence.sh --project <compose-project> \
-#        [--out <dir>] [--poll-seconds <n>] [--poll-interval <n>]
+#        [--out <dir>] [--poll-seconds <n>] [--poll-interval <n>] \
+#        [--secret-env-file <file>]... [--stop-file <path>] [--detach]
 #
 #   --project        compose project name; containers are filtered by
 #                    label com.docker.compose.project=<name>
@@ -36,42 +43,103 @@
 #                    artifacts/m6-acceptance/env-evidence/<project>-<UTCstamp>)
 #   --poll-seconds   poll duration; 0 (default) = single before/after capture
 #   --poll-interval  seconds between poll passes (default 10)
+#   --secret-env-file
+#                    env-style file whose credential values are redacted from
+#                    everything this run writes; repeatable. Default: every
+#                    .env file at the repository root that exists
+#                    (.env, .env.observation, .env.perf).
+#   --stop-file      poll mode ends as soon as this path exists (default
+#                    <out>/collector.stop). Ignored in single-shot mode.
+#   --detach         start the collection as a session-detached background
+#                    process and return immediately (see "Detached start")
 #
-# Poll mode exists for short-lived containers: during an AT-0016 scenario the
-# k6 container lives for minutes and is absent from a point-in-time list —
-# which is exactly how the earlier evidence ended up with six quota entries
-# for a seven-service stack. Run the collector with --poll-seconds spanning
-# the load window; every container id first seen under the project label is
-# inspected once and kept, so the k6 inspect lands beside the long-running
-# six, with the capture phase recorded in raw/container-capture-order.txt.
+# Detached start (D6 of the W2 fix batch)
+# ---------------------------------------
+# A collector started as an ordinary child of a round driver dies with that
+# driver: the W2a window ended with the collector cut off by SIGHUP, and its
+# env-snapshot.json / container-quotas.txt / after-inventory never appeared —
+# the missing files had to be recomputed from the raw inspects afterwards.
+# `--detach` re-executes this script under `setsid` (falling back to `nohup`
+# when setsid is unavailable) with stdin from /dev/null, so it owns a new
+# session and cannot be reached by a hangup aimed at the driver's session. The
+# child writes:
+#   - collector.pid        its own PID, immediately, before any collection
+#   - collector-done.txt   on exit, carrying exit_code + stop_reason
+# `--detach` returns only after collector.pid holds a live PID (it reports the
+# PID on stdout); if that does not happen within 5 seconds it fails with exit 2
+# and points at collector-console.log. Callers therefore have two end
+# conditions to wait on: the done marker, and, for poll mode, the stop file
+# that ends the poll window early. Poll mode is additionally bounded by
+# --poll-seconds, so a forgotten call site cannot leave a poller running
+# forever. `--detached-child` is the internal flag that tells the re-executed
+# copy it is the detached child (it must not detach again).
 #
-# Exit codes: 0 ok; 2 docker CLI missing / daemon unreachable / python3
-# missing; 3 output evidence already exists (refuses to overwrite — pick a
-# fresh --out); 64 usage error.
+# Redaction (D7 of the W2 fix batch)
+# ----------------------------------
+# `docker inspect` renders the container environment, which carries the stack's
+# credentials (DB_PASSWORD, AI_VISITOR_COOKIE_SIGNING_KEY, ...). Writing that
+# verbatim is how the W2a evidence tree ended up with .env credential values in
+# six container inspect files that had to be redacted after the fact. This
+# collector now redacts at the source: every stream it writes is filtered
+# through scripts/redact-evidence-values.sh against the value set built by
+# scripts/collect-evidence-secret-values.sh from the --secret-env-file files,
+# replacing each literal value with [REDACTED-SECRET]. No value is ever echoed
+# by this script. Afterwards it scans the whole output tree with
+# scripts/check-sensitive-evidence.sh and records the result in
+# redaction-selfcheck.txt; a residual value fails the run with exit 4, so a
+# tree that still carries a credential can never be presented as clean.
+# The temporary value-set file is created with mktemp and deleted on exit; it
+# never lives inside the evidence tree.
+#
+# Exit codes: 0 ok; 2 setup failure (docker CLI missing / daemon unreachable /
+# python3, rg or a scanner script missing / no env file to derive the value set
+# from / the value set is empty / the detached collector did not come up);
+# 3 output evidence already exists (refuses to overwrite — pick a fresh --out);
+# 4 the redaction self-check found a credential value in the output tree, the
+# tree must not be used as clean evidence; 64 usage error.
 #
 # Read-only by construction: the collector only runs version/context/info/ps/
 # stats/system df/inspect. It never starts, stops or reconfigures anything.
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."
 
-project="" out="" poll_seconds=0 poll_interval=10
+project="" out="" poll_seconds=0 poll_interval=10 stop_file="" detach="false" detached_child="false"
+secret_env_files=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --project) project="${2:?--project needs a value}"; shift 2 ;;
     --out) out="${2:?--out needs a value}"; shift 2 ;;
     --poll-seconds) poll_seconds="${2:?--poll-seconds needs a value}"; shift 2 ;;
     --poll-interval) poll_interval="${2:?--poll-interval needs a value}"; shift 2 ;;
+    --secret-env-file) secret_env_files+=("${2:?--secret-env-file needs a value}"); shift 2 ;;
+    --stop-file) stop_file="${2:?--stop-file needs a value}"; shift 2 ;;
+    --detach) detach="true"; shift ;;
+    --detached-child) detached_child="true"; shift ;;
+    -h|--help)
+      sed -n '/^# Usage:/,/^set -Eeuo/p' "$0" | sed 's/^# \{0,1\}//' | sed '$d'
+      exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 64 ;;
   esac
 done
 [ -n "$project" ] || {
-  echo "usage: bash scripts/collect-env-evidence.sh --project <compose-project> [--out <dir>] [--poll-seconds <n>] [--poll-interval <n>]" >&2
+  echo "usage: bash scripts/collect-env-evidence.sh --project <compose-project> [--out <dir>] [--poll-seconds <n>] [--poll-interval <n>] [--secret-env-file <file>]... [--stop-file <path>] [--detach]" >&2
   exit 64
 }
 
-command -v python3 >/dev/null 2>&1 || { echo "python3 not found in PATH" >&2; exit 2; }
-command -v docker >/dev/null 2>&1 || { echo "docker CLI not found in PATH" >&2; exit 2; }
-docker version >/dev/null 2>&1 || { echo "docker daemon unreachable (docker version failed)" >&2; exit 2; }
+if ! command -v python3 >/dev/null 2>&1; then echo "python3 not found in PATH" >&2; exit 2; fi
+if ! command -v docker >/dev/null 2>&1; then echo "docker CLI not found in PATH" >&2; exit 2; fi
+if ! command -v rg >/dev/null 2>&1; then
+  echo "rg (ripgrep) not found in PATH; the in-tree secret scan cannot run" >&2
+  exit 2
+fi
+if ! docker version >/dev/null 2>&1; then echo "docker daemon unreachable (docker version failed)" >&2; exit 2; fi
+
+redactor="scripts/redact-evidence-values.sh"
+scanner="scripts/check-sensitive-evidence.sh"
+value_collector="scripts/collect-evidence-secret-values.sh"
+for helper in "$redactor" "$scanner" "$value_collector"; do
+  [ -f "$helper" ] || { echo "required helper script is missing: $helper" >&2; exit 2; }
+done
 
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 if [ -z "$out" ]; then
@@ -81,23 +149,120 @@ if [ -e "$out/env-snapshot.json" ]; then
   echo "refusing to overwrite existing evidence: $out/env-snapshot.json — pick a fresh --out" >&2
   exit 3
 fi
+[ -n "$stop_file" ] || stop_file="$out/collector.stop"
 mkdir -p "$out/raw" "$out/container-inspects"
+
+# The value set is read from the env files named on the command line, or from
+# the repository's own .env files when none is named. Everything this script
+# writes is filtered through it, so a run with nothing to filter against is a
+# setup failure, not a silent no-op.
+if (( ${#secret_env_files[@]} == 0 )); then
+  for candidate in .env .env.observation .env.perf; do
+    if [ -f "$candidate" ]; then
+      secret_env_files+=("$candidate")
+    fi
+  done
+fi
+(( ${#secret_env_files[@]} > 0 )) || {
+  echo "no env file to derive the redaction value set from (looked for .env, .env.observation, .env.perf); pass --secret-env-file" >&2
+  exit 2
+}
+
+# --- detached start ----------------------------------------------------------
+if [ "$detach" = "true" ] && [ "$detached_child" != "true" ]; then
+  console_log="$out/collector-console.log"
+  child_args=(--project "$project" --out "$out"
+    --poll-seconds "$poll_seconds" --poll-interval "$poll_interval"
+    --stop-file "$stop_file" --detached-child)
+  for env_file in "${secret_env_files[@]}"; do
+    child_args+=(--secret-env-file "$env_file")
+  done
+  : >> "$console_log"
+  if command -v setsid >/dev/null 2>&1; then
+    # setsid: the child owns a new session, so a SIGHUP aimed at this script's
+    # session (the W2a failure) cannot reach it.
+    setsid nohup bash "$0" "${child_args[@]}" >>"$console_log" 2>&1 </dev/null &
+  else
+    nohup bash "$0" "${child_args[@]}" >>"$console_log" 2>&1 </dev/null &
+    disown 2>/dev/null || true
+  fi
+  child_pid=""
+  for _ in $(seq 1 20); do
+    if [ -s "$out/collector.pid" ]; then
+      child_pid="$(cat "$out/collector.pid")"
+      break
+    fi
+    sleep 0.25
+  done
+  if [ -z "$child_pid" ] || ! kill -0 "$child_pid" 2>/dev/null; then
+    echo "detached collector did not report a live PID within 5s; see $console_log" >&2
+    exit 2
+  fi
+  printf 'detached collector pid=%s out=%s console=%s poll_seconds=%s stop_file=%s\n' \
+    "$child_pid" "$out" "$console_log" "$poll_seconds" "$stop_file"
+  exit 0
+fi
+
 log_file="$out/run-log.txt"
 log() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "$log_file"; }
 
-log "collect-env-evidence start: project=$project out=$out poll_seconds=$poll_seconds poll_interval=$poll_interval"
+secret_values_file="$(mktemp "${TMPDIR:-/tmp}/collect-env-evidence-secrets.XXXXXX")"
+chmod 600 "$secret_values_file"
+work="$(mktemp -d "${TMPDIR:-/tmp}/collect-env-evidence-work.XXXXXX")"
+stop_reason="single-shot"
+post_write_scan_exit="not-run"
+write_done_marker=1
+finish() {
+  local code=$?
+  rm -f -- "$secret_values_file"
+  rm -rf -- "$work"
+  if [ "$write_done_marker" = "1" ]; then
+    printf 'exit_code=%s stop_reason=%s post_write_scan_exit=%s finished_at=%s\n' \
+      "$code" "$stop_reason" "$post_write_scan_exit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      > "$out/collector-done.txt"
+  fi
+  exit "$code"
+}
+trap finish EXIT
+
+printf '%s\n' "$$" > "$out/collector.pid"
+
+value_set_status=0
+value_set_summary="$(bash "$value_collector" "${secret_env_files[@]}" "$secret_values_file" 2>&1)" || value_set_status=$?
+if [ "$value_set_status" -ne 0 ]; then
+  echo "building the redaction value set failed (exit ${value_set_status}): ${value_set_summary}" >&2
+  exit 2
+fi
+if [ ! -s "$secret_values_file" ]; then
+  echo "the redaction value set is empty (${value_set_summary}); refusing to collect evidence that could not be redacted" >&2
+  exit 2
+fi
+
+log "collect-env-evidence start: project=$project out=$out poll_seconds=$poll_seconds poll_interval=$poll_interval stop_file=$stop_file detached=$detached_child"
+log "redaction value set: ${value_collector} ${secret_env_files[*]} -> ${value_set_summary}"
 
 raw="$out/raw"
 
-# run_save <file> <command...>: run the command, store stdout+stderr in
-# raw/<file>. Auxiliary evidence must not abort the run on failure, so a
-# failing command keeps its error output on disk and only logs a warning.
+# redact_stream: stdin -> stdout, with every credential value replaced by
+# [REDACTED-SECRET]. Every write below goes through it, so a value cannot land
+# in the evidence tree even transiently.
+redact_stream() {
+  bash "$redactor" --stdin "$secret_values_file"
+}
+
+# run_save <file> <command...>: run the command, store its redacted
+# stdout+stderr in raw/<file>. Auxiliary evidence must not abort the run on
+# failure, so a failing command keeps its (redacted) error output on disk and
+# only logs a warning. A failing redactor does abort: writing unredacted
+# output is exactly what this collector must not do.
 run_save() {
   local f="$1"; shift
-  if "$@" > "$raw/$f" 2>&1; then
+  local status=0
+  { "$@" 2>&1 || status=$?; } | redact_stream > "$raw/$f"
+  if [ "$status" -eq 0 ]; then
     log "saved raw/$f"
   else
-    log "WARN: command failed, error output kept in raw/$f: $*"
+    log "WARN: command failed (exit $status), error output kept in raw/$f: $*"
   fi
 }
 
@@ -131,7 +296,7 @@ run_save docker-system-df.txt      docker system df -v
   echo "=== disk (df -h .) ==="
   df -h .
   echo "=== note: daemon-side utility-VM CPU/memory figures are in raw/docker-info-full.txt (NCPU / Total Memory)"
-} > "$raw/host-spec.txt"
+} | redact_stream > "$raw/host-spec.txt"
 log "saved raw/host-spec.txt"
 
 # --- 3. whole-daemon inventory & stats, before -------------------------------
@@ -146,7 +311,8 @@ capture_new_containers() {
   while IFS= read -r id; do
     [ -n "$id" ] || continue
     if [ -f "$inspect_dir/$id.json" ]; then continue; fi
-    docker inspect "$id" > "$inspect_dir/$id.json"
+    # The inspect carries the container environment: redact while writing.
+    docker inspect "$id" | redact_stream > "$inspect_dir/$id.json"
     printf '%s\t%s\n' "$phase" "$id" >> "$order_file"
     log "captured container ${id:0:12} (phase=$phase)"
   done < <(docker ps -aq --filter "label=com.docker.compose.project=$project")
@@ -155,13 +321,21 @@ capture_new_containers before
 
 # --- 5. poll mode: catch short-lived containers (k6) -------------------------
 if [ "$poll_seconds" -gt 0 ]; then
-  log "poll mode: capturing for ${poll_seconds}s, interval ${poll_interval}s"
+  log "poll mode: capturing for ${poll_seconds}s, interval ${poll_interval}s, stop file ${stop_file}"
   deadline=$(( $(date +%s) + poll_seconds ))
   while :; do
     capture_new_containers poll
-    [ "$(date +%s)" -ge "$deadline" ] && break
+    if [ -e "$stop_file" ]; then
+      stop_reason="stop-file"
+      break
+    fi
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      stop_reason="poll-deadline"
+      break
+    fi
     sleep "$poll_interval"
   done
+  log "poll mode ended: ${stop_reason}"
 fi
 capture_new_containers after
 
@@ -353,6 +527,56 @@ print("project_containers={pc} daemon_before={b} daemon_after={a} poll_enabled={
 PYEOF
 )"
 log "snapshot assembled: $summary"
+
+# --- 8. redaction sweep over the finished tree --------------------------------
+# Every write above was already filtered; the sweep is the second line of
+# defence (it also covers files assembled by the python step and the log).
+sweep_log="$work/redaction-sweep.txt"
+sweep_status=0
+bash "$redactor" "$secret_values_file" "$out" > "$sweep_log" 2>&1 || sweep_status=$?
+sed 's/^/redact: /' "$sweep_log" | tee -a "$log_file"
+if [ "$sweep_status" -ne 0 ]; then
+  log "ERROR: redaction sweep failed (exit $sweep_status); see the lines above"
+  echo "redaction sweep failed (exit $sweep_status); refusing to present this tree as clean evidence" >&2
+  exit 4
+fi
+
+# --- 9. redaction self-check --------------------------------------------------
+# Scan the tree with the same value set. The second scan runs after this file
+# is written and is the authoritative one; its exit code also lands in
+# collector-done.txt.
+scan1="$work/selfcheck-1.log"
+scan1_status=0
+bash "$scanner" "$out" "$secret_values_file" > "$scan1" 2>&1 || scan1_status=$?
+scan1_hits="$(grep -c '^hit: ' "$scan1" 2>/dev/null || true)"
+{
+  echo "redaction self-check: ${scanner} over ${out}"
+  echo "value_set_files: ${secret_env_files[*]}"
+  echo "value_set_size: $(wc -l < "$secret_values_file" | tr -d ' ')"
+  echo "scan_1_exit: ${scan1_status} (0 = clean, 1 = hit, other = the scan did not run)"
+  echo "scan_1_hits: ${scan1_hits:-0}"
+  echo "note: the authoritative scan runs after this file is written; its exit code is recorded as"
+  echo "      post_write_scan_exit in collector-done.txt. Neither file carries a credential value."
+} > "$out/redaction-selfcheck.txt"
+if [ "$scan1_status" -ne 0 ]; then
+  {
+    echo "scan_1_hit_lines (path, line, length and first/last-character mask only):"
+    grep '^hit: ' "$scan1" || true
+  } >> "$out/redaction-selfcheck.txt"
+fi
+
+scan2="$work/selfcheck-2.log"
+scan2_status=0
+bash "$scanner" "$out" "$secret_values_file" > "$scan2" 2>&1 || scan2_status=$?
+post_write_scan_exit="$scan2_status"
+if [ "$scan2_status" -ne 0 ]; then
+  echo "redaction self-check FAILED (scan exit $scan2_status) for $out:" >&2
+  grep '^hit: ' "$scan2" >&2 || true
+  printf 'scan_2_exit: %s (FAIL: the tree still carried a value; the tree must not be used)\n' "$scan2_status" \
+    >> "$out/redaction-selfcheck.txt"
+  exit 4
+fi
+log "redaction self-check: tree scanned clean (scan exits ${scan1_status}/${scan2_status})"
 log "collect-env-evidence done: $out/env-snapshot.json"
 echo "env evidence written to $out (env-snapshot.json, container-quotas.txt, container-inspects/, raw/)"
 echo "$summary"

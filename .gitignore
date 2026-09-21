@@ -111,3 +111,4 @@ e2e/browsers/installs/
 !scripts/payment-egress-audit.sh
 !scripts/sanitize-evidence-traces.sh
 !scripts/collect-env-evidence.sh
+!scripts/redact-evidence-values.sh

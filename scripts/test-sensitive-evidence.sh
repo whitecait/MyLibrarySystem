@@ -109,10 +109,10 @@ mkdir -p "$restricted_bin" "$no_unzip_bin" "$stub_bin"
 for tool in bash mktemp awk rm; do
   ln -s "$(command -v "$tool")" "$restricted_bin/$tool"
 done
-for tool in bash dirname mktemp awk rm find sed mkdir wc rg; do
+for tool in bash dirname mktemp awk rm find sed mkdir wc grep sort tr cat rg; do
   ln -s "$(command -v "$tool")" "$no_unzip_bin/$tool"
 done
-for tool in bash dirname mktemp awk rm find sed mkdir wc rg python3; do
+for tool in bash dirname mktemp awk rm find sed mkdir wc grep sort tr cat rg python3; do
   ln -s "$(command -v "$tool")" "$stub_bin/$tool"
 done
 cat > "$stub_bin/unzip" <<'EOF'
@@ -183,8 +183,29 @@ run_case T8 "redacted evidence passes the deep scan" 0 "deep scan clean" \
 run_case T9 "missing secret file is a setup error, not a clean pass" 2 "secret file is missing or unreadable" \
   bash "$base_scanner" "$redacted_dir" "$work/absent-secret.txt"
 
-run_case T10 "missing evidence directory is a setup error" 2 "evidence directory is missing or not a directory" \
+run_case T10 "missing evidence path is a setup error" 2 "evidence path is missing or is neither a file nor a directory" \
   bash "$base_scanner" "$work/absent-evidence-dir" "$secret_file"
+
+# --- D8: hits must be listed per file and line, with the value masked --------
+run_case T11 "base scan lists the hitting file and line number" 1 "hit: $hit_dir/ignored-login.json:1" \
+  bash "$base_scanner" "$hit_dir" "$secret_file"
+
+run_case T12 "base scan prints a mask and a length, never the value" 1 "len=${#canary} mask=${canary:0:1}..${canary: -1}" \
+  bash "$base_scanner" "$hit_dir" "$secret_file"
+
+empty_secret="$work/empty-secret.txt"
+: > "$empty_secret"
+run_case T13 "an empty value set is refused instead of reported clean" 2 "the secret-value set is empty" \
+  bash "$base_scanner" "$hit_dir" "$empty_secret"
+
+run_case T14 "deep scan refuses to run without a value set" 2 "no secret-value set given" \
+  env PATH="$stub_bin" bash "$deep_scanner" "$hit_dir"
+
+run_case T15 "deep scan lists an archive member with its line number" 1 "hit: $zip_hit_dir/login.zip!login.json:1" \
+  env PATH="$stub_bin" bash "$deep_scanner" "$zip_hit_dir" "$secret_file"
+
+run_case T16 "deep scan refuses an empty value set instead of reporting clean" 2 "the secret-value set is empty" \
+  env PATH="$stub_bin" bash "$deep_scanner" "$hit_dir" "$empty_secret"
 
 # --- summary ---
 echo

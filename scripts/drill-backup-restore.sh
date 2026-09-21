@@ -53,17 +53,34 @@
 #     frontend publishing the same port is refused;
 #   - after the target stack starts, its ACTUAL published port must equal the
 #     resolved one and must not be an Env-O port.
+#
+# Host ports are read from the daemon — `docker inspect .NetworkSettings.Ports`
+# rendered as JSON and parsed with python3 — because neither of the two
+# formatter fields that look obvious actually yields a "IP:PORT" pair here:
+# the Docker CLI formatter has no `.Publishers` field (it fails with rc=1,
+# "can't evaluate field Publishers in type *formatter.ContainerContext"), and
+# Compose v5 renders `{{.Publishers}}` as a Go struct (`[{127.0.0.1 80 18091
+# tcp}]`), not as text. Both were used before this rework: the first made the
+# port-holder scan fail silently (empty output was read as "port free"), the
+# second could never be parsed (so the drill died before t_ready). `docker ps`
+# is still used for the container LIST, with only the documented `.Names`,
+# `.ID` and `.Label` fields. A read whose emptiness would be read as "check
+# passed" (the port-holder scan) is FATAL on failure (exit 1): the drill never
+# records `port free` from a check it could not run.
 # Configuration (exit code 2): FRONTEND_PORT must resolve from the shell
 #   environment or the env file — no default port is guessed (a guessed port
 #   could collide with the source stack).
 #
 # Exit codes: 0 drill passed (RPO/RTO within limits); 1 drill/measurement
-# failure; 2 usage or credential errors; 3 Env-O/conflict guard rejection.
+# failure (including a port read that could not be performed); 2 usage or
+# credential errors; 3 Env-O/conflict guard rejection.
 #
 # `|| true` appears in exactly three places — the health poll and the two
-# publisher-port polls — where it only tolerates the pipe-close status of a
-# status read; every value captured there is strictly validated right after,
-# and no check result or measurement is ever replaced or swallowed.
+# target-frontend reads whose emptiness is fatal right below (see the comment
+# at each site) — where it only tolerates the pipe-close status of a status
+# read cut short by `head -1`; every value captured there is strictly
+# validated immediately after, and no check result or measurement is ever
+# replaced or swallowed.
 #
 # The drill wipes the TARGET project's compose volumes before restoring —
 # only pass a throwaway/clone project as --target. The SOURCE stack is left
@@ -369,6 +386,27 @@ wait_healthy() { # wait_healthy <project> <service> <timeout-s>
   return 1
 }
 
+container_host_ports() { # container_host_ports <container-ref> -> published HOST ports, one per line
+  # Daemon-side fact via `docker inspect` JSON (same source `docker port` reads);
+  # rc=1 on any failure so callers can distinguish "no host port" from "could
+  # not read". See the header for why no formatter field is used here.
+  local ref="$1" pubjson
+  pubjson="$(docker inspect --format '{{json .NetworkSettings.Ports}}' "$ref")" || return 1
+  CONTAINER_PORTS_JSON="$pubjson" python3 - <<'PY'
+import json, os, sys
+
+try:
+    ports = json.loads(os.environ["CONTAINER_PORTS_JSON"])
+except ValueError:
+    sys.exit("docker inspect returned unparsable .NetworkSettings.Ports JSON")
+for bindings in (ports or {}).values():
+    for binding in (bindings or []):
+        host_port = (binding or {}).get("HostPort")
+        if host_port:
+            print(host_port)
+PY
+}
+
 http_call() { # http_call <body-out-file> <curl args...> ; echoes http code (000 on transport failure)
   local body_file="$1"; shift
   curl -sS -m 15 -o "$body_file" -w '%{http_code}' "$@" 2>/dev/null || printf '000'
@@ -429,22 +467,55 @@ if [[ -z "$src_db_cid" ]]; then
 fi
 record_step "precheck" "ok" "docker compose -p $source_project ps -q database" "source database running; ps output: $(printf '%s' "$src_ps_out" | tr '\n' ';' | cut -c1-400)"
 
-# live source frontend port must not collide with the target port
-# (`|| true` here only tolerates head-terminated pipe-close status on a
-# status poll; the captured value is validated immediately below)
-src_frontend_pub="$(compose_src ps --format '{{.Publishers}}' frontend 2>/dev/null | head -1 | grep -oE '127\.0\.0\.1:[0-9]+' | head -1 | cut -d: -f2 || true)"
+# live source frontend port must not collide with the target port.
+# An empty container id means "source frontend not running" (verified: `compose
+# ps -q` exits 0 with empty output for a service that is not up) = nothing
+# published = no conflict; a non-zero compose status is fatal (never a silent
+# skip of the guard).
+if ! src_frontend_cid="$(compose_src ps -q frontend 2>/dev/null)"; then
+  die "docker compose -p $source_project ps -q frontend failed; the source/target port-conflict guard cannot be evaluated"
+fi
+src_frontend_cid="${src_frontend_cid%%$'\n'*}"
+src_frontend_pub=""
+if [[ -n "$src_frontend_cid" ]]; then
+  if ! src_frontend_ports="$(container_host_ports "$src_frontend_cid")"; then
+    die "could not read the published ports of the source frontend container $src_frontend_cid via docker inspect; the source/target port-conflict guard cannot be evaluated"
+  fi
+  while IFS= read -r hp; do
+    [[ -n "$hp" ]] || continue
+    if [[ "$hp" == "$frontend_port" ]]; then
+      src_frontend_pub="$hp"
+    fi
+  done <<< "$src_frontend_ports"
+fi
 if [[ -n "$src_frontend_pub" && "$src_frontend_pub" == "$frontend_port" ]]; then
   guard_fail "source frontend already publishes $src_frontend_pub, which equals the resolved target port; pick a different FRONTEND_PORT for the target in $env_file"
 fi
 
 # target port must be free on the host, except the target project's own
-# containers (those are removed by `down -v` right before the restore)
+# containers (those are removed by `down -v` right before the restore).
+# Every read here is fatal on failure: an empty result means "no holder", so a
+# read that did not run must never be mistaken for a free port.
+scan_err="$(scratch_file)"
+if ! ps_scan_out="$(docker ps --format '{{.Names}}\t{{.ID}}\t{{.Label "com.docker.compose.project"}}' 2>"$scan_err")"; then
+  die "docker ps failed while checking whether target port $frontend_port is free: $(tail -1 "$scan_err")"
+fi
 port_holders=""
-while IFS=$'\t' read -r cname cpublish cproj; do
-  if [[ "$cpublish" == *":${frontend_port}->"* && "$cproj" != "$target_project" ]]; then
-    port_holders+="${cname}(project=${cproj:-none}) "
+scanned=0
+while IFS=$'\t' read -r cname cid cproj; do
+  [[ -n "$cname" ]] || continue
+  scanned=$(( scanned + 1 ))
+  [[ "$cproj" == "$target_project" ]] && continue
+  if ! holder_ports="$(container_host_ports "$cid")"; then
+    die "could not read the published ports of running container $cname ($cid) via docker inspect; refusing to record 'port $frontend_port free' from a check that could not run"
   fi
-done < <(docker ps --format '{{.Names}}\t{{.Publishers}}\t{{.Label "com.docker.compose.project"}}')
+  while IFS= read -r hp; do
+    [[ -n "$hp" ]] || continue
+    if [[ "$hp" == "$frontend_port" ]]; then
+      port_holders+="${cname}(project=${cproj:-none}) "
+    fi
+  done <<< "$holder_ports"
+done <<< "$ps_scan_out"
 if [[ -n "$port_holders" ]]; then
   guard_fail "target port $frontend_port is already published by: ${port_holders%; }"
 fi
@@ -466,8 +537,8 @@ while IFS= read -r v; do
     guard_fail "Env-O volume set (label com.docker.compose.project=$ENV_O_PROJECT) contains $v; refusing"
   fi
 done < <(docker volume ls --format '{{.Name}}' --filter "label=com.docker.compose.project=$ENV_O_PROJECT")
-record_step "precheck" "ok" "docker ps publishers scan + docker volume label checks" \
-  "port $frontend_port free; volume $tgt_volume not Env-O-owned; source frontend published port: ${src_frontend_pub:-<none>}"
+record_step "precheck" "ok" "docker ps + docker inspect .NetworkSettings.Ports scan + docker volume label checks" \
+  "port $frontend_port free (running containers scanned: $scanned); volume $tgt_volume not Env-O-owned; source frontend published port: ${src_frontend_pub:-<none>}"
 
 # ============================ measurement phase =============================
 
@@ -548,11 +619,17 @@ if ! wait_healthy "$target_project" frontend 120; then
 fi
 record_step "target-stack-up" "ok" "docker compose -p $target_project up -d backend frontend; wait_healthy backend/frontend" "target stack healthy"
 
-# (`|| true` tolerates the head-terminated pipe-close status on a status
-# poll; the captured value is strictly validated below — no fallback port)
-frontend_port_actual="$(compose_tgt ps --format '{{.Publishers}}' frontend 2>/dev/null | head -1 | grep -oE '127\.0\.0\.1:[0-9]+' | head -1 | cut -d: -f2 || true)"
-if [[ -z "$frontend_port_actual" ]]; then
-  die "could not determine the target frontend published port from docker compose ps (no fallback port is guessed)"
+# Both reads below tolerate only the pipe-close status of a status read that
+# `head -1` cuts short (`|| true`); the captured values are strictly validated
+# immediately after — an empty or non-numeric value is a fatal failure and no
+# fallback port is ever guessed.
+tgt_frontend_cid="$(compose_tgt ps -q frontend 2>/dev/null | head -1 || true)"
+if [[ -z "$tgt_frontend_cid" ]]; then
+  die "target frontend container is not running (docker compose -p $target_project ps -q frontend returned nothing); cannot verify its published port (no fallback port is guessed)"
+fi
+frontend_port_actual="$(container_host_ports "$tgt_frontend_cid" 2>/dev/null | head -1 || true)"
+if [[ ! "$frontend_port_actual" =~ ^[0-9]+$ ]]; then
+  die "could not read a published host port for the target frontend container $tgt_frontend_cid via docker inspect (got '$frontend_port_actual'); no fallback port is guessed"
 fi
 for p in $ENV_O_PORTS; do
   if [[ "$frontend_port_actual" == "$p" ]]; then
@@ -563,7 +640,7 @@ if [[ "$frontend_port_actual" != "$frontend_port" ]]; then
   die "target frontend actually publishes $frontend_port_actual but the precheck resolved $frontend_port from $env_file; port governance inconsistent, aborting"
 fi
 base_url="http://127.0.0.1:${frontend_port_actual}"
-record_step "target-stack-up" "ok" "docker compose -p $target_project ps --format '{{.Publishers}}' frontend" "base_url=$base_url"
+record_step "target-stack-up" "ok" "docker inspect --format '{{json .NetworkSettings.Ports}}' $tgt_frontend_cid (published host port of service frontend)" "base_url=$base_url"
 
 # 6) continuation checks — every one must pass; t_ready only after all of them
 run_id="$(date -u +%Y%m%d%H%M%S)-$$"

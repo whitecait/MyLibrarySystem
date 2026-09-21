@@ -33,6 +33,14 @@
 //     OOM kill, or counter reset) mark the affected window invalid; such
 //     windows are registered under invalidWindows and excluded from the
 //     verdict instead of counting as violations or as clean.
+//   - The thread-pool dimension matches the tomcat family names with the
+//     micrometer `_threads` suffix stripped, so both
+//     `tomcat_threads_busy_threads` / `tomcat_threads_config_max_threads`
+//     (the backend actually emits these: 406 line pairs in the AT-0016 run-1
+//     sample log, 407 in run-2) and the un-suffixed spellings count as the
+//     same dimension. The old exact-prefix match scored 0 hits on real
+//     samples, which read as a collection gap (`collection_missing`) on both
+//     attempts — see artifacts/m6-acceptance/phase-w2/fix/judging-replay/.
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
@@ -55,6 +63,19 @@ const MEM_LIMIT = 0.9 // of quota
 const POOL_LIMIT = 0.9
 const GC_SHARE_LIMIT = 0.05
 const LOCK_SHARE_LIMIT = 0.1 // of the 60s window
+
+// Metric family name = the text before the first '{'. The two tomcat
+// families are recognised with an optional trailing `_threads` (micrometer
+// appends it to the `tomcat.threads.busy` / `tomcat.threads.config.max`
+// gauges), so a spelling difference between exporter versions cannot turn the
+// thread-pool dimension into a collection gap.
+const TOMCAT_FIELD = { tomcat_threads_busy: 'busy', tomcat_threads_config_max: 'tomcatMax' }
+const tomcatField = (line) => {
+  const brace = line.indexOf('{')
+  if (brace === -1) return null
+  const family = line.slice(0, brace).replace(/_threads$/, '')
+  return TOMCAT_FIELD[family] ?? null
+}
 
 const parsePct = (s) => parseFloat(String(s).replace('%', '')) || 0
 const parseMem = (s) => {
@@ -86,6 +107,7 @@ const dims = new Map(DIMENSIONS.map((n) => [n, { status: 'not_evaluated', sample
 const notEvaluatedReasons = {}
 const violations = []
 const invalidWindows = []
+const tomcatFamilies = new Set() // tomcat family spellings actually matched (D1 evidence)
 const evaluate = (name, samples, windows) => {
   const d = dims.get(name)
   d.status = 'evaluated'
@@ -245,12 +267,13 @@ if (!metricFile) {
         gcByWindowSeries.set(id, g)
         continue
       }
-      if (l.startsWith('tomcat_threads_busy{') || l.startsWith('tomcat_threads_config_max{')) {
+      const tField = tomcatField(l)
+      if (tField !== null) {
         hasTomcat = true
+        tomcatFamilies.add(l.slice(0, l.indexOf('{')))
         const w = poolByWindow.get(key) ?? { key, busy: [], tomcatMax: [], hikActive: [], hikMax: [] }
         const v = parseFloat(l.split(' ').pop()) || 0
-        if (l.startsWith('tomcat_threads_busy{')) w.busy.push(v)
-        else w.tomcatMax.push(v)
+        w[tField].push(v)
         poolByWindow.set(key, w)
         continue
       }
@@ -302,7 +325,7 @@ if (!metricFile) {
     }
     evaluate('thread-pool', blocks.length, windowsEvaluated)
   } else {
-    notEvaluatedReasons['thread-pool'] = `${metricFile} has no tomcat_threads_* samples`
+    notEvaluatedReasons['thread-pool'] = `${metricFile} has no tomcat_threads_busy*/tomcat_threads_config_max* samples`
   }
   if (hasHikari) {
     let windowsEvaluated = 0
@@ -327,7 +350,7 @@ for (const n of notEvaluated) notEvaluatedReasons[n] ??= 'no samples'
 const saturated = violations.length > 0
 const pass = !saturated && notEvaluated.length === 0
 const verdict = {
-  checkerRevision: 'r15',
+  checkerRevision: 'r16',
   samplesDir,
   windowSeconds: WINDOW_S,
   quotas: QUOTAS,
@@ -343,6 +366,7 @@ const verdict = {
   notEvaluated,
   notEvaluatedReasons,
   invalidWindows,
+  tomcatFamilies: [...tomcatFamilies].sort(),
   dimensions: Object.fromEntries(DIMENSIONS.map((n) => [n, dims.get(n)])),
 }
 writeFileSync(outFile, JSON.stringify(verdict, null, 2))
