@@ -109,3 +109,5 @@ e2e/browsers/installs/
 !scripts/observation-report.mjs
 !scripts/drill-backup-restore.sh
 !scripts/payment-egress-audit.sh
+!scripts/sanitize-evidence-traces.sh
+!scripts/collect-env-evidence.sh

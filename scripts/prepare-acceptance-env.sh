@@ -6,8 +6,9 @@
 #
 # Reads BASE_URL / MODEL / API_KEY from the ignored .env, rejects a BASE_URL
 # with a trailing slash or missing values, and writes AI_ENDPOINT_URL =
-# <BASE_URL>/chat/completions plus AI_MODEL / AI_API_KEY into the ignored
-# output file. Values are never echoed; only the endpoint host is printed.
+# <BASE_URL>/chat/completions plus AI_MODEL / AI_API_KEY and the Env-W
+# acceptance quota AI_VISITOR_DAILY_LIMIT into the ignored output file.
+# Secret values are never echoed; only the endpoint host is printed.
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."
 
@@ -47,10 +48,19 @@ esac
 endpoint_url="${base_url}/chat/completions"
 host="$(printf '%s' "$base_url" | sed -E 's#^[a-z]+://([^/]+).*#\1#')"
 
+# Env-W acceptance quota (acceptance plan 2026-09-19 run log item ④: visitor
+# quota 8/day for the E2E-AI-001 quota-exhaustion scenario). .env may pin a
+# different value; otherwise the registered acceptance value is written
+# explicitly so .env.acceptance always carries the quota convention that
+# e2e/scenarios/e2e-ai-001-ai-portal.spec.js reads back as its expectation.
+visitor_daily_limit="$(get_env AI_VISITOR_DAILY_LIMIT || true)"
+: "${visitor_daily_limit:=8}"
+
 {
   printf 'AI_ENDPOINT_URL=%s\n' "$endpoint_url"
   printf 'AI_MODEL=%s\n' "$model"
   printf 'AI_API_KEY=%s\n' "$api_key"
+  printf 'AI_VISITOR_DAILY_LIMIT=%s\n' "$visitor_daily_limit"
 } > "$out_file"
 chmod 600 "$out_file"
 

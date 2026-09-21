@@ -12,7 +12,7 @@
 | 路径 | 内容 |
 | ---- | ---- |
 | `playwright.config.js` | Playwright 配置；证据策略（无 HAR、不保存 storageState、截图经守卫）写在文件头注释 |
-| `browsers/registry.json` | AT-0017 六浏览器矩阵登记表（版本、安装来源、隔离目录、可执行路径、自动更新策略） |
+| `browsers/registry.json` | AT-0017 六浏览器矩阵登记表（版本、安装来源、隔离目录、可执行路径、自动更新策略、执行三态 `executionStatus`） |
 | `browsers/verify-matrix.mjs` | 逐项验证 Playwright 可驱动；全部通过退出 0，有未登记项退出 2 |
 | `ai-endpoint/` | 真实模型端点验证 S1~S6（自 `verification/ai-endpoint` 吸收，见下） |
 | `evidence/safe-shot.mjs` | 截图守卫：页面内容与 URL 命中临时值集即拒绝写入 |
@@ -38,6 +38,33 @@
 2. 将版本号、安装来源、隔离 profile 目录、可执行路径、自动更新关闭策略逐项填入 `browsers/registry.json`（null 字段表示未登记，不得执行 AT-0017）。
 3. `npm run browsers:verify` 验证可驱动性；结果落 `artifacts/m6-acceptance/browser-matrix/`。
 
+### 登记三态（executionStatus）
+
+`browsers/registry.json` 每个槽位带 `executionStatus` 三态标记，三态含义不同、不可互相替代：
+
+| 取值 | 含义 | 判据 |
+| ---- | ---- | ---- |
+| `procedure-written` | 规程已编写：该槽位的执行线只有书面规程（Manual fallback 或安装登记路径），该执行线尚未实际执行 | `drivable` 为 `null`；或自动线实测不可驱动（`drivable: false` 已实测留档）且人工正式执行未做 |
+| `drivability-verified` | 可驱动已验证：该槽位已完成 Playwright 可驱动性实测，实测记录落档 | `npm run browsers:verify` 实跑得出 `drivable` 与 `verifiedAt`，证据在 `artifacts/m6-acceptance/browser-matrix/` |
+| `formal-execution-pending` | 正式矩阵执行完成前的矩阵级等待状态 | 登记于 registry `policy.executionStatus`，截至 2026-09-21 对全部六个槽位成立 |
+
+三态两两不等：**规程已编写 ≠ 可驱动已验证 ≠ 正式矩阵执行完成**。书面规程存在不代表实测跑通过；可驱动性实测通过不代表 AT-0017 正式矩阵轮已执行。
+
+当前六槽位状态（2026-09-21 登记）：
+
+| 槽位 | executionStatus | 依据 |
+| ---- | ---- | ---- |
+| chrome-current | `drivability-verified` | `verify-2026-09-20T08-17-15-037Z.json`：drivable=true，2026-09-20T08:17:06.718Z |
+| chrome-previous | `drivability-verified` | 同上：drivable=true，2026-09-20T08:17:07.687Z |
+| edge-current | `drivability-verified` | 同上：drivable=true，2026-09-20T08:17:10.093Z |
+| edge-previous | `procedure-written` | 版本 146.0.3856.109 已查证（Microsoft Learn 存档发行说明）；安装未执行、无可驱动性实测 |
+| firefox-current | `procedure-written` | 自动线实测不可驱动（drivable=false，2026-09-20）；人工规程已编写、人工正式执行未做 |
+| firefox-previous | `drivability-verified` | 同上 verify json：drivable=true，2026-09-20T08:17:15.037Z（Playwright 构建 v1543）；官方发行版人工线为 `procedure-written`，W2 待执行 |
+
+W2 待执行项（截至 2026-09-21 均未执行）：edge-previous 真实安装（企业离线 MSI 146.0.3856.109，官方渠道可获得性待核实）、正式前一稳定 Firefox 官方发行版（155.0.1）安装、六槽位 AT-0017 正式矩阵轮。上述项完成前，任何槽位的标记都不表示「正式矩阵执行完成」。
+
+edge-previous 已登记查证版本但 `executablePath` 仍为 null：`npm run browsers:verify` 对该槽位报 FAIL（退出码 1），直至 W2 安装完成并补齐登记。这是登记状态的真实反映，不是脚本缺陷。
+
 ### Manual fallback（书面人工执行规程）
 
 某组合 Playwright 无法驱动时，按以下步骤人工执行并在登记表 `drivable` 填 `manual`：
@@ -46,6 +73,11 @@
 2. 分辨率按桌面 1280×720~2560×1440 与窄屏 375×667~430×932 的系统显示设置切换；键盘操作拔掉鼠标等效执行；焦点位置以截图记录。
 3. 对比度用系统取色器或对比度工具对关键前景/背景取色，记录测量值。
 4. 证据经 `safe-shot` 同等检查（肉眼核对无凭据）后存 `artifacts/m6-acceptance/at-0017/<browser-id>/`。
+
+具名人工执行条目（按槽位；执行前把实际安装版本、来源、profile 目录补登记进 `browsers/registry.json` 对应槽位，执行后该槽位 `drivable` 填 `manual`）：
+
+- **edge-previous（146 线，查证版本 146.0.3856.109）**：优先路径是 W2 安装企业离线 MSI（官方渠道可获得性待核实）后转自动驱动；安装不可得或自动驱动失败时，按上述步骤 1~4 人工执行，分辨率切换、纯键盘操作、对比度取色记录与 `safe-shot` 存证逐项留档，证据存 `artifacts/m6-acceptance/at-0017/edge-previous/`。
+- **firefox-previous 官方发行版（155 线最终构建 155.0.1）**：与已验证可驱动的 Playwright 构建 v1543 是两个对象；官方安装包为 `Firefox Setup 155.0.1.exe` / `Firefox Setup 155.0.1.msi`（archive.mozilla.org 官方发行存档）。按上述步骤 1~4 人工执行，证据存 `artifacts/m6-acceptance/at-0017/firefox-previous-official/`。
 
 ## 首次安装与锁定
 
@@ -60,3 +92,4 @@
 
 - 2026-09-19：初建；ai-endpoint 自 verification/ai-endpoint 字节级吸收并登记哈希。
 - 2026-09-20：登记端点验证执行口径（THINKING_MODE=disabled，与应用线格式一致）；scenarios 目录随 E2E-001/E2E-AI-001 纳入。
+- 2026-09-21：登记表回填四槽位可驱动性实测结果（verify-2026-09-20T08-17-15-037Z.json）；edge-previous 登记查证版本 146.0.3856.109（Microsoft Learn 存档发行说明）并注明官方安装包可获得性待核实；firefox-previous 注明 Playwright 构建 v1543 非官方发行版、官方 155.0.1 列为人工规程项；新增三态标记 `executionStatus` 与 W2 待执行项登记；Manual fallback 增补 edge-previous 与 firefox-previous 官方发行版具名条目。

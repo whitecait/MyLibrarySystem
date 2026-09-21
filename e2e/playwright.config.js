@@ -2,15 +2,18 @@
 // M6 acceptance browser harness (runs in Env-W against the acceptance stack's
 // frontend Nginx entry, never against component-level mock servers).
 //
-// Evidence policy (acceptance plan 2026-09-19 §7, plan item 2.7):
+// Evidence policy (registered in e2e/EVIDENCE-POLICY.md):
 //   - No HAR capture and no storageState persistence. Raw cookies, Bearer
-//     tokens and model keys must not enter long-term evidence; this config is
-//     the first control, sensitive-value scans are only a safety net.
+//     tokens and model keys must not enter long-term evidence.
 //   - Evidence screenshots are taken deliberately through
 //     e2e/evidence/safe-shot.mjs, which refuses to write when the page
 //     content or URL contains a value from the temporary secret set.
-//   - Traces stay 'retain-on-failure' (zip archives) and are scanned by
-//     scripts/check-sensitive-evidence-deep.sh before evidence hand-off.
+//   - Traces stay 'retain-on-failure' (zip archives) inside the session
+//     outputDir only. Before any hand-off, scripts/sanitize-evidence-traces.sh
+//     runs over test-results: default mode destroys every trace artifact,
+//     --keep-redacted redacts runtime credentials and repacks. The deep scan
+//     (scripts/check-sensitive-evidence-deep.sh) over the delivered tree
+//     stays the final safety net.
 import { defineConfig } from '@playwright/test'
 
 export default defineConfig({

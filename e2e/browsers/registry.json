@@ -1,12 +1,15 @@
 {
   "registeredAt": "2026-09-19",
+  "updatedAt": "2026-09-21",
   "policy": {
     "scope": "NFR-CMP-0001: desktop Chrome/Edge/Firefox current stable and previous stable major version. No native mobile apps, no screen-reader matrix.",
     "registration": "Every entry must record version, install source, isolated profile dir, executable path and auto-update policy before execution. Entries are filled during Env-W preparation; null fields mean not yet registered.",
     "autoUpdate": "Per-browser field. System installs without a policy-enforced updater freeze register autoUpdateDisabled=false and rely on version checks before and after each matrix round: any version drift voids that round. Isolated installs (unpacked archives) register true.",
     "isolation": "Each browser uses its own persistent profile directory under artifacts/m6-acceptance/browser-profiles/<id> (untracked) so evidence cannot leak session state between entries.",
     "axe": "axe-core is auxiliary only; keyboard, focus, layout and contrast are judged per NFR-CMP-0001 by Playwright assertions plus manual inspection.",
-    "fallback": "A combination Playwright cannot drive is executed by the manual procedure in e2e/README.md §Manual fallback and registered with its evidence."
+    "fallback": "A combination Playwright cannot drive is executed by the manual procedure in e2e/README.md §Manual fallback and registered with its evidence.",
+    "executionStatus": "Per-entry three-state marker, definitions in e2e/README.md §登记三态: procedure-written = written procedure only, no executed verification on the entry's execution line; drivability-verified = Playwright drivability actually tested on this entry (drivable + verifiedAt recorded); formal-execution-pending = matrix-level waiting state held in policy, because the AT-0017 formal round has not run for any slot as of 2026-09-21. A written procedure is not drivability verification; drivability verification is not formal matrix execution.",
+    "w2Pending": "Registered as W2 pending items, none executed as of 2026-09-21: (1) real-browser installation for edge-previous (enterprise offline MSI for 146.0.3856.109; official-package availability still 待核实) and for the official previous-stable Firefox release (155.0.1 from archive.mozilla.org); (2) the formal AT-0017 matrix round over all six slots with per-slot evidence."
   },
   "browsers": [
     {
@@ -19,8 +22,9 @@
       "playwrightChannel": null,
       "profileDir": "artifacts/m6-acceptance/browser-profiles/chrome-current",
       "autoUpdateDisabled": false,
-      "drivable": null,
-      "verifiedAt": null
+      "drivable": true,
+      "verifiedAt": "2026-09-20T08:17:06.718Z",
+      "executionStatus": "drivability-verified"
     },
     {
       "id": "chrome-previous",
@@ -32,8 +36,9 @@
       "playwrightChannel": null,
       "profileDir": "artifacts/m6-acceptance/browser-profiles/chrome-previous",
       "autoUpdateDisabled": true,
-      "drivable": null,
-      "verifiedAt": null
+      "drivable": true,
+      "verifiedAt": "2026-09-20T08:17:07.687Z",
+      "executionStatus": "drivability-verified"
     },
     {
       "id": "edge-current",
@@ -45,22 +50,24 @@
       "playwrightChannel": null,
       "profileDir": "artifacts/m6-acceptance/browser-profiles/edge-current",
       "autoUpdateDisabled": false,
-      "drivable": null,
-      "verifiedAt": null
+      "drivable": true,
+      "verifiedAt": "2026-09-20T08:17:10.093Z",
+      "executionStatus": "drivability-verified"
     },
     {
       "id": "edge-previous",
       "family": "edge",
       "slot": "previous-stable-major",
-      "version": null,
-      "installSource": null,
+      "version": "146.0.3856.109 (final 146 stable-channel build, per Microsoft Learn archived release notes; not installed)",
+      "installSource": "planned: official enterprise offline installer (Microsoft Edge for Business MSI channel); official-package availability for the 146 line 待核实 — no portable official archive exists",
       "executablePath": null,
       "playwrightChannel": null,
       "profileDir": "artifacts/m6-acceptance/browser-profiles/edge-previous",
       "autoUpdateDisabled": null,
       "drivable": null,
       "verifiedAt": null,
-      "note": "previous-major Edge has no portable official archive; obtain the enterprise offline package for the 146 line before the AT-0017 round, or execute this slot via the e2e/README.md manual fallback procedure"
+      "executionStatus": "procedure-written",
+      "note": "version identified 2026-09-21 from learn.microsoft.com/deployedge/microsoft-edge-relnote-archive-stable-channel (Version 146.0.3856.109: April 06, 2026, Stable; first 147 stable 147.0.3912.60 followed April 10, 2026); no install exists on the Env-W host. Installing the enterprise offline package is a W2 pending item; until then this slot is executed by the e2e/README.md manual fallback procedure (executionStatus stays procedure-written). verify-matrix.mjs reports this entry FAIL (exit 1) while executablePath is null — expected until the W2 install completes registration."
     },
     {
       "id": "firefox-current",
@@ -74,6 +81,7 @@
       "autoUpdateDisabled": false,
       "drivable": false,
       "verifiedAt": "2026-09-20",
+      "executionStatus": "procedure-written",
       "note": "system Firefox lacks the Playwright juggler build, so automation cannot drive it (verify 2026-09-20T08-07-02Z); executed by the e2e/README.md manual fallback procedure with its own evidence"
     },
     {
@@ -86,8 +94,10 @@
       "playwrightChannel": "firefox",
       "profileDir": "artifacts/m6-acceptance/browser-profiles/firefox-previous",
       "autoUpdateDisabled": true,
-      "drivable": null,
-      "verifiedAt": null
+      "drivable": true,
+      "verifiedAt": "2026-09-20T08:17:15.037Z",
+      "executionStatus": "drivability-verified",
+      "note": "the drivable entry here is the Playwright build v1543, which is NOT the formally released previous-stable Firefox; the official release line (155, final build 155.0.1, installers Firefox Setup 155.0.1.exe/.msi under archive.mozilla.org/pub/firefox/releases/155.0.1/) is registered as a manual-procedure item per e2e/README.md §Manual fallback, and installing it plus running the manual procedure are W2 pending items"
     }
   ]
 }

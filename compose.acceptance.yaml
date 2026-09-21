@@ -30,7 +30,11 @@ services:
       AI_MODEL: ${AI_MODEL:?Set MODEL in .env and run scripts/prepare-acceptance-env.sh}
       AI_API_KEY: ${AI_API_KEY:?Set API_KEY in .env and run scripts/prepare-acceptance-env.sh}
       # AT-0002 §1.35/§2.34: the quota must be configurable to a low value to
-      # trigger exhaustion. Default stays the protocol value (10/day); the
-      # Env-W probe .env sets AI_VISITOR_DAILY_LIMIT=3 for the E2E-AI-001
-      # quota-exhaustion scenario (registered in the evidence).
+      # trigger exhaustion. The protocol default stays 10/day (application.yml).
+      # The Env-W acceptance value is set explicitly in .env.acceptance
+      # (AI_VISITOR_DAILY_LIMIT=8; registered in the acceptance plan
+      # 2026-09-19 run log item ④); scripts/prepare-acceptance-env.sh writes
+      # that value and e2e/scenarios/e2e-ai-001-ai-portal.spec.js reads the
+      # same value back as its assertion expectation. The :-10 fallback only
+      # applies when .env.acceptance carries no value.
       AI_VISITOR_DAILY_LIMIT: ${AI_VISITOR_DAILY_LIMIT:-10}
