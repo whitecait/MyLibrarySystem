@@ -10,8 +10,10 @@
 //   02 simulated-payment loop: borrow copy 800002 → DAMAGED return (fine) →
 //      reader order → admin schedules SUCCESS via the simulator (with the
 //      prominent simulated-payment notice) → fine reaches PAID.
-//   03 manual review: admin submits an account SUSPEND change for review →
-//      rejects it in /admin/reviews → reader account stays usable.
+//   03 manual review: librarian submits an account SUSPEND change from the
+//      review-initiation page /review-requests (DEF-M6-005 direction b, real
+//      UI path) → admin rejects it in /admin/reviews → reader account stays
+//      usable.
 //
 // Required seed: book_title 700001, book_copy 800001/800002 SHELF_READY,
 // throwaway accounts e2e-librarian (600001) and e2e-admin (600002).
@@ -193,14 +195,15 @@ test('E2E-001/02 模拟支付闭环：损毁归还→罚款→建单→模拟成
   await logoutViaUi(page)
 })
 
-test('E2E-001/03 人工复核：账户变更提交复核→复核拒绝→账户保持可用', async ({ page }) => {
+test('E2E-001/03 人工复核：馆员经复核发起页提交账户变更→管理员复核拒绝→账户保持可用', async ({ page }) => {
   test.setTimeout(180_000)
   const shot = (name) => join(evidenceDir, name)
   const username = `e2e-rev-r-${Date.now()}`
   await registerReader(page, username, 'E2E复核读者')
 
-  // 管理员在账户管理页定位该读者并取得账户号（列表查询为 ADMIN 能力；
-  // 新注册账户按序排在尾页，翻页加载直到出现）
+  // 数据前置（实页定位，不含 API 调用）：accountId 由后端生成、无法从读者名
+  // 反查，listAccounts 为 ADMIN 能力——先由管理员在账户管理页翻页定位该读者
+  // 取得 accountId，供馆员在复核发起页手工录入。
   await login(page, ADMIN_USERNAME, ADMIN_PASSWORD)
   await page.goto('/admin/accounts')
   await page.getByTestId('account-filter-submit').click()
@@ -216,25 +219,18 @@ test('E2E-001/03 人工复核：账户变更提交复核→复核拒绝→账户
   await safeShot(page, shot('13-reader-located.png'), secrets)
   await logoutViaUi(page)
 
-  // 提交账户变更为 LIBRARIAN 能力（角色矩阵 LIBRARIAN_THEN_ADMIN_REVIEW），
-  // 而账户管理页面挂在 ADMIN-only 路由上——页面上的「提交复核」对能进入
-  // 页面的唯一角色必然被 MLS-ID-005 拒绝（DEF-M6-005），因此经馆员
-  // 会话以 API 发起变更申请。
+  // 发起走真实 UI（DEF-M6-005 方向 b）：复核发起页 /review-requests 挂
+  // LIBRARIAN 路由，accountId 手工录入后提交 SUSPEND（角色矩阵
+  // LIBRARIAN_THEN_ADMIN_REVIEW 的发起端），不再经馆员会话 API 绕行。
   await login(page, LIBRARIAN_USERNAME, LIBRARIAN_PASSWORD)
-  const changeStatus = await page.evaluate(async (id) => {
-    const token = JSON.parse(sessionStorage.getItem('mls.session.v1')).token
-    const res = await fetch(`/api/v1/accounts/${id}/change-requests`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        'Idempotency-Key': `e2e-change-${Date.now()}`,
-      },
-      body: JSON.stringify({ action: 'SUSPEND', payload: {}, reason: 'E2E 复核链路探路：提交停用复核' }),
-    })
-    return res.status
-  }, accountId)
-  expect(changeStatus).toBeLessThan(300)
+  await page.goto('/review-requests')
+  await page.getByTestId('initiation-account-id').fill(accountId)
+  await page.getByTestId('initiation-action').selectOption('SUSPEND')
+  await page.getByTestId('initiation-reason').fill('E2E 复核链路：提交停用复核')
+  await page.getByTestId('initiation-submit').click()
+  await expect(page.getByTestId('initiation-result')).toBeVisible()
+  await expect(page.getByTestId('initiation-result')).toContainText('PENDING')
+  await safeShot(page, shot('14-review-requested.png'), secrets)
   await logoutViaUi(page)
 
   // 管理员在复核决定页拒绝该申请，读者账户保持可用
@@ -246,14 +242,14 @@ test('E2E-001/03 人工复核：账户变更提交复核→复核拒绝→账户
   await expect(decideButton).toBeVisible()
   await decideButton.click()
   await page.getByTestId('decision').selectOption('REJECTED')
-  await page.getByTestId('decision-reason').fill('E2E 复核链路探路：拒绝停用，保持账户可用')
+  await page.getByTestId('decision-reason').fill('E2E 复核链路：拒绝停用，保持账户可用')
   await page.getByTestId('decision-submit').click()
   await expect(page.getByTestId('decision-success')).toBeVisible()
-  await safeShot(page, shot('14-review-rejected.png'), secrets)
+  await safeShot(page, shot('15-review-rejected.png'), secrets)
   await logoutViaUi(page)
 
   // 复核被拒后读者仍可登录（停用未生效）
   await login(page, username, READER_PASSWORD)
-  await safeShot(page, shot('15-reader-still-active.png'), secrets)
+  await safeShot(page, shot('16-reader-still-active.png'), secrets)
   await logoutViaUi(page)
 })

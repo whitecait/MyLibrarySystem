@@ -4,7 +4,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getRole, isAuthenticated } from '../platform/auth/session.js'
 import { saveContinuation } from '../platform/auth/continuation.js'
-import { AccountAdminView, LoginView, RegisterView } from '../modules/identity/index.js'
+import { AccountAdminView, LoginView, RegisterView, ReviewInitiationView } from '../modules/identity/index.js'
 import { CatalogAdminView, PortalView, ReadingView, TitleDetailView } from '../modules/catalog/index.js'
 import {
   ClosingAdminView,
@@ -37,6 +37,7 @@ export const routes = [
   { path: '/admin/catalog', name: 'catalog-admin', component: CatalogAdminView, meta: { module: 'catalog', requiresAuth: true, roles: ['LIBRARIAN'], title: '书目维护' } },
   { path: '/admin/copies', name: 'copy-admin', component: CopyAdminView, meta: { module: 'circulation', requiresAuth: true, roles: ['LIBRARIAN'], title: '副本维护' } },
   { path: '/desk', name: 'librarian-desk', component: LibrarianDeskView, meta: { module: 'circulation', requiresAuth: true, roles: ['LIBRARIAN'], title: '馆员工作台' } },
+  { path: '/review-requests', name: 'review-initiation', component: ReviewInitiationView, meta: { module: 'identity', requiresAuth: true, roles: ['LIBRARIAN'], title: '复核发起' } },
   { path: '/admin/dashboard', name: 'arrival-dashboard', component: ArrivalDashboardView, meta: { module: 'query', requiresAuth: true, roles: ['LIBRARIAN'], title: '到馆看板' } },
   { path: '/fines', name: 'fine-settlement', component: FineSettlementView, meta: { module: 'settlement', requiresAuth: true, roles: ['READER', 'LIBRARIAN'], title: '罚款与支付' } },
   { path: '/admin/simulator', name: 'payment-simulator', component: PaymentSimulatorView, meta: { module: 'settlement', requiresAuth: true, roles: ['ADMIN'], title: '模拟支付调度' } },

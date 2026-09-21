@@ -33,3 +33,4 @@ export function changeReaderStatus({ readerId, status, reason }, options = {}) {
 export { default as LoginView } from './internal/LoginView.vue'
 export { default as RegisterView } from './internal/RegisterView.vue'
 export { default as AccountAdminView } from './internal/AccountAdminView.vue'
+export { default as ReviewInitiationView } from './internal/ReviewInitiationView.vue'

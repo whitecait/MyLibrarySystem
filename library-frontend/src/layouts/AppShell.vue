@@ -13,6 +13,7 @@
           <RouterLink v-if="isLibrarian" to="/admin/catalog">书目维护</RouterLink>
           <RouterLink v-if="isLibrarian" to="/admin/copies">副本维护</RouterLink>
           <RouterLink v-if="isLibrarian" to="/desk">馆员工作台</RouterLink>
+          <RouterLink v-if="isLibrarian" to="/review-requests">复核发起</RouterLink>
           <RouterLink v-if="isLibrarian" to="/admin/dashboard">到馆看板</RouterLink>
           <RouterLink v-if="isAdmin" to="/admin/reviews">复核决定</RouterLink>
           <RouterLink v-if="isAdmin" to="/admin/closing">闭馆恢复</RouterLink>

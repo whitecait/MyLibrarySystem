@@ -70,5 +70,6 @@ describe('identity module facade', () => {
     expect(identity.LoginView).toBeTruthy()
     expect(identity.RegisterView).toBeTruthy()
     expect(identity.AccountAdminView).toBeTruthy()
+    expect(identity.ReviewInitiationView).toBeTruthy()
   })
 })
