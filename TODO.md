@@ -21,7 +21,7 @@
 
 ### M6
 
-- [ ] 使用真实 OpenAI-compatible 模型端点执行 smoke；该项不由脚本化模型 Adapter 的集成通过替代，并与 Windows 原生实页验证一并后置。
+- [x] 使用真实 OpenAI-compatible 模型端点执行 smoke；该项不由脚本化模型 Adapter 的集成通过替代。（2026-09-20 探路完成，两份 S1–S6 报告在 artifacts/m6-acceptance/phase3/ai-endpoint/；thinking=disabled 6/6 通过，provider-default 5/6、S3 失败保留为不兼容证据）
 - [ ] 执行系统测试与产品验收，按批准验收定义覆盖正常、权限拒绝、状态冲突、重复、并发、恢复与 AI 权限一致性。
 - [ ] DEF-M6-007 修复：复核三端点控制器层鉴权对齐契约（`GET /reviews`→LIBRARIAN_OR_ADMIN、`POST /reviews`→LIBRARIAN、`POST /reviews/{id}/decision`→ADMIN）＋READER/LIBRARIAN/ADMIN 交叉负例 403 测试；Sev-2，M6 收口前清零，优先于 005-b（2026-09-20 lingzz 裁定）。
 - [ ] DEF-M6-005-b 实施：identity 模块内独立馆员发起页面（新路由 `roles:['LIBRARIAN']`＋AppShell 导航入口、表单迁移、accountId 手工录入）；E2E-001/03 改回真实 UI 发起路径（2026-09-20 lingzz 裁定方向 b）。
@@ -31,6 +31,8 @@
 本文件不登记已完成明细。已完成事实的唯一登记区为 [HANDOFF.md](HANDOFF.md)。
 
 ## 修订记录
+
+- 2026-09-21：勾选真实 OpenAI-compatible 模型端点 smoke 待办（2026-09-20 探路完成，证据为 artifacts/m6-acceptance/phase3/ai-endpoint/ 两份 S1–S6 报告），取代本日早前「真实端点 smoke 待执行」表述；M6 系统测试与产品验收、DEF-M6-007、DEF-M6-005-b 待办保持不变。
 
 - 2026-09-21：M6 待办项不变（批次 A–F、真实端点 smoke 与验收签署待执行）；阶段 4 已完成 AT-0016 三轮（全绿）与 Env-O 观察窗口启动（含停机恢复），登记于 HANDOFF、执行清单与 AT-0003 v0.2。
 - 2026-09-20：新增下一批次两项待办（DEF-M6-007 修复、DEF-M6-005-b 实施），来源为同日 lingzz grill 两轮裁定；均须 M6 收口前完成。
