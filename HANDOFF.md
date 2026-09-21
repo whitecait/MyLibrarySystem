@@ -172,6 +172,16 @@
 - DEF-M6-007 新登记（Sev-2）：复核三端点（`GET /reviews`＝LIBRARIAN_OR_ADMIN、`POST /reviews`＝LIBRARIAN、`POST /reviews/{id}/decision`＝ADMIN）实现只查认证不查角色，任何登录角色（含读者）可直发复核、决定复核、列出待复核清单，违反 AT-0002 §2.3 R5。修复边界（lingzz 裁定）＝控制器层对齐契约补角色检查（循 `CirculationController.java:381,392`、`SettlementController.java:29` 先例）＋READER/LIBRARIAN/ADMIN 交叉负例 403 测试；复测要求＝负例绿＋读者经 decision approve 不落地账户变更核实＋`mvnw clean verify` 全绿。
 - 下一批次任务：DEF-M6-007 修复（先行，Sev-2 清零门禁）＋DEF-M6-005-b 实施（馆员页面、表单迁移、E2E 改真实路径），均须 M6 收口前完成；不阻塞阶段 4 Env-P/AT-0016 与 Env-O 上线（AT-0016 负载与 Env-O 可用率探针均不触达复核端点，窗口受影响情况在 007 修复落地时按窗口内变更规则另行做证据影响分析）。
 
+### 2026-09-20 M6 阶段 4 执行（Env-P AT-0016 三轮与 Env-O 上线）
+
+- 冻结候选：产品树＝e4eb4ee＋闭环修复 DEF-M6-001/002/004/006；提交链 `e5c1b66`→`dbdf18c`（其后六笔均为 harness/工具修复，未触产品路径），镜像自该产品树重建。
+- Env-P 合规性登记（§4.8/4.9 项）：daemon＝Docker Desktop（WSL2 后端，与 Env-W 共享同一 utility VM 与 daemon）；Docker 29.7.2、Compose v5.5.1（与协议表述差异按差异规则登记）；内核 6.18.33.2-microsoft-standard-WSL2、VM 32 CPU/16GB/40GB 根盘。lingzz 2026-09-20 驳回 .wslconfig 约束后，约束验证＝逐容器配额生效（七服务 docker inspect 与清单 §4.1 一致）＋测量窗口宿主纯净（每轮 docker ps 快照，仅 m6-perf 容器运行）。
+- AT-0016 三轮独立运行全绿（2026-09-20 12:22–14:47 UTC）：24 个场景行全 PASS、零非预期失败、零越限阈值、三轮饱和判定清洁（六维判据）；检索四子场景各 361 有效样本；写路径真实性核验（每轮预约创建 110、支付链 10 含回调落地）。证据：`artifacts/m6-acceptance/phase4/at-0016/`（run-1~3＋env-p-compliance＋phase4-verdicts.json/summary）。AT-0003 v0.2 已登记三行通过记录与观察窗口进行中行。
+- 数据集升级 seed-20260910-v2（v1 的 COPY NULL 双重转义修复，`5c2ebfa`），dataset.sql SHA-256 `203c8c31…5b0e`，字节级确定性复核通过，逐轮新鲜库装载。
+- harness 修复六笔（首次真实执行暴露：k6 2.2.0 模块导出/路径、检索参数 `q=`、`titleId` 字段、预约/取消请求体、副本清单令牌与枚举、k6 容器 uid 导出权限、探针幂等键、凭据值集过滤），提交 `5c2ebfa`/`5f115cb`/`7f90800`/`81fded2`/`dbdf18c`。
+- Env-O 上线：2026-09-20T14:55:00Z 窗口启动（项目 `m6-observation`、独立卷与端口 8091/19091/13001、配额 overlay、V1–V9 全 success、探针 30s 三探针全绿）；**宿主设备重启致计划外停机 14:56:30Z→2026-09-21T00:22:56Z（约 9.4 小时）已如实登记**并恢复；无预登记维护时段；窗口按 lingzz 裁定不真实等待、虚拟签署时点由其决定。
+- 阶段 4 观察五项登记（详见清单执行记录）：非法 `/titles/{id}` 得 500；支付模拟器端点鉴权未强制（DEF-M6-007 关联观察）；副本 status 过滤语义；书目 availability 三态个案（title 1001）；audit/outbox/notification 链路未运行（AT-0014/0027 批次前必须核实设计意图）。
+
 ## 未完成责任
 
 本表与 [TODO.md](TODO.md) 当前待办按类别对应，逐项完成条件以 TODO.md 和 REV-0005 §3 为准：
@@ -184,6 +194,8 @@
 原型及 `artifacts/` 取证目录不入库；历史交接原文可经提交 `3181a9f` 恢复，不意味着本地证据已随 git 发布。
 
 ## 修订记录
+
+- 2026-09-21：登记 M6 阶段 4 执行（Env-P AT-0016 三轮全绿、Env-O 窗口启动与宿主重启停机恢复、观察五项、harness 修复链）；只登记执行事实，验收通过结论以 AT-0003 登记为准。
 
 - 2026-09-20：登记 M6 验收阻塞裁定落账（DEF-M6-005 裁定方向 b·表单迁移、DEF-M6-007 新登记 Sev-2）与下一批次排期；lingzz 经 grill 两轮裁定，本页仅登记过程事实。
 
