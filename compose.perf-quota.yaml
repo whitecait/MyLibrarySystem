@@ -11,6 +11,16 @@
 # compose.observability.yaml digest-freeze precedent.
 services:
   backend:
+    environment:
+      # RA-0013 §11 saturation check reads tomcat_threads_busy /
+      # tomcat_threads_config_max from the backend /actuator/prometheus
+      # extract (thread-pool dimension). Spring Boot 3 dropped its own
+      # Tomcat metrics auto-configuration; Micrometer's TomcatMetrics
+      # reads the thread pools over JMX, so the Tomcat MBean registry must
+      # be enabled before the connector starts. Relaxed binding maps this
+      # to server.tomcat.mbeanregistry.enabled. Scope: perf-quota overlay
+      # only — the base and observability stacks are unchanged.
+      SERVER_TOMCAT_MBEANREGISTRY_ENABLED: 'true'
     deploy:
       resources:
         limits:

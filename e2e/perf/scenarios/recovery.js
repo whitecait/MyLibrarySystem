@@ -5,6 +5,8 @@
 import { check } from 'k6'
 import { api, req, thresholds } from '../lib/common.js'
 
+export { handleSummary } from '../lib/common.js'
+
 export const options = {
   scenarios: {
     probe: { executor: 'constant-arrival-rate', rate: 30, timeUnit: '1m', duration: '10m', preAllocatedVUs: 10, maxVUs: 40 },

@@ -5,6 +5,8 @@
 import { check } from 'k6'
 import { api, req, thresholds } from '../lib/common.js'
 
+export { handleSummary } from '../lib/common.js'
+
 const SET = __ENV.RETRIEVAL_SET || 'hot'
 // The pinned k6 image (2.2.0) does not export open from the 'k6' module
 // (the import binds null); the file-reading global is used instead. Absolute

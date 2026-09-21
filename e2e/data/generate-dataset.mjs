@@ -19,6 +19,13 @@
 // "dataset-no-login-20260910" — and load scenarios must use accounts
 // registered through the API during warmup. Bulk login against dataset
 // accounts is not a supported scenario.
+//
+// v3 (2026-09-21, R13): hot-set titles (ids 1..1000) keep a lendable
+// margin — per hot title at most 2 of 3 copies may be bound open (LENT or
+// CONFIRMED), so every hot title retains >=1 SHELF_READY copy and the
+// 80/20-weighted load can target hot titles. v2 capped nothing and the
+// hot-set copies ended up fully occupied, forcing write chains to escape
+// to the tail. All other composition ratios are unchanged.
 import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -35,7 +42,7 @@ const outDir = resolve(argValue('--out', join(here, 'out')))
 const baseDate = argValue('--base-date', '2026-09-10')
 
 const SEED = 20260910
-const GENERATOR_VERSION = 'seed-20260910-v2'
+const GENERATOR_VERSION = 'seed-20260910-v3'
 
 function mulberry32(seed) {
   let a = seed >>> 0
@@ -149,15 +156,23 @@ const freeCopy = (titleId, used) => {
 }
 const openPairs = new Set() // `${readerId}:${titleId}` unique among open statuses (uq_borrow_tx_open_per_reader_title)
 const usedCopies = new Set() // copies currently LENT or RESERVED
+// v3 lendable margin: a hot title has 3 copies and no maintenance slice, so
+// capping open copy-binding (LENT + CONFIRMED) at 2 guarantees every hot
+// title keeps >=1 SHELF_READY copy for the load's write chains. Tail titles
+// are uncapped.
+const HOT_OPEN_CAP = 2
+const openPerTitle = new Array(TITLES + 1).fill(0)
 function bindOpen(readerId) {
   for (let tries = 0; tries < 60; tries++) {
     const titleId = pickTitle()
     const pair = `${readerId}:${titleId}`
     if (openPairs.has(pair)) continue
+    if (isHot(titleId) && openPerTitle[titleId] >= HOT_OPEN_CAP) continue
     const cid = freeCopy(titleId, usedCopies)
     if (cid === null) continue
     openPairs.add(pair)
     usedCopies.add(cid)
+    openPerTitle[titleId]++
     return { titleId, copyId: cid }
   }
   return null
@@ -325,7 +340,11 @@ const manifest = {
   recordComposition: statusCounts,
   copyComposition: copyCounts,
   fines: { due: fines.filter((f) => f.status === 'DUE').length, settled: fines.filter((f) => f.status === 'SETTLED').length },
-  hotSet: { titles: HOT_COUNT, share: 'top 10% of titles carry ~80% of retrieval and loan traffic (enforced by query sets and load mix)' },
+  hotSet: {
+    titles: HOT_COUNT,
+    share: 'top 10% of titles carry ~80% of retrieval and loan traffic (enforced by query sets and load mix)',
+    lendableMargin: 'open LENT/CONFIRMED bindings capped at 2 of 3 copies per hot title; every hot title keeps >=1 SHELF_READY copy',
+  },
   datasetAccounts: 'not for login (shared fixed-salt bcrypt hash, password dataset-no-login-20260910); load scenarios must use API-registered probe accounts',
   checksums: {
     'dataset.sql': sha256(sqlFile),

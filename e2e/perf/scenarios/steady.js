@@ -5,10 +5,21 @@
 // (authenticated LIBRARIAN) and a low-rate end-to-end payment chain
 // (self borrow -> damaged librarian return -> fine -> order -> simulated
 // payment) on top of the read/circulation mix. Same-query conflicts (e.g.
-// all-copies-reserved, lost races) are controlled business rejections and
-// tagged expected.
+// all-copies-reserved, lost races) are controlled business rejections,
+// declared per call site as expected 4xx with the contract's concrete HTTP
+// status and stable business code (see the `expected` arguments below).
+//
+// Traffic follows the hot-set distribution (RA-0013 §11 data distribution
+// [D]): 80% of search/detail/write/payment targets are drawn from the top
+// 10% of titles via queries-hot.json, 20% from the long tail via
+// queries-tail.json (both produced by the dataset generator). Generator
+// seed-20260910-v3 keeps at least one lendable (SHELF_READY) copy on every
+// hot title, so hot-weighted picks can actually proceed instead of being
+// forced to the tail.
 import { check } from 'k6'
 import { api, req, login, auth, thresholds, readerName, probePassword, librarianName, librarianPassword } from '../lib/common.js'
+
+export { handleSummary } from '../lib/common.js'
 
 export const options = {
   scenarios: {
@@ -22,12 +33,16 @@ export const options = {
 
 const READERS = Number(__ENV.PROBE_READERS || 10)
 const probePasswordLocal = probePassword
-// Long-tail query fragments: the default catalog page is dominated by the
-// hot set (top 10% titles), whose copies are fully occupied in the fixed
-// dataset — write and payment chains must target tail titles to find
-// AVAILABLE ones. Loaded via the file-reading global with the absolute
-// in-container path (the pinned k6 image does not export open from 'k6').
+// Query pools produced by the dataset generator. Loaded via the file-reading
+// global with the absolute in-container path (the pinned k6 image does not
+// export open from 'k6'; the k6 service mounts ./e2e/perf at /scripts,
+// compose.perf-quota.yaml).
+const hotQueries = JSON.parse(open('/scripts/out/queries-hot.json'))
 const tailQueries = JSON.parse(open('/scripts/out/queries-tail.json'))
+// Traffic-weighted pool pick: 80% hot set / 20% long tail.
+function pickPool() {
+  return Math.random() < 0.8 ? hotQueries : tailQueries
+}
 let tokens = []
 
 export function setup() {
@@ -45,7 +60,10 @@ export function setup() {
 let queryCursor = 0
 export function reads(data) {
   const token = data.tokens[queryCursor % data.tokens.length]
-  const res = req('GET', api('/titles?q=&limit=10'), 'public_read')
+  // Search target follows the 80/20 hot/tail weighting; the detail request
+  // shares the weighting by drawing on the hits of the current round.
+  const pool = pickPool()
+  const res = req('GET', api(`/titles?q=${encodeURIComponent(pool[queryCursor % pool.length].q)}&limit=10`), 'public_read')
   check(res, { 'search 2xx': (r) => r.status === 200 })
   const items = res.json()?.data?.items ?? []
   if (items.length > 0 && queryCursor % 3 === 0) {
@@ -62,21 +80,31 @@ let writeCursor = 0
 export function writes(data) {
   const token = data.tokens[writeCursor % data.tokens.length]
   writeCursor++
-  // Find a borrowable long-tail title via the contract query parameter (q=)
-  // — hot-set copies are fully occupied in the fixed dataset — then create
-  // and cancel a reservation (two circulation writes; capacity conflicts
-  // are controlled business rejections and tagged expected).
-  const q = tailQueries[(writeCursor * 7) % tailQueries.length]
-  const res = req('GET', api(`/titles?q=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
-  const items = res.json()?.data?.items ?? []
-  const borrowable = items.find((t) => t.availability === 'AVAILABLE')
+  // Target selection follows the 80/20 hot/tail weighting: the pool is
+  // picked weighted and the retries stay inside the same pool, so a hot
+  // iteration borrows a hot title and a tail iteration a tail title. With
+  // generator seed-20260910-v3 hot titles keep a lendable copy; when the
+  // drawn queries still yield no AVAILABLE title the iteration is a
+  // controlled no-op. The search itself is a public_read request; the
+  // create+cancel reservation pair below is two circulation writes
+  // (same-reader open-transaction conflicts are declared expected:
+  // 409 / MLS-CIRC-003).
+  const pool = pickPool()
+  let borrowable = null
+  for (let attempt = 0; attempt < 3 && !borrowable; attempt++) {
+    const q = pool[(writeCursor * 7 + attempt) % pool.length]
+    const res = req('GET', api(`/titles?q=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
+    borrowable = res.json()?.data?.items?.find((t) => t.availability === 'AVAILABLE') ?? null
+  }
   if (!borrowable) return
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
   const create = req('POST', api('/reservations'), 'circulation',
-    { titleId: String(borrowable.titleId), reservationDate: tomorrow, pickupSlot: 'PM', channel: 'ONLINE' }, true, auth(token))
+    { titleId: String(borrowable.titleId), reservationDate: tomorrow, pickupSlot: 'PM', channel: 'ONLINE' },
+    [{ status: 409, reason: 'MLS-CIRC-003' }], auth(token))
   const txId = create.json()?.data?.txId
   if (txId) {
-    req('POST', api(`/reservations/${txId}/cancel`), 'circulation', { reason: 'perf-load-release' }, true, auth(token))
+    req('POST', api(`/reservations/${txId}/cancel`), 'circulation', { reason: 'perf-load-release' },
+      [{ status: 409, reason: 'MLS-CIRC-003' }], auth(token))
   }
 }
 
@@ -93,35 +121,52 @@ export function paymentChain(data) {
   // End-to-end payment class at low rate (2/min): a reader borrows a
   // shelf-ready copy self-service, the librarian returns it DAMAGED (fine),
   // the reader opens an order on the fine and a SUCCESS simulated payment is
-  // scheduled. Lost races (copy taken between list and borrow) are expected.
-  // Copy listing is a LIBRARIAN capability, so the staff token performs the
-  // lookup (and the simulator call); business writes stay with the reader.
+  // scheduled. Target selection follows the 80/20 hot/tail weighting with
+  // same-pool retries (as writes). Lost races (copy taken between list and
+  // borrow) are expected. Copy listing is a LIBRARIAN capability, so the
+  // staff token performs the lookup (and the simulator call); business
+  // writes stay with the reader.
   const token = data.tokens[payCursor % data.tokens.length]
   payCursor++
-  const q = tailQueries[(payCursor * 11) % tailQueries.length]
-  const res = req('GET', api(`/titles?q=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
-  const items = res.json()?.data?.items ?? []
-  const candidates = items.filter((t) => t.availability === 'AVAILABLE').slice(0, 3)
+  const pool = pickPool()
+  const candidates = []
+  for (let attempt = 0; attempt < 3 && candidates.length === 0; attempt++) {
+    const q = pool[(payCursor * 11 + attempt) % pool.length]
+    const res = req('GET', api(`/titles?q=${encodeURIComponent(q.q)}&limit=10`), 'public_read')
+    for (const t of res.json()?.data?.items ?? []) {
+      if (t.availability === 'AVAILABLE') candidates.push(t)
+    }
+  }
   let copy = null
   let titleId = null
-  for (const t of candidates) {
+  for (const t of candidates.slice(0, 3)) {
     const copies = req('GET', api(`/copies?titleId=${t.titleId}&status=AVAILABLE&limit=3`), 'normal_read', null, false, auth(data.librarianToken))
       .json()?.data?.items ?? []
     if (copies.length > 0) { copy = copies[0]; titleId = t.titleId; break }
   }
   if (!copy) return
+  // Lost copy races are declared expected as the contract's conflict paths:
+  // copy-state conflict 409 / MLS-CIRC-003, reader-eligibility 422 /
+  // MLS-CIRC-011. Any other 4xx lands in unexpected_4xx.
   const loan = req('POST', api('/walk-in-loans'), 'circulation',
-    { items: [{ titleId: String(titleId), copyId: String(copy.copyId) }], channel: 'SELF_SERVICE' }, true, auth(token))
+    { items: [{ titleId: String(titleId), copyId: String(copy.copyId) }], channel: 'SELF_SERVICE' },
+    [{ status: 409, reason: 'MLS-CIRC-003' }, { status: 422, reason: 'MLS-CIRC-011' }], auth(token))
   const lent = (loan.json()?.data?.items ?? []).some((i) => i.outcome === 'LENT')
   if (!lent) return
-  req('POST', api('/returns'), 'circulation', { copyId: String(copy.copyId), condition: 'DAMAGED' }, true, auth(data.librarianToken))
+  // double-return / not-on-loan races: 409 / MLS-CIRC-006
+  req('POST', api('/returns'), 'circulation', { copyId: String(copy.copyId), condition: 'DAMAGED' },
+    [{ status: 409, reason: 'MLS-CIRC-006' }], auth(data.librarianToken))
   const fines = req('GET', api('/fines?status=UNPAID&limit=5'), 'circulation', null, false, auth(token))
     .json()?.data?.items ?? []
   const fine = fines[0]
   if (!fine) return
-  const order = req('POST', api(`/fines/${fine.fineId}/orders`), 'payment', {}, true, auth(token))
+  // concurrent order on the same fine: 409 / MLS-PAY-001
+  const order = req('POST', api(`/fines/${fine.fineId}/orders`), 'payment', {},
+    [{ status: 409, reason: 'MLS-PAY-001' }], auth(token))
   const orderId = order.json()?.data?.orderId
   if (!orderId) return
+  // conflicting callback events: 409 / MLS-PAY-003
   req('POST', api('/payment-simulator/results'), 'payment',
-    { orderId: String(orderId), result: 'SUCCESS', delayMs: 0, duplicateCount: 0 }, true, auth(data.librarianToken))
+    { orderId: String(orderId), result: 'SUCCESS', delayMs: 0, duplicateCount: 0 },
+    [{ status: 409, reason: 'MLS-PAY-003' }], auth(data.librarianToken))
 }

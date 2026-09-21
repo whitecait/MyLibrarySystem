@@ -11,6 +11,8 @@
 import { check } from 'k6'
 import { api, req, login, auth, thresholds } from '../lib/common.js'
 
+export { handleSummary } from '../lib/common.js'
+
 export const options = {
   scenarios: {
     calib: { executor: 'constant-vus', vus: 2, duration: '60s' },
