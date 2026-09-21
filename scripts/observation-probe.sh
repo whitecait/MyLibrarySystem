@@ -13,8 +13,9 @@
 #
 # Probe set (core scenarios, read-only + login):
 #   health  GET  /api/health                         expect 2xx
-#   search  GET  /api/v1/titles?search=...&limit=5   expect 2xx
+#   search  GET  /api/v1/titles?q=...&limit=5        expect 2xx
 #   login   POST /api/v1/auth/sessions               expect 2xx
+# (login declares a required Idempotency-Key — without it the call 400s.)
 #
 # Credentials reach curl only through a scratch file (never command args);
 # responses are discarded. Run under a supervisor; SIGTERM/SIGINT close the
@@ -49,7 +50,7 @@ while true; do
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   health="$(probe health "${base_url}/api/health")"
   search="$(probe search "${base_url}/api/v1/titles?q=${search_word}&limit=5")"
-  login="$(probe login -X POST -H 'Content-Type: application/json' --data-binary "@${body_scratch}" "${base_url}/api/v1/auth/sessions")"
+  login="$(probe login -X POST -H 'Content-Type: application/json' -H 'Idempotency-Key: probe-'"$(date -u +%Y%m%d%H%M%S)" --data-binary "@${body_scratch}" "${base_url}/api/v1/auth/sessions")"
   if [[ "$health" == *'"ok":true'* && "$search" == *'"ok":true'* && "$login" == *'"ok":true'* ]]; then
     ok=true
   else

@@ -24,9 +24,16 @@ env_files=("${@:1:$#-1}")
 
 for env_file in "${env_files[@]}"; do
   test -f "$env_file" || { echo "not a file: $env_file" >&2; exit 2; }
+  # Credential keys only: the acceptance .env files also carry operational
+  # config (ports, pinned image tags, provider base URLs) that legitimately
+  # appears in evidence; matching those turned the scan into noise.
   awk -F= '
     { sub(/\r$/, "") }
-    $0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ {
+    $0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ && $0 ~ /=/ {
+      key = $0
+      sub(/=.*$/, "", key)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+      if (key !~ /(PASSWORD|SECRET|TOKEN|API_KEY|_KEY)/) next
       val = $0
       if (val ~ /=/) sub(/^[^=]*=/, "", val)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", val)
