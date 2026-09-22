@@ -10,6 +10,7 @@ import com.library.circulation.contract.ReservationCommands;
 import com.library.circulation.contract.ReturnCommands;
 import com.library.circulation.contract.model.BusinessDate;
 import com.library.circulation.contract.model.CopyId;
+import com.library.circulation.contract.model.TxId;
 import com.library.contract.ModuleResult;
 import com.library.contract.model.AccountId;
 import com.library.contract.model.Role;
@@ -182,6 +183,30 @@ class ITDefM6011AuditTrailTest {
         assertAudit("SIMULATION_SCHEDULED", orderId, admin, "SCHEDULED");
     }
 
+    // 预约取消与人工处置（人工例外）：两类同样各落一条成功审计
+    @Test
+    void defM6011_reservationCancelAndManualActionAreAudited() {
+        var reader = seedAccount("def011-cancel-" + System.nanoTime(), "READER");
+        var librarian = seedAccount("def011-manuallib-" + System.nanoTime(), "LIBRARIAN");
+        var title = seedTitle("m6011d-");
+        var manualTitle = seedTitle("m6011e-");
+        seedCopy(title, "DEF011-D1");
+        var readerActor = actor(reader, Role.READER);
+        var librarianActor = actor(librarian, Role.LIBRARIAN);
+
+        var reserved = accepted(loans.reserve(readerActor, new ReservationCommands.ReservationCommand(
+                reader, TitleId.of(title), BusinessDate.of(LocalDate.now().plusDays(1)), "AM",
+                "ONLINE", true, readerActor)));
+        accepted(loans.cancel(readerActor, new ReservationCommands.CancelReservation(
+                reserved.txId(), "改期", readerActor)));
+        assertAudit("RESERVATION_CANCELLED", reserved.txId().value(), reader, "CANCELLED");
+
+        var manualTx = seedManualHandlingTransaction(reader, manualTitle);
+        accepted(loans.applyManualAction(librarianActor, new LoanCommands.ManualAction(
+                TxId.of(manualTx), "REJECT", "读者无法到馆", librarianActor)));
+        assertAudit("MANUAL_ACTION_APPLIED", manualTx, librarian, "REJECTED");
+    }
+
     private void assertAudit(String eventType, long relatedId, long actorId, String outcome) {
         var rows = jdbc.queryForList("""
                 SELECT actor_id, detail->>'relatedId' AS related, detail->>'outcome' AS outcome
@@ -249,6 +274,15 @@ class ITDefM6011AuditTrailTest {
                 INSERT INTO book_copy (title_id, copy_no, status) VALUES (?, ?, 'SHELF_READY')
                 RETURNING id
                 """, Long.class, titleId, copyNo);
+    }
+
+    private long seedManualHandlingTransaction(long readerId, long titleId) {
+        return jdbc.queryForObject("""
+                INSERT INTO borrow_transaction (reader_id, title_id, status, reservation_date,
+                                                pickup_slot)
+                VALUES (?, ?, 'MANUAL_HANDLING', current_date, 'AM')
+                RETURNING id
+                """, Long.class, readerId, titleId);
     }
 
     @SuppressWarnings("unchecked")

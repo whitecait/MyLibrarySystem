@@ -122,9 +122,9 @@ AI `actions` 只允许 `{actionType,level,prefill,draftId,label}`。L1 可带查
 
 | eventType | 触发用例 | `detail.relatedId` | `detail.outcome` |
 | --------- | -------- | ------------------ | ---------------- |
-| `ACCESS_DENIED` | 401/403/404 拒绝响应与令牌解析失败 | 无（路径在 `detail.path`） | HTTP 状态码 |
+| `ACCESS_DENIED` | 401/403/404 拒绝响应与令牌解析失败 | 无（路径与状态在 `detail.path`／`detail.status`） | 无（拒绝码在 `detail.code`） |
 | `RESERVATION_DECIDED` | 预约判定成立（绑定成功、候补入队、转人工处理中） | 借阅事务 id | `CONFIRMED`／`WAITLIST_ENQUEUED`／`MANUAL_HANDLING` |
-| `RESERVATION_CANCELLED` | 预约取消 | 借阅事务 id | `NOT_BORROWED` |
+| `RESERVATION_CANCELLED` | 预约取消 | 借阅事务 id | `CANCELLED` |
 | `WALKIN_LOAN_BATCH` | 现场逐册借阅（每个成功册一条） | 该册借阅事务 id | `LENT` |
 | `PICKUP_CLAIMED` | 到台取书借出 | 借阅事务 id | `CLAIMED` |
 | `MANUAL_ACTION_APPLIED` | 人工处置 | 借阅事务 id | `RELEASED`／`ENTRY_CONFIRMED`／`REJECTED` |
@@ -137,7 +137,7 @@ AI `actions` 只允许 `{actionType,level,prefill,draftId,label}`。L1 可带查
 | `REVIEW_DECIDED` | 复核决定 | 复核 id | `APPROVED`／`REJECTED` |
 | `SIMULATION_SCHEDULED` | 模拟支付调度 | 订单 id | `SCHEDULED` |
 
-`detail` 至少携带 `relatedId` 与 `outcome`：`GET /audit-events` 的关联过滤与结果呈现按 `detail->>'relatedId'`、`detail->>'outcome'` 读出，缺键即该行在反查结果中关联为空。`actor_id` 为当步操作者账户 id；自动判定（闭馆结算的分配与清退）无操作者，按 0 登记。
+成功路径类型的 `detail` 至少携带 `relatedId` 与 `outcome`：`GET /audit-events` 的关联过滤与结果呈现按 `detail->>'relatedId'`、`detail->>'outcome'` 读出，缺键即该行在反查结果中关联为空。`ACCESS_DENIED` 沿用既有结构（`path`／`code`／`status`），不含这两个键，故按 `relatedId` 反查不会返回拒绝审计行。`actor_id` 为当步操作者账户 id；自动判定（闭馆结算的分配与清退）无操作者，按 0 登记。
 
 事务语义分两类：成功路径审计加入业务事务，与所登记的业务事实同提交同回滚；拒绝与失败审计沿用 DD-0004 §1 的独立提交。
 
