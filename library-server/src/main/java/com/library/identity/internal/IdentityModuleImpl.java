@@ -168,11 +168,13 @@ public class IdentityModuleImpl implements IdentityRegistration, ActorResolver, 
             case "LIBRARIAN_THEN_ADMIN_REVIEW" -> role == Role.LIBRARIAN;
             case "SYSTEM" -> role == Role.SYSTEM;
             case "SYSTEM_OR_ADMIN" -> role == Role.SYSTEM || role == Role.ADMIN;
+            // 2026-09-22 lingzz 裁定（M6 恢复计划 §8 第 2 项）：模拟支付调度能力限定 ADMIN
+            case "CONTROLLED_TEST_OPERATOR" -> role == Role.ADMIN;
             case "READER_SELF" -> isSelf(actor, subject);
             case "READER_SELF_OR_LIBRARIAN" -> role == Role.LIBRARIAN || isSelf(actor, subject);
             case "READER_SELF_OR_LIBRARIAN_OR_SYSTEM" ->
                     role == Role.LIBRARIAN || role == Role.SYSTEM || isSelf(actor, subject);
-            default -> false; // CONTROLLED_TEST_OPERATOR/SIMULATOR_CREDENTIAL/SESSION_OWNER 随批次登记
+            default -> false; // SIMULATOR_CREDENTIAL/SESSION_OWNER 随批次登记
         };
         if (!allowed) {
             if (actor == null) {

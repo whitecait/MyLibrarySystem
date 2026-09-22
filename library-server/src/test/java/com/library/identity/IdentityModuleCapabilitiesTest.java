@@ -103,6 +103,31 @@ class IdentityModuleCapabilitiesTest {
                 .isEqualTo("MLS-ID-005");
     }
 
+    // DEF-M6-008 裁定回归（2026-09-22 lingzz，M6 恢复计划 §8 第 2 项）：
+    // CONTROLLED_TEST_OPERATOR 映射 ADMIN；其余角色无权、匿名未认证。
+    @Test
+    void defM6008_controlledTestOperatorMapsToAdminOnly() {
+        var admin = new ActorContext(com.library.contract.model.AccountId.of(1),
+                com.library.contract.model.Role.ADMIN, Instant.now());
+        assertThat(decision(module.authorize(admin, Capability.CONTROLLED_TEST_OPERATOR,
+                SubjectRef.system()))).isTrue();
+
+        for (var role : java.util.List.of(com.library.contract.model.Role.READER,
+                com.library.contract.model.Role.LIBRARIAN, com.library.contract.model.Role.SYSTEM)) {
+            var other = new ActorContext(com.library.contract.model.AccountId.of(2), role, Instant.now());
+            assertThat(decision(module.authorize(other, Capability.CONTROLLED_TEST_OPERATOR, SubjectRef.system())))
+                    .as("role %s 不得持有 CONTROLLED_TEST_OPERATOR", role).isFalse();
+            assertThat(codeOf(module.authorize(other, Capability.CONTROLLED_TEST_OPERATOR, SubjectRef.system())))
+                    .isEqualTo("MLS-ID-005");
+        }
+        assertThat(codeOf(module.authorize(null, Capability.CONTROLLED_TEST_OPERATOR, SubjectRef.system())))
+                .isEqualTo("MLS-ID-001");
+        // 裁定范围外：SIMULATOR_CREDENTIAL/SESSION_OWNER 仍无角色映射（default 拒绝）
+        assertThat(decision(module.authorize(admin, Capability.SIMULATOR_CREDENTIAL,
+                SubjectRef.system()))).isFalse();
+        assertThat(decision(module.authorize(admin, Capability.SESSION_OWNER, SubjectRef.system()))).isFalse();
+    }
+
     // UT-ID-005 读者状态办理：馆员直办 ACTIVE/SUSPENDED、非读者与非法状态冲突
     @Test
     void utId005_readerStatusHandling() {

@@ -4,7 +4,7 @@
 | -------- | -------------------------- |
 | 文档编号 | `MLS-DOC-MD-0003`          |
 | 文档状态 | `Approved`                 |
-| 文档版本 | `v0.4`                     |
+| 文档版本 | `v0.5`                     |
 | 编制日期 | `2026-09-13`               |
 | 阶段     | M5 模块设计收尾与单元测试  |
 | 权威性质 | 已批准的前后端共同契约     |
@@ -89,6 +89,8 @@
 
 支付等待超时是本地等待事件，不伪造成失败回调。成功回调只对合法占用订单生效；重复 `eventId` 返回首次结果，冲突事件留证但不改写业务事实。任何金额的退款都是高风险动作：馆员发起、管理员复核，批准前不生效；迟到关闭或计时器不能自动退款。
 
+`POST /payment-simulator/results` 权限列的「受控测试操作者」即 `contracts/http/openapi.yaml` 的 `x-permission: CONTROLLED_TEST_OPERATOR`；该 capability 映射到 ADMIN 角色（2026-09-22 lingzz 裁定，`docs/agents/M6-RECOVERY-PLAN-20260922.md` 第 8 节第 2 项）：模拟结果调度仅管理员会话可发起，READER 与 LIBRARIAN 调度返回 `403 MLS-ID-005`，匿名保持 `401 MLS-ID-001`。限定对象是模拟器结果调度操作本身，不改变读者正常支付建单（`POST /fines/{fineId}/orders`）与模拟器回调（`POST /payment-callbacks`）的既有权限。
+
 ## 5. 查询、通知、审计与 AI 契约
 
 | 方法与路径 | 权限 | 请求或查询 | 成功 data | 主要错误 | 覆盖 |
@@ -115,6 +117,8 @@ AI `actions` 只允许 `{actionType,level,prefill,draftId,label}`。L1 可带查
 `contracts/examples/contract-scenarios.json` 是前端 mock、后端 Controller 契约测试与联调共同使用的固定样例，并由相邻的 `contract-scenarios.schema.json` 校验样例外形。请求与响应结构还必须逐操作通过 OpenAPI 校验；样例中的 `request`、`response` 和 `expect` 必须同时更新。14 个样例是跨域关键行为集，其中新增 5 个匿名 AI 场景覆盖 Cookie 启动、连续交互、错误凭据不可见、登录不提权与跨访客共享额度；它们不承担 45 个操作的结构穷举。样例通过不替代模块规则、PostgreSQL 并发或产品验收测试。
 
 ## 修订记录
+
+- 2026-09-22，v0.5：登记 `CONTROLLED_TEST_OPERATOR` capability 到 ADMIN 角色的映射（依据 2026-09-22 lingzz 批准的 M6 恢复计划第 8 节第 2 项），补记模拟结果调度端点仅管理员会话可发起；`x-permission` 取值与 45 个操作的成功状态未变，故机器契约与前端生成物无需重建。影响需求：FR-0020/0026 的调度权限语义可判；影响验收：批次 B AT-0010 越权负例、AT-0016 支付链调度角色；评审人/批准人：lingzz（2026-09-22 裁定）；结论：登记该裁定，未做结构变更。
 
 - 2026-09-17，v0.4：OpenAPI 契约升至 2.0.0，删除 `clientSessionId` 和启动请求体，增加匿名 Cookie/Bearer 替代安全方案、Set-Cookie 响应、`VISITOR` AI 角色、401/404 所有权语义与 5 个共同样例；45 个 operationId 不变。影响需求：无；影响验收：匿名所有权、不可见性、登录不提权和共享额度可结构验证；前端生成物按批准选择暂不重建，CONTRACT-002 预期漂移；评审人/批准人：lingzz；结论：随 REV-0005 v1.2 批准，生成物与实现仍未同步。
 
