@@ -46,3 +46,8 @@ library:
     retry-budget: ${AI_RETRY_BUDGET:2}
     endpoint-timeout: ${AI_ENDPOINT_TIMEOUT:8s}
     visitor-cookie-signing-key: ${AI_VISITOR_COOKIE_SIGNING_KEY}
+  outbox:
+    # 应用内 Outbox 分发循环（DEF-M6-012）。集成测试以 test 属性关闭后台轮询，改为显式调用分发器。
+    dispatch-enabled: ${OUTBOX_DISPATCH_ENABLED:true}
+    dispatch-interval-ms: ${OUTBOX_DISPATCH_INTERVAL_MS:2000}
+    dispatch-initial-delay-ms: ${OUTBOX_DISPATCH_INITIAL_DELAY_MS:3000}

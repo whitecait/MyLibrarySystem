@@ -8,8 +8,9 @@ import org.springframework.stereotype.Component;
 
 @Component
 public final class ClosingModuleImpl implements ClosingCommands {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ClosingModuleImpl.class);
     private final ClosingStore store;
     public ClosingModuleImpl(ClosingStore store){this.store=store;}
-    @Override public ModuleResult<ClosingRun> closeBusinessDate(ClosingCommand c){var date=c.businessDate().value();store.beginDraining(date);while(true){try{var status=store.isolateAndRun(date);return ModuleResult.Accepted.of(new ClosingRun(date.toEpochDay(),status));}catch(RuntimeException failure){var state=store.markFailure(date);if("MANUAL".equals(state.status()))return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_014.code(),"闭馆批次失败，已转人工");}}}
+    @Override public ModuleResult<ClosingRun> closeBusinessDate(ClosingCommand c){var date=c.businessDate().value();store.beginDraining(date);while(true){try{var status=store.isolateAndRun(date);return ModuleResult.Accepted.of(new ClosingRun(date.toEpochDay(),status));}catch(RuntimeException failure){log.warn("闭馆批次失败 businessDate={} cause={}", date, failure.toString());var state=store.markFailure(date);if("MANUAL".equals(state.status()))return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_014.code(),"闭馆批次失败，已转人工");}}}
     @Override public ModuleResult<ReopenedDate> reopen(ReopenCommand c){if(!store.caughtUpThrough(c.throughDate().value()))return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_008.code(),"闭馆批次尚未追平");return ModuleResult.Accepted.of(new ReopenedDate("REOPENED",store.reopen(c.throughDate().value())));}
 }

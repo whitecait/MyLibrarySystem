@@ -16,6 +16,8 @@ import com.library.catalog.contract.model.TitleId;
 import com.library.circulation.contract.model.TxId;
 import com.library.circulation.internal.CirculationModuleImpl;
 import com.library.circulation.internal.adapter.persistence.InMemoryCirculationStore;
+import com.library.contract.audit.RecordingAuditAppender;
+import com.library.contract.outbox.RecordingOutboxAppender;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -32,7 +34,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CirculationModuleTest {
 
     private final InMemoryCirculationStore store = new InMemoryCirculationStore();
-    private final CirculationModuleImpl module = new CirculationModuleImpl(store);
+    private final RecordingOutboxAppender outbox = new RecordingOutboxAppender();
+    private final RecordingAuditAppender audit = new RecordingAuditAppender();
+    private final CirculationModuleImpl module = new CirculationModuleImpl(store, outbox, audit);
 
     private final ActorContext reader = new ActorContext(AccountId.of(1L), Role.READER,
             Instant.parse("2026-09-16T08:00:00Z"));
@@ -219,6 +223,34 @@ class CirculationModuleTest {
         assertThat(calendar.days().get(0).availability()).isEqualTo("GUARANTEED");
         assertThat(codeOf(module.calendar(title, BusinessDate.of(LocalDate.now().plusDays(6)),
                 BusinessDate.of(LocalDate.now())))).isEqualTo("MLS-CIRC-001");
+    }
+
+    // DEF-M6-012 维护完成刷新结算：SHELVE 使副本回可借后按队头先到先得分配候补并登记事件（仅分配、不清退）
+    @Test
+    void defM6012_maintenanceCompletionAssignsWaitlistHead() {
+        shelvedCopy("C-80");
+        var reserved = ((ModuleResult.Accepted<ReservationCommands.Reservation>) module.reserve(
+                command(reader, title, false))).value();
+        assertThat(reserved.outcome()).isEqualTo("CONFIRMED");
+        var other = readerOf(3L);
+        var enqueued = ((ModuleResult.Accepted<ReservationCommands.Reservation>) module.reserve(
+                command(other, title, true))).value();
+        assertThat(enqueued.outcome()).isEqualTo("WAITLIST_ENQUEUED");
+        assertThat(outbox.entries()).isEmpty();
+
+        var shelvedLater = shelvedCopy("C-81");
+
+        var assigned = store.txById(enqueued.txId().value()).orElseThrow();
+        assertThat(assigned.status()).isEqualTo("CONFIRMED");
+        assertThat(assigned.copyId()).isEqualTo(shelvedLater);
+        assertThat(store.copyById(shelvedLater).orElseThrow().status()).isEqualTo("RESERVED");
+        assertThat(outbox.entries()).singleElement()
+                .satisfies(entry -> {
+                    assertThat(entry.eventType()).isEqualTo("WAITLIST_ASSIGNED");
+                    assertThat(entry.aggId()).isEqualTo(enqueued.txId().value());
+                });
+        assertThat(audit.entries()).singleElement()
+                .extracting(RecordingAuditAppender.Entry::eventType).isEqualTo("WAITLIST_ASSIGNED");
     }
 
     private ReservationCommands.ReservationCommand command(ActorContext actor, TitleId titleId,

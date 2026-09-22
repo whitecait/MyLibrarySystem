@@ -1,8 +1,12 @@
 package com.library.circulation.internal;
 
 import com.library.contract.ModuleResult;
+import com.library.contract.audit.AuditAppender;
+import com.library.contract.audit.AuditEventTypes;
+import com.library.contract.audit.BusinessOutcome;
 import com.library.contract.error.StableErrorCode;
 import com.library.contract.model.PageCursor;
+import com.library.contract.outbox.OutboxAppender;
 import com.library.contract.security.ActorContext;
 import com.library.circulation.contract.AvailabilityQuery;
 import com.library.circulation.contract.CopyCommands;
@@ -27,6 +31,8 @@ import java.util.Map;
  * CIRCULATION 模块实现：副本六态、预约/候补、借出、人工处置、续借、归还。
  * 规则与持久化细节隐藏在模块内；DB 副本态 SHELF_READY/LENT 在契约边界映射
  * API 态 AVAILABLE/BORROWED。借期/续借参数为待确认业务常量（见批次报告）。
+ * 维护完成刷新结算（DEF-M6-012）：SHELVE 使副本回到可借后按队头先到先得分配候补并
+ * 登记 WAITLIST_ASSIGNED 事件；刷新结算仅分配、不清退（清退在闭馆结算）。
  */
 @Component
 public class CirculationModuleImpl implements AvailabilityQuery, ReservationCommands,
@@ -53,9 +59,13 @@ public class CirculationModuleImpl implements AvailabilityQuery, ReservationComm
             "REMOVED", "REMOVED");
 
     private final CirculationStore store;
+    private final OutboxAppender outbox;
+    private final AuditAppender audit;
 
-    public CirculationModuleImpl(CirculationStore store) {
+    public CirculationModuleImpl(CirculationStore store, OutboxAppender outbox, AuditAppender audit) {
         this.store = store;
+        this.outbox = outbox;
+        this.audit = audit;
     }
 
     // ---- 可用性 -------------------------------------------------------------
@@ -398,8 +408,44 @@ public class CirculationModuleImpl implements AvailabilityQuery, ReservationComm
             return ModuleResult.Rejected.conflict(StableErrorCode.MLS_CIRC_003.code(), copy.version(),
                     "版本或状态已变化，请基于最新版本重新提交");
         }
+        if ("SHELVE".equals(action)) {
+            refreshSettlement(copy.titleId(), command.actor());
+        }
         return ModuleResult.Accepted.of(new CopySnapshot(CopyId.of(copy.id()), TitleId.of(copy.titleId()),
                 copy.copyNo(), DB_TO_API_STATUS.get(transition.getValue()), updated));
+    }
+
+    /**
+     * 维护完成刷新结算（AT-0002 §1.28「书目出现可用副本时…维护完成触发的即时结算」）：
+     * 候补队头绑定一个可用副本并置 CONFIRMED，登记 WAITLIST_ASSIGNED。**仅分配、不清退**。
+     * 无可分配副本时不做任何改动，留待闭馆结算按到期清退。
+     */
+    private void refreshSettlement(long titleId, ActorContext actor) {
+        var head = store.waitlistByTitle(titleId, 1);
+        if (head.isEmpty()) {
+            return;
+        }
+        var candidate = head.getFirst();
+        if (candidate.reservationDate() == null) {
+            return;
+        }
+        var copyId = bindFirstAvailable(titleId);
+        if (copyId == null) {
+            return;
+        }
+        if (store.transitionTransaction(candidate.id(), "WAITLIST", "CONFIRMED",
+                candidate.version()) == null) {
+            // 事务状态已变化：释放刚绑定的副本，回到可借
+            store.transitionCopy(copyId, "RESERVED", "SHELF_READY", versionOfCopy(copyId));
+            return;
+        }
+        attachCopyToTx(candidate.id(), copyId);
+        outbox.append("CIRCULATION_TX", candidate.id(), "WAITLIST_ASSIGNED",
+                Map.of("readerId", candidate.readerId(),
+                        "reservationDate", candidate.reservationDate().toString()));
+        audit.appendWithBusinessFact(AuditEventTypes.WAITLIST_ASSIGNED,
+                actor == null ? null : actor.accountId().value(),
+                new BusinessOutcome(candidate.id(), "ASSIGNED"));
     }
 
     // ---- 内部工具 ----------------------------------------------------------------
