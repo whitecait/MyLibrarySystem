@@ -87,6 +87,8 @@ library-frontend/reports/
 !scripts/test-database-readiness.sh
 !scripts/check-review-docs.py
 !scripts/audit-g34-review.py
+!scripts/sanitize-idempotency-snapshots.py
+!scripts/test-sanitize-idempotency-snapshots.py
 # --- M6 acceptance harness (2026-09-19) ---
 !compose.acceptance.yaml
 !compose.perf-quota.yaml

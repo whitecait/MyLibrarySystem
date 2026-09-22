@@ -73,8 +73,34 @@ fi
 for f in warmup steady retrieval peak recovery; do
   [[ -f "e2e/perf/scenarios/${f}.js" ]] || { echo "preflight: missing e2e/perf/scenarios/${f}.js" >&2; exit 2; }
 done
+[[ -f e2e/perf/lib/sanitize-k6-summary.mjs ]] || {
+  echo "preflight: missing e2e/perf/lib/sanitize-k6-summary.mjs (summary evidence cannot be made credential-free)" >&2
+  exit 2
+}
 for set in hot tail; do
   [[ -f "e2e/perf/out/queries-${set}.json" ]] || { echo "preflight: missing e2e/perf/out/queries-${set}.json (run the dataset generator first)" >&2; exit 2; }
+done
+
+# A hard interruption can leave k6's raw --summary-export file in the shared
+# output mount. Remove only the exact names owned by this protocol before the
+# next attempt starts; query fixtures (queries-hot.json / queries-tail.json)
+# and every other output are outside this allow-list. A path that cannot be
+# removed is a hard preflight failure, because proceeding would make a stale
+# raw summary indistinguishable from the next attempt's output.
+protocol_summary_labels=(
+  warmup steady
+  retrieval-cold-hot retrieval-hot-hot retrieval-cold-tail retrieval-hot-tail
+  peak recovery
+)
+for label in "${protocol_summary_labels[@]}"; do
+  stale_summary="e2e/perf/out/${label}-summary.json"
+  if [[ -e "$stale_summary" || -L "$stale_summary" ]]; then
+    if ! rm -f -- "$stale_summary"; then
+      echo "preflight: stale protocol summary cannot be removed: ${stale_summary}; refusing to run" >&2
+      exit 2
+    fi
+    echo "preflight: removed stale protocol summary ${stale_summary}"
+  fi
 done
 
 # --- attempt identity: timestamp + unique attempt id, fresh directory ------
@@ -89,6 +115,7 @@ sha() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1 || echo unknown; }
 proto_sha="$(sha e2e/perf/run-protocol.sh)"
 sampler_sha="$(sha e2e/perf/sample-resources.sh)"
 sat_sha="$(sha e2e/perf/check-saturation.mjs)"
+sanitizer_sha="$(sha e2e/perf/lib/sanitize-k6-summary.mjs)"
 
 json_str() { # minimal JSON string escaping for the controlled values below
   local s="$1"; s=${s//\\/\\\\}; s=${s//\"/\\\"}; s=${s//$'\t'/ }; s=${s//$'\n'/ }
@@ -133,8 +160,8 @@ attempt_write() { # attempt_write <ended-token> <valid-token> <basis-token> <env
   {
     printf '{"attempt_id":%s,"run_label":%s,"candidate_commit":%s,"working_tree_dirty":%s,' \
       "$(json_str "$attempt_id")" "$(json_str "$run")" "$(json_str "$candidate_commit")" "$dirty"
-    printf '"script_versions":{"run-protocol.sh":%s,"sample-resources.sh":%s,"check-saturation.mjs":%s},' \
-      "$(json_str "$proto_sha")" "$(json_str "$sampler_sha")" "$(json_str "$sat_sha")"
+    printf '"script_versions":{"run-protocol.sh":%s,"sample-resources.sh":%s,"check-saturation.mjs":%s,"sanitize-k6-summary.mjs":%s},' \
+      "$(json_str "$proto_sha")" "$(json_str "$sampler_sha")" "$(json_str "$sat_sha")" "$(json_str "$sanitizer_sha")"
     printf '"compose":{"project":%s,"files":["compose.yaml","compose.observability.yaml","compose.perf-quota.yaml"],"profile":"perf","env_file":%s,"resolved_config":"compose-resolved.yaml"},' \
       "$(json_str "$project")" "$(json_str "${ENV_FILE:-<unset>}")"
     printf '"window_env_collector":%s,' "$4"
@@ -151,10 +178,35 @@ basis_final=""
 err_info="interrupted before completion (no failing command recorded)"
 stage="init"
 sampler_pid=""
+k6_summary_source=""
+error_detail_override=""
+cleanup_failures=""
+record_cleanup_failure() {
+  local detail="$1"
+  if [[ -n "$cleanup_failures" ]]; then
+    cleanup_failures+="; "
+  fi
+  cleanup_failures+="$detail"
+}
 finalize() {
   local code=$?
   [[ -z "$sampler_pid" ]] || kill "$sampler_pid" 2>/dev/null || true
-  [[ -z "$secret_values_file" ]] || rm -f -- "$secret_values_file"
+  if [[ -n "$k6_summary_source" ]]; then
+    if ! rm -f -- "$k6_summary_source"; then
+      echo "warning: finalize could not remove raw k6 summary ${k6_summary_source}" >&2
+      record_cleanup_failure "raw summary cleanup failed: ${k6_summary_source}"
+    else
+      k6_summary_source=""
+    fi
+  fi
+  if [[ -n "$secret_values_file" ]]; then
+    if ! rm -f -- "$secret_values_file"; then
+      echo "warning: finalize could not remove temporary secret value set" >&2
+      record_cleanup_failure "temporary secret value-set cleanup failed: ${secret_values_file}"
+    else
+      secret_values_file=""
+    fi
+  fi
   # Whatever happened, the window collector must not outlive the attempt's
   # window: the stop file ends its poll loop (the poll deadline is the second
   # bound, so a forgotten call site cannot leave a poller running).
@@ -162,6 +214,17 @@ finalize() {
     : >> "$env_collector_dir/collector.stop" 2>/dev/null || true
     if [[ "$completed" != "true" && "$env_collector_status" == "started" ]]; then
       env_collector_status="aborted-with-attempt:stop-file-touched"
+    fi
+  fi
+  if [[ -n "$cleanup_failures" ]]; then
+    completed="false"
+    if [[ -n "$err_info" && "$err_info" != "interrupted before completion (no failing command recorded)" ]]; then
+      err_info+="; ${cleanup_failures}"
+    else
+      err_info="$cleanup_failures"
+    fi
+    if [[ "$code" -eq 0 ]]; then
+      code=1
     fi
   fi
   if [[ "$completed" == "true" ]]; then
@@ -174,7 +237,13 @@ finalize() {
   fi
   exit "$code"
 }
-on_err() { err_info="failed at stage [${stage}] while running [${BASH_COMMAND}] (run-protocol.sh:${LINENO})"; }
+on_err() {
+  if [[ -n "$error_detail_override" ]]; then
+    err_info="$error_detail_override"
+  else
+    err_info="failed at stage [${stage}] while running [${BASH_COMMAND}] (run-protocol.sh:${LINENO})"
+  fi
+}
 trap on_err ERR
 trap finalize EXIT
 
@@ -261,13 +330,23 @@ k6run() { # k6run <scenario.js> <label> [env...]
   local script="$1" label="$2"; shift 2
   stage="k6 ${label}"
   echo "[$(date -u +%H:%M:%S)] k6 ${label}"
+  k6_summary_source="e2e/perf/out/${label}-summary.json"
   env "$@" docker compose "${compose_base[@]}" --profile perf run --rm \
     k6 run --summary-export "/scripts/out/${label}-summary.json" "/scripts/scenarios/${script}" \
     > "${attempt_dir}/${label}-stdout.log" 2>&1
-  # Snapshot this attempt's summary out of the shared export dir immediately:
-  # e2e/perf/out is overwritten by every later scenario and attempt, so a
-  # summary left only there is no longer attributable to this attempt.
-  cp -f "e2e/perf/out/${label}-summary.json" "${attempt_dir}/${label}-summary.json"
+  # k6 puts setup()'s return value under setup_data in --summary-export. The
+  # scenarios need those bearer tokens at runtime, but they are not metrics
+  # and must never enter long-lived evidence. Sanitize into the attempt tree
+  # before the raw shared output is removed; collect-verdicts/reconcile read
+  # the resulting metric-only summary and therefore keep their contracts.
+  node e2e/perf/lib/sanitize-k6-summary.mjs "$k6_summary_source" \
+    > "${attempt_dir}/${label}-summary.json"
+  if ! rm -f -- "$k6_summary_source"; then
+    error_detail_override="raw k6 summary cleanup failed: ${k6_summary_source}; attempt invalid and the file may require manual removal"
+    err_info="$error_detail_override"
+    return 1
+  fi
+  k6_summary_source=""
 }
 
 # 1) warmup 5m (excluded from statistics)

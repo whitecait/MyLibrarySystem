@@ -12,7 +12,10 @@
 #
 # Measurement order — every step (command + key output + timepoint) is
 # recorded in <out>/drill-timeline.json:
-#   1. pg_dump the source database               -> backup file = recoverable point
+#   1. pg_dump the source database               -> temporary restore input;
+#      only its bytes/hash metadata and a structure-sanitized evidence copy
+#      are retained (the raw dump is removed by the EXIT trap on normal exits;
+#      SIGKILL limits are documented below)
 #   2. `compose stop backend frontend` on the SOURCE project (real stop, not a
 #      marker); t_fault is taken after the stop returns
 #   3. wipe the target project's volumes (`down -v`), start its database,
@@ -248,11 +251,20 @@ write_timeline() { # write_timeline <status> <verdict> ; scalars via globals
   RUN_T_DATA="${t_data:-}" RUN_T_READY="${t_ready:-}" \
   RUN_RPO="${rpo:-}" RUN_RTO="${rto:-}" \
   RUN_RPO_LIMIT="$RPO_LIMIT_SECONDS" RUN_RTO_LIMIT="$RTO_LIMIT_SECONDS" \
-  RUN_BACKUP_FILE="${backup_file:-}" RUN_BACKUP_SHA="${backup_sha:-}" \
+  RUN_BACKUP_RESTORE_FILE="${backup_restore_file:-}" \
+  RUN_BACKUP_RESTORE_KIND="${backup_restore_file_kind:-}" \
+  RUN_BACKUP_RESTORE_BYTES="${backup_bytes:-}" \
+  RUN_BACKUP_RESTORE_SHA="${backup_sha:-}" \
+  RUN_BACKUP_RAW_RETAINED="${backup_raw_retained:-false}" \
+  RUN_BACKUP_EVIDENCE_FILE="${backup_evidence_file:-}" \
+  RUN_BACKUP_EVIDENCE_BYTES="${backup_evidence_bytes:-}" \
+  RUN_BACKUP_EVIDENCE_SHA="${backup_evidence_sha:-}" \
+  RUN_BACKUP_EVIDENCE_METADATA="${backup_evidence_metadata:-}" \
+  RUN_BACKUP_SNAPSHOT_REDACTED="${backup_snapshot_fields_redacted:-}" \
   RUN_BASE_URL="${base_url:-}" RUN_FRONTEND_PORT="${frontend_port:-}" \
   RUN_CUSTOM_SCRIPT="${CONTINUATION_SCRIPT:-}" RUN_CUSTOM_RC="${custom_rc:-}" \
   python3 - <<'PY' && tl_ok=1
-import json, os
+import json, os, tempfile
 
 def read_jsonl(path):
     out = []
@@ -277,10 +289,13 @@ def num(name):
 def st(name):
     return os.environ.get(name) or None
 
+def boolv(name):
+    return (os.environ.get(name) or "").strip().lower() == "true"
+
 steps = read_jsonl(os.environ["TIMELINE_STEPS"])
 checks = read_jsonl(os.environ["TIMELINE_CHECKS"])
 obj = {
-    "schema": "drill-timeline/1",
+    "schema": "drill-timeline/2",
     "generatedAt": os.environ["RUN_GENERATED_AT"],
     "status": os.environ["RUN_STATUS"],
     "verdict": os.environ["RUN_VERDICT"],
@@ -297,8 +312,20 @@ obj = {
     "rtoSeconds": num("RUN_RTO"),
     "rpoLimitSeconds": int(os.environ["RUN_RPO_LIMIT"]),
     "rtoLimitSeconds": int(os.environ["RUN_RTO_LIMIT"]),
-    "backupFile": st("RUN_BACKUP_FILE"),
-    "backupSha256": st("RUN_BACKUP_SHA"),
+    # The restore input is temporary and is never a path to retained evidence.
+    # Its hash/bytes identify the exact input used for the measurement.
+    "backupRestoreFile": st("RUN_BACKUP_RESTORE_FILE"),
+    "backupRestoreFileKind": st("RUN_BACKUP_RESTORE_KIND") or "temporary-unretained",
+    "backupRestoreBytes": num("RUN_BACKUP_RESTORE_BYTES"),
+    "backupRestoreSha256": st("RUN_BACKUP_RESTORE_SHA"),
+    "backupRawRetained": boolv("RUN_BACKUP_RAW_RETAINED"),
+    # These fields identify the separate, structure-sanitized evidence copy.
+    "backupEvidenceFile": st("RUN_BACKUP_EVIDENCE_FILE"),
+    "backupEvidenceBytes": num("RUN_BACKUP_EVIDENCE_BYTES"),
+    "backupEvidenceSha256": st("RUN_BACKUP_EVIDENCE_SHA"),
+    "backupEvidenceMetadataFile": st("RUN_BACKUP_EVIDENCE_METADATA"),
+    "backupEvidenceFormat": "postgres-copy-structured-sanitized",
+    "backupSnapshotFieldsRedacted": num("RUN_BACKUP_SNAPSHOT_REDACTED"),
     "baseUrl": st("RUN_BASE_URL"),
     "frontendPort": st("RUN_FRONTEND_PORT"),
     "sourceLeftStopped": True,
@@ -307,11 +334,27 @@ obj = {
     "continuationChecks": checks,
     "steps": steps,
 }
-tmp = os.environ["TIMELINE_OUT"] + ".tmp"
-with open(tmp, "w", encoding="utf-8") as f:
-    json.dump(obj, f, ensure_ascii=False, indent=2)
-    f.write("\n")
-os.replace(tmp, os.environ["TIMELINE_OUT"])
+timeline_out = os.environ["TIMELINE_OUT"]
+timeline_dir = os.path.dirname(timeline_out) or "."
+fd, tmp = tempfile.mkstemp(
+    prefix=f".{os.path.basename(timeline_out)}.", suffix=".tmp", dir=timeline_dir
+)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+        f.flush()
+        os.fsync(f.fileno())
+    # The final path is owned by this drill and may be intentionally rewritten
+    # by die()/on_exit after a cleanup failure; the temp path is unique per
+    # write, so stale fixed-name temp files cannot be overwritten.
+    os.replace(tmp, timeline_out)
+except Exception:
+    try:
+        os.unlink(tmp)
+    except FileNotFoundError:
+        pass
+    raise
 PY
   if (( tl_ok == 1 )); then
     timeline_written=1
@@ -346,19 +389,53 @@ fail_check() { # fail_check <check-name> <detail>  (continuation failure, exit 1
 }
 
 SCRATCH_FILES=()
-scratch_file() { # scratch_file -> path, registered for cleanup
+SCRATCH_DIRS=()
+SCRATCH_FILE_RESULT=""
+scratch_dir=""
+scratch_seq=0
+scratch_file() { # sets SCRATCH_FILE_RESULT to a pre-registered private path
   local f
-  f="$(mktemp)"
+  f="$scratch_dir/scratch-$scratch_seq"
+  scratch_seq=$((scratch_seq + 1))
   SCRATCH_FILES+=("$f")
-  printf '%s' "$f"
+  ( umask 077; : > "$f" ) || return 1
+  SCRATCH_FILE_RESULT="$f"
 }
 
 on_exit() {
   local rc=$?
-  local f
+  local f d cleanup_failed=0 cleanup_count=0
   for f in "${SCRATCH_FILES[@]:-}"; do
-    [[ -n "$f" ]] && rm -f "$f"
+    [[ -n "$f" ]] || continue
+    [[ -e "$f" ]] || continue
+    cleanup_count=$((cleanup_count + 1))
+    if ! rm -f -- "$f"; then
+      cleanup_failed=1
+    fi
   done
+  for d in "${SCRATCH_DIRS[@]:-}"; do
+    [[ -n "$d" && -d "$d" ]] || continue
+    cleanup_count=$((cleanup_count + 1))
+    if ! rmdir -- "$d"; then
+      cleanup_failed=1
+    fi
+  done
+  if (( cleanup_failed == 1 )); then
+    add_reason "scratch cleanup failed for one or more temporary files"
+    # Cleanup failure means the raw input may still exist.  The timeline must
+    # not assert false even when the failing item was a credential scratch
+    # file or the private directory itself.
+    backup_raw_retained="true"
+    backup_restore_file_kind="temporary-cleanup-failed"
+    record_step "failure" "failed" "temporary scratch cleanup" \
+      "cleanup failed for at least one of ${cleanup_count} temporary file(s)"
+    # A successful drill cannot remain a pass when its raw/credential scratch
+    # cleanup failed.  Rewrite the timeline as failed while preserving all
+    # measurements and the original reason rows.
+    timeline_written=0
+    write_timeline "failed" "fail"
+    rc=1
+  fi
   if (( timeline_written == 0 )); then
     add_reason "drill aborted unexpectedly (exit $rc) before writing a timeline"
     write_timeline "failed" "fail"
@@ -372,6 +449,33 @@ on_exit() {
 }
 trap on_exit EXIT
 
+# Use a private, project-pair-specific directory.  Its path is registered
+# before mkdir/file creation, so a normal signal between creation and cleanup
+# cannot lose the path.  A SIGKILL can still leave the directory behind; a
+# later run refuses only this exact source/target prefix and never deletes
+# another process's files.
+scratch_tmp_root="${TMPDIR:-/tmp}"
+scratch_prefix="$scratch_tmp_root/mls-drill-backup-${source_project}-${target_project}-"
+stale_scratch_count="$(SCRATCH_TMP_ROOT="$scratch_tmp_root" SCRATCH_PREFIX="$(basename "$scratch_prefix")" python3 - <<'PY'
+import os
+from pathlib import Path
+
+root = Path(os.environ["SCRATCH_TMP_ROOT"])
+prefix = os.environ["SCRATCH_PREFIX"]
+try:
+    print(sum(1 for entry in root.iterdir() if entry.name.startswith(prefix)))
+except OSError as exc:
+    raise SystemExit(f"cannot inspect scratch root: {exc}")
+PY
+)" || die "cannot inspect temporary backup scratch root"
+if [[ ! "$stale_scratch_count" =~ ^0$ ]]; then
+  die "refusing to start: ${stale_scratch_count} stale scratch path(s) match this source/target raw-backup prefix; inspect and remove only after confirming ownership"
+fi
+scratch_dir="${scratch_prefix}${BASHPID}-${RANDOM}"
+SCRATCH_DIRS+=("$scratch_dir")
+if ! ( umask 077; mkdir -- "$scratch_dir" ); then
+  die "cannot create private temporary backup scratch directory"
+fi
 compose_src() { docker compose -p "$source_project" "$@"; }
 compose_tgt() { docker compose -p "$target_project" --env-file "$env_file" -f compose.yaml "$@"; }
 
@@ -496,7 +600,8 @@ fi
 # containers (those are removed by `down -v` right before the restore).
 # Every read here is fatal on failure: an empty result means "no holder", so a
 # read that did not run must never be mistaken for a free port.
-scan_err="$(scratch_file)"
+scratch_file
+scan_err="$SCRATCH_FILE_RESULT"
 if ! ps_scan_out="$(docker ps --format '{{.Names}}\t{{.ID}}\t{{.Label "com.docker.compose.project"}}' 2>"$scan_err")"; then
   die "docker ps failed while checking whether target port $frontend_port is free: $(tail -1 "$scan_err")"
 fi
@@ -542,9 +647,20 @@ record_step "precheck" "ok" "docker ps + docker inspect .NetworkSettings.Ports s
 
 # ============================ measurement phase =============================
 
-# 1) backup — the recoverable data point
-backup_file="$out_dir/backup-$(date -u +%Y%m%dT%H%M%SZ).sql"
-record_step "backup" "running" "docker compose -p $source_project exec -T database pg_dump -U library -d library" "-> $backup_file"
+# 1) backup — the recoverable data point.  The raw pg_dump is a scratch input
+# for restore only.  The path is registered before the redirection creates the
+# file, so every normal exit path removes it.
+backup_file="$scratch_dir/raw-backup.sql"
+SCRATCH_FILES+=("$backup_file")
+backup_restore_file=""
+backup_restore_file_kind="temporary-unretained"
+backup_raw_retained="false"
+backup_evidence_file=""
+backup_evidence_metadata=""
+backup_evidence_bytes=""
+backup_evidence_sha=""
+backup_snapshot_fields_redacted=""
+record_step "backup" "running" "docker compose -p $source_project exec -T database pg_dump -U library -d library" "-> temporary restore input (raw dump is not retained)"
 compose_src exec -T database pg_dump -U library -d library > "$backup_file" \
   || die "pg_dump of source database failed"
 backup_bytes="$(wc -c < "$backup_file")"
@@ -554,7 +670,40 @@ fi
 backup_sha="$(sha256sum "$backup_file" | cut -d' ' -f1)"
 t_backup_done="$(now_s)"
 record_step "backup" "ok" "docker compose -p $source_project exec -T database pg_dump -U library -d library" \
-  "bytes=$backup_bytes sha256=$backup_sha t_backup_done=$t_backup_done"
+  "temporary input bytes=$backup_bytes sha256=$backup_sha t_backup_done=$t_backup_done"
+
+# Keep only a structure-sanitized copy in the evidence directory.  The
+# sanitizer identifies the target COPY block and column from its header and
+# replaces the complete response_snapshot field; it does not search for a
+# token-shaped substring.  A sanitizer failure is a drill failure, and the
+# raw temporary input is still removed by on_exit.
+backup_evidence_file="$out_dir/backup-sanitized.sql"
+backup_evidence_metadata="$out_dir/backup-sanitization.json"
+record_step "backup-sanitize" "running" \
+  "python3 scripts/sanitize-idempotency-snapshots.py <temporary restore input> $backup_evidence_file" \
+  "rawRetained=false"
+if ! python3 scripts/sanitize-idempotency-snapshots.py "$backup_file" \
+  "$backup_evidence_file" --metadata "$backup_evidence_metadata" \
+  > "$out_dir/backup-sanitization.stdout.log" 2>&1; then
+  die "structured backup evidence sanitization failed; raw restore input will be removed"
+fi
+if [[ ! -s "$backup_evidence_file" || ! -s "$backup_evidence_metadata" ]]; then
+  die "structured backup evidence sanitization produced missing/empty output"
+fi
+backup_evidence_bytes="$(wc -c < "$backup_evidence_file")"
+backup_evidence_sha="$(sha256sum "$backup_evidence_file" | cut -d' ' -f1)"
+backup_snapshot_fields_redacted="$(python3 - "$backup_evidence_metadata" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    value = json.load(f).get("responseSnapshotFieldsRedacted")
+if not isinstance(value, int) or value < 0:
+    raise SystemExit("invalid responseSnapshotFieldsRedacted metadata")
+print(value)
+PY
+)" || die "structured backup evidence metadata is unreadable"
+record_step "backup-sanitize" "ok" \
+  "python3 scripts/sanitize-idempotency-snapshots.py <temporary restore input> $backup_evidence_file" \
+  "rawRetained=false sanitizedBytes=$backup_evidence_bytes sanitizedSha256=$backup_evidence_sha responseSnapshotFieldsRedacted=$backup_snapshot_fields_redacted"
 
 # 2) real source-write stop, then t_fault
 record_step "stop-source" "running" "docker compose -p $source_project stop backend frontend" "stopping source business writes"
@@ -579,13 +728,13 @@ if ! wait_healthy "$target_project" database 180; then
 fi
 record_step "target-database-up" "ok" "docker compose -p $target_project up -d database; wait_healthy database 180" "target database healthy"
 
-record_step "restore" "running" "docker compose -p $target_project exec -T database psql -U library -d library -q -v ON_ERROR_STOP=1 < $backup_file" "restoring dump"
+record_step "restore" "running" "docker compose -p $target_project exec -T database psql -U library -d library -q -v ON_ERROR_STOP=1 < <temporary restore input>" "restoring temporary raw dump"
 if ! compose_tgt exec -T database psql -U library -d library -q -v ON_ERROR_STOP=1 < "$backup_file" > "$out_dir/restore.log" 2>&1; then
   die "restore failed (psql ON_ERROR_STOP): $(tail -3 "$out_dir/restore.log" | tr '\n' ' ')"
 fi
 compose_tgt exec -T database psql -U library -d library -q -c "ANALYZE;" >/dev/null 2>&1 \
   || die "ANALYZE on restored target database failed"
-record_step "restore" "ok" "psql -v ON_ERROR_STOP=1 < $(basename "$backup_file")" "restore completed without error; log: $(basename "$out_dir")/restore.log"
+record_step "restore" "ok" "psql -v ON_ERROR_STOP=1 < <temporary restore input>" "restore completed without error; raw input is not retained; log: $(basename "$out_dir")/restore.log"
 
 # 4) t_data — read back from the RESTORED target database as a raw epoch
 t_data_sql="SELECT extract(epoch FROM COALESCE(max(greatest(updated_at, created_at)), 'epoch'::timestamptz))::bigint FROM (SELECT updated_at, created_at FROM borrow_transaction UNION ALL SELECT updated_at, created_at FROM account UNION ALL SELECT updated_at, created_at FROM payment_order) t;"
@@ -644,7 +793,8 @@ record_step "target-stack-up" "ok" "docker inspect --format '{{json .NetworkSett
 
 # 6) continuation checks — every one must pass; t_ready only after all of them
 run_id="$(date -u +%Y%m%d%H%M%S)-$$"
-cred_file="$(scratch_file)"
+scratch_file
+cred_file="$SCRATCH_FILE_RESULT"
 DRILL_ACCOUNT="$DRILL_ACCOUNT" DRILL_PASSWORD="$DRILL_PASSWORD" python3 - > "$cred_file" \
   <<'PY' || die "could not serialize credentials"
 import json, os
@@ -660,7 +810,8 @@ fi
 record_check "health" 1 "GET ${base_url}/api/health -> HTTP ${health_code}"
 
 # 6b. search (public portal, contract parameter is q=)
-search_body="$(scratch_file)"
+scratch_file
+search_body="$SCRATCH_FILE_RESULT"
 search_code="$(http_call "$search_body" -G --data-urlencode "q=${search_keyword}" --data-urlencode "limit=50" "${base_url}/api/v1/titles")"
 if [[ ! "$search_code" =~ ^2 ]]; then
   fail_check "search" "GET /api/v1/titles?q=${search_keyword} returned HTTP ${search_code}, expected 2xx"
@@ -689,7 +840,8 @@ write_title_id="$(printf '%s' "$search_pick" | cut -d' ' -f2)"
 record_check "search" 1 "GET /api/v1/titles?q=${search_keyword}&limit=50 -> HTTP ${search_code}, items=${search_count}, write-path title=${write_title_id}"
 
 # 6c. login
-login_body="$(scratch_file)"
+scratch_file
+login_body="$SCRATCH_FILE_RESULT"
 login_code="$(http_call "$login_body" -X POST -H 'Content-Type: application/json' \
   -H "Idempotency-Key: drill-${run_id}-login" --data-binary "@${cred_file}" \
   "${base_url}/api/v1/auth/sessions")"
@@ -710,7 +862,8 @@ fi
 record_check "login" 1 "POST /api/v1/auth/sessions -> HTTP ${login_code}, accessToken issued for ${DRILL_ACCOUNT}"
 
 # 6d. reservation create + cancel (two asserted business writes)
-reserve_body="$(scratch_file)"
+scratch_file
+reserve_body="$SCRATCH_FILE_RESULT"
 RESERVE_TITLE_ID="$write_title_id" python3 - > "$reserve_body" <<'PY' || die "could not serialize reservation body"
 import datetime, json, os
 reservation_date = (datetime.date.today() + datetime.timedelta(days=2)).isoformat()
@@ -719,7 +872,8 @@ print(json.dumps({"titleId": os.environ["RESERVE_TITLE_ID"],
                   "pickupSlot": "PM", "channel": "ONLINE",
                   "confirmWaitlist": True}))
 PY
-create_body="$(scratch_file)"
+scratch_file
+create_body="$SCRATCH_FILE_RESULT"
 create_code="$(http_call "$create_body" -X POST -H 'Content-Type: application/json' \
   -H "Authorization: Bearer ${token}" -H "Idempotency-Key: drill-${run_id}-reserve" \
   --data-binary "@${reserve_body}" "${base_url}/api/v1/reservations")"
@@ -745,7 +899,8 @@ tx_id_value="$(printf '%s' "$tx_id" | cut -d' ' -f1)"
 tx_outcome="$(printf '%s' "$tx_id" | cut -d' ' -f2)"
 record_check "reservation-create" 1 "POST /api/v1/reservations -> HTTP ${create_code}, outcome=${tx_outcome}, txId=${tx_id_value}"
 
-cancel_body="$(scratch_file)"
+scratch_file
+cancel_body="$SCRATCH_FILE_RESULT"
 printf '{"reason":"drill-continuation-release"}' > "$cancel_body"
 cancel_code="$(http_call /dev/null -X POST -H 'Content-Type: application/json' \
   -H "Authorization: Bearer ${token}" -H "Idempotency-Key: drill-${run_id}-cancel" \
