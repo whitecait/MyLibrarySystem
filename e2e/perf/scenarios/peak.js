@@ -1,6 +1,9 @@
-// Peak scenario: concurrency ramps to 50 over 2 minutes and then holds at 50
-// for 10 minutes (MLS-NFR-PER-0001 peak concurrency 50, >=20 concurrent
-// operations; 12 minutes wall clock in total).
+// Peak scenario: concurrency ramps to 50 over 120 seconds and then holds at 50
+// for 180 seconds (MLS-NFR-PER-0001 peak concurrency 50, >=20 concurrent
+// operations; 5 minutes wall clock in total — the 2026-09-22 reduced protocol
+// window, was 2m ramp + 10m hold). The saturation judgement windows fall
+// inside this shortened hold window; check-saturation.mjs still evaluates
+// every dimension per 60-second window and the sample rate is unchanged.
 import { check, sleep } from 'k6'
 import { api, req, thresholds } from '../lib/common.js'
 
@@ -12,8 +15,8 @@ export const options = {
       executor: 'ramping-vus',
       startVUs: 5,
       stages: [
-        { duration: '2m', target: 50 }, // ramp to 50
-        { duration: '10m', target: 50 }, // hold at peak for the protocol window
+        { duration: '120s', target: 50 }, // ramp to 50
+        { duration: '180s', target: 50 }, // hold at peak for the protocol window
       ],
       gracefulRampDown: '30s',
     },

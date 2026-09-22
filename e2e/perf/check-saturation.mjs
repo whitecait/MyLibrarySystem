@@ -64,6 +64,17 @@ const POOL_LIMIT = 0.9
 const GC_SHARE_LIMIT = 0.05
 const LOCK_SHARE_LIMIT = 0.1 // of the 60s window
 
+// The 2026-09-22 protocol reduction shortened the k6 scenario windows
+// (steady/retrieval/peak-hold/recovery to 300s/180s/180s/300s); nothing here
+// depends on a scenario duration. What a dimension needs to be "evaluated" is
+// sampler material inside the attempt's samples dir, not a window length: the
+// sampler loop emits one docker-stats/psql/prometheus block per iteration at
+// the documented ~7s period (sample-resources.sh), so the shortened peak hold
+// alone still contributes ~43 blocks and ~5 judgement windows by arithmetic,
+// and every dimension is judged per 60-second window exactly as before. The
+// window length, the limits above and the "not_evaluated ⇒ failureReasons
+// includes collection_missing" rule are unchanged by the reduction.
+
 // Metric family name = the text before the first '{'. The two tomcat
 // families are recognised with an optional trailing `_threads` (micrometer
 // appends it to the `tomcat.threads.busy` / `tomcat.threads.config.max`

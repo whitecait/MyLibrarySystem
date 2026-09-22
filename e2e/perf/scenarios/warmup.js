@@ -1,6 +1,9 @@
-// Warmup (5 minutes, excluded from all statistics per MLS-NFR-PER-0002):
-// registers the probe reader accounts through the public path and drives
-// light search traffic to warm caches.
+// Warmup (60 seconds — the 2026-09-22 reduced protocol window; excluded from
+// all statistics per MLS-NFR-PER-0002): registers the probe reader accounts
+// through the public path and drives light search traffic to warm caches.
+// Account provisioning happens on the first iteration (not spread over the
+// window), so shortening the warmup does not change what steady.js can log
+// in with.
 import { check } from 'k6'
 import { api, req, thresholds, readerName, probePassword, RUN_ID } from '../lib/common.js'
 
@@ -8,7 +11,7 @@ export { handleSummary } from '../lib/common.js'
 
 export const options = {
   scenarios: {
-    warmup: { executor: 'constant-arrival-rate', rate: 60, timeUnit: '1m', duration: '5m', preAllocatedVUs: 20, maxVUs: 60 },
+    warmup: { executor: 'constant-arrival-rate', rate: 60, timeUnit: '1m', duration: '60s', preAllocatedVUs: 20, maxVUs: 60 },
   },
   thresholds: thresholds(['public_read', 'normal_read']),
 }

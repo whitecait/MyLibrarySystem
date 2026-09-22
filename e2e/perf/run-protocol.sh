@@ -21,6 +21,17 @@
 #
 #   RUN=1 bash e2e/perf/run-protocol.sh <compose-project> <evidence-root>
 #
+# Protocol window (2026-09-22 reduced set, lingzz ruling): warmup 60s, steady
+# 300s, retrieval four sub-scenarios 180s each, peak 120s ramp + 180s hold,
+# recovery 300s — about 28 minutes of measured wall clock per attempt. The
+# reduction moved the durations only: the response-class thresholds
+# (lib/common.js), the 60-second saturation judgement window and the
+# sampling/valid-sample semantics are unchanged, and a class below the
+# 100-valid-sample floor is registered samples_insufficient without
+# invalidating the attempt (collect-verdicts.mjs). How many attempts a
+# candidate needs is registered in docs/agents/M6-ACCEPTANCE-PLAN-20260919.md,
+# not decided here.
+#
 # Repeat at least three times per candidate; saturation re-runs count as
 # independent attempts. Prerequisites: stack up with compose.yaml +
 # compose.observability.yaml + compose.perf-quota.yaml; dataset loaded
@@ -349,10 +360,10 @@ k6run() { # k6run <scenario.js> <label> [env...]
   k6_summary_source=""
 }
 
-# 1) warmup 5m (excluded from statistics)
+# 1) warmup 60s (excluded from statistics)
 k6run warmup.js warmup RUN_ID="$RUN_ID" BASE_URL="$BASE_URL"
 
-# 2) steady mixed load 10m
+# 2) steady mixed load 300s
 k6run steady.js steady RUN_ID="$RUN_ID" BASE_URL="$BASE_URL"
 
 # 3) retrieval专项: for each set, cold (database restart) then hot back-to-back
@@ -369,7 +380,7 @@ for set in hot tail; do
   k6run retrieval.js "retrieval-hot-${set}" RETRIEVAL_SET="$set" BASE_URL="$BASE_URL"
 done
 
-# 4) peak 10m + recovery 10m
+# 4) peak 180s hold after a 120s ramp + recovery 300s
 k6run peak.js peak BASE_URL="$BASE_URL"
 k6run recovery.js recovery BASE_URL="$BASE_URL"
 

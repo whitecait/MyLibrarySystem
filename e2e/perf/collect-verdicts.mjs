@@ -15,10 +15,13 @@
 //   - A class below the sample floor (100) is registered as
 //     samples_insufficient: no percentile conclusion for that class, and the
 //     round is NOT judged invalid because of it (§4.4: 样本不足的场景不输出
-//     分位值并如实登记). steady's payment class is the standing case — the
-//     protocol drives payments at 2/minute, so ~22-24 samples in a 10-minute
-//     scenario is the protocol's own arithmetic rather than a defect; the
-//     retrieval sub-scenarios §4.2 names do hold their floor (361 measured).
+//     分位值并如实登记). Under the 2026-09-22 reduced protocol window the
+//     steady scenario's low-rate classes are the standing case — at the
+//     unchanged arrival rates a 300-second window yields ~11 payment samples
+//     (2/minute) and ~60 audit samples (6/minute × 2 calls), so both are
+//     registered samples_insufficient as a consequence of the protocol's own
+//     arithmetic rather than a defect; the retrieval sub-scenarios §4.2 names
+//     keep their floor (180s at 100/minute).
 //   - warmup is excluded from statistics by protocol (reported, not gated).
 //   - A summary that lacks the per-class count sub-metrics
 //     (http_reqs{class:*} / http_req_failed{class:*} from lib/common.js)

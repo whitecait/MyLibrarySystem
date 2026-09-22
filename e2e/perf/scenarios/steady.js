@@ -1,4 +1,5 @@
-// Steady mixed load: 10 minutes, >=100 requests/min with >=20% writes
+// Steady mixed load: 300 seconds (2026-09-22 reduced protocol window; was
+// 10 minutes), >=100 requests/min with >=20% writes
 // (MLS-NFR-PER-0001 capacity baseline). Reads are public search/detail;
 // writes are reader reservation create+cancel pairs through the circulation
 // class. Covers all five MLS-NFR-PER-0001 classes: an audit-query stream
@@ -23,10 +24,10 @@ export { handleSummary } from '../lib/common.js'
 
 export const options = {
   scenarios: {
-    reads: { executor: 'constant-arrival-rate', rate: 96, timeUnit: '1m', duration: '10m', preAllocatedVUs: 30, maxVUs: 120, exec: 'reads' },
-    writes: { executor: 'constant-arrival-rate', rate: 24, timeUnit: '1m', duration: '10m', preAllocatedVUs: 20, maxVUs: 60, exec: 'writes', startTime: '5s' },
-    audit: { executor: 'constant-arrival-rate', rate: 6, timeUnit: '1m', duration: '10m', preAllocatedVUs: 2, maxVUs: 8, exec: 'audit', startTime: '10s' },
-    payment: { executor: 'constant-arrival-rate', rate: 2, timeUnit: '1m', duration: '10m', preAllocatedVUs: 4, maxVUs: 12, exec: 'paymentChain', startTime: '15s' },
+    reads: { executor: 'constant-arrival-rate', rate: 96, timeUnit: '1m', duration: '300s', preAllocatedVUs: 30, maxVUs: 120, exec: 'reads' },
+    writes: { executor: 'constant-arrival-rate', rate: 24, timeUnit: '1m', duration: '300s', preAllocatedVUs: 20, maxVUs: 60, exec: 'writes', startTime: '5s' },
+    audit: { executor: 'constant-arrival-rate', rate: 6, timeUnit: '1m', duration: '300s', preAllocatedVUs: 2, maxVUs: 8, exec: 'audit', startTime: '10s' },
+    payment: { executor: 'constant-arrival-rate', rate: 2, timeUnit: '1m', duration: '300s', preAllocatedVUs: 4, maxVUs: 12, exec: 'paymentChain', startTime: '15s' },
   },
   thresholds: thresholds(['public_read', 'normal_read', 'circulation', 'payment', 'audit']),
 }
