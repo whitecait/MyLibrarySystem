@@ -4,7 +4,7 @@
 | -------- | ----------------- |
 | 文档编号 | `MLS-DOC-AT-0003` |
 | 文档状态 | `Draft`           |
-| 文档版本 | `v0.6`            |
+| 文档版本 | `v0.8`            |
 | 编制日期 | `2026-07-13`      |
 | 适用阶段 | `需求分析`        |
 | 验证对应 | `系统验收测试`    |
@@ -14,18 +14,29 @@
 >
 > - [系统验收策略](MLS-DOC-AT-0001.md)
 > - [系统验收条件与验收用例](MLS-DOC-AT-0002.md)
+> - [M6 系统验收执行清单](../../agents/M6-ACCEPTANCE-PLAN-20260919.md)
+> - [M6 验收剩余工作流执行约束](../../agents/M6-W2-EXECUTION-CONSTRAINTS-20260922.md)
+> - [AT-0016 W2a-2 汇总登记](../../../artifacts/m6-acceptance/phase-w2/perf/AT-0016-W2a-rerun-summary.md)
+> - [脱敏记录](../../../artifacts/m6-acceptance/phase-w2/SANITIZATION-NOTE.md)
+> - [W2a-2 A5 复跑报告](../../../artifacts/m6-acceptance/phase-w2/drill/a5-rerun-20260922/A5-REPORT.md)
+> - [A5 attempt1 备份证据安全处置记录](../../../artifacts/m6-acceptance/phase-w2/drill/a5-rerun-20260922/SANITIZATION-NOTE.md)
+> - [A5 attempt2 失败记录](../../../artifacts/m6-acceptance/phase-w2/drill/a5-rerun-20260922/attempt2/ATTEMPT2-FAILURE-SUMMARY.md)
 
 本文件只登记完整系统验收的实际执行结果。M6 阶段 4 起按 12 列逐次登记实际执行（2026-09-21 v0.2）；「进行中」行表示观察窗口已启动尚未收口，不计入通过/失败计数。2026-09-21 v0.3：六条分条用例（MLS-AT-0003、MLS-AT-0015、MLS-AT-0018、MLS-AT-0021、MLS-AT-0022、MLS-AT-0023）按 AT-0002 v0.26 分条口径逐检查点建执行行共 47 行，未执行检查点结果一律登记「未执行」，唯一例外 M6-分条-0018-C02 登「窗口作废·待重启」。2026-09-21 v0.4：AT-0016 W2a 复跑两轮（M6-复跑-W2a-R1/R2）按 12 列另立行，结果登「无效」；第三轮立行 M6-复跑-W2a-R3 登「未执行」；本登记册首次出现「无效」结果值，其含义与判定依据见下方补充登记。2026-09-21 v0.5：AT-0018 C03/C04 备份恢复演练在 Env-P2 执行两次尝试，均未达判定，两行分条检查点行由「未执行」改登「失败」（成因为候选内演练脚本两处端口核验缺陷，非产品侧恢复失败；改登对象为占位行，无既有结果被覆盖），详见下方 v0.5 补充登记。2026-09-21 v0.6：Env-O 观察窗口以冻结候选 `701a13b` 重启为第二窗口，分条行 M6-分条-0018-C02 由「窗口作废·待重启」改登「窗口重启·进行中」并登记窗口起点 `2026-09-21T17:48:35Z`（改登对象仍为状态占位值，无既有结果被覆盖）；本窗口的探针前置缺口与补齐、三项门禁实测见下方 v0.6 补充登记。
 
-总体执行状态：执行中（2026-09-21 v0.3 整改登记：AT-0016 三行改登「证据缺陷·待复跑」；六条分条用例 47 个检查点行建立——46 行「未执行」、M6-分条-0018-C02 行「窗口作废·待重启」；已作废观察窗口见 M6-阶段4-C02 既有行及下方补充登记。2026-09-21 v0.4 复跑登记：AT-0016 W2a 复跑两轮登「无效」、第三轮登「未执行」，**AT-0016 复跑未达三轮有效**，无通过结论。2026-09-21 v0.5 演练登记：AT-0018 C03/C04 分条检查点行两行由「未执行」改登「失败」，**AT-0018 C03/C04 未达判定**，无通过结论。2026-09-21 v0.6 窗口重启登记：Env-O 第二观察窗口启动（起点 `2026-09-21T17:48:35Z`，候选 `701a13b`），分条行 M6-分条-0018-C02 由「窗口作废·待重启」改登「窗口重启·进行中」，**窗口进行中，本批不产生任何 AT 判定结论**）
-执行次数：4（既有批次行：AT-0016 三行「证据缺陷·待复跑」、M6-阶段4-C02 已作废窗口行）；另有分条检查点行 47 行（「未执行」46 行、「窗口作废·待重启」1 行），未出结果不计入执行次数；2026-09-21 v0.4：另有 W2a 复跑已出结果的批次行 2 行（M6-复跑-W2a-R1/R2），故已出结果批次行合计 6 行；M6-复跑-W2a-R3 未出结果，不计入执行次数；2026-09-21 v0.5：另有分条检查点行 2 行（M6-分条-0018-C03/C04）本批取得结果，故已出结果行合计 8 行（批次行 6 行＋分条检查点行 2 行）
-通过：0（v0.3 整改：AT-0016 三行不再计入通过；v0.4 维持：AT-0016 复跑未达三轮有效；v0.5 维持：AT-0018 C03/C04 未达判定，均无从登记通过）
-失败：2（2026-09-21 v0.5：分条检查点行 M6-分条-0018-C03/C04，演练两次尝试均未达判定；成因为候选内 `scripts/drill-backup-restore.sh` 端口核验缺陷，非产品侧备份/恢复失败，详见下方 v0.5 补充登记）
+2026-09-22 v0.7：W2a-2 新执行批次按 12 列另立 `M6-复跑-W2a-2-R3/R4/R5` 三行，既有 `M6-复跑-W2a-R1/R2/R3` 行不删除、不改写；三轮 `protocol valid=true` 且五项门禁均为 0，登记为三轮有效。AT-0016 结论仅在本登记册登记，使用「通过（W2a-2 新执行批次取得 3 个有效轮；p99 在本批证据中不可得，未作 p99 断言；该用语仅表示 AT-0016 性能复跑结论，不表示 M6 全部验收已完成）」；动态 33 值集不可重放、一次诊断 stdout token 偏差、历史后置脱敏与扫描值集 12/9/6 差异见 v0.7 补充登记。
+
+2026-09-22 v0.8：W2a-2 A5 按 12 列另立 `M6-复跑-W2a-2-A5-attempt1` 与 `M6-复跑-W2a-2-A5-attempt2` 两行，既有 `M6-分条-0018-C03/C04` 失败历史不覆盖；attempt1 的功能完成事实与证据安全失败分开登记，attempt2 的前置登录 HTTP 500 失败如实登记。A5 总体为 FAIL，AT-0018-C03/C04 未达判定、不登记通过，不执行第三次，A6 未放行；现有证据不足以归因产品 auth 或 fixture/config，不立项。AT-0016 v0.7 的三轮通过结论保持不变。
+
+总体执行状态：执行中（2026-09-21 v0.3 整改登记：AT-0016 三行改登「证据缺陷·待复跑」；六条分条用例 47 个检查点行建立——46 行「未执行」、M6-分条-0018-C02 行「窗口作废·待重启」；已作废观察窗口见 M6-阶段4-C02 既有行及下方补充登记。2026-09-21 v0.4 复跑登记：AT-0016 W2a 复跑两轮登「无效」、第三轮登「未执行」，**AT-0016 复跑未达三轮有效**，无通过结论。2026-09-21 v0.5 演练登记：AT-0018 C03/C04 分条检查点行两行由「未执行」改登「失败」，**AT-0018 C03/C04 未达判定**，无通过结论。2026-09-21 v0.6 窗口重启登记：Env-O 第二观察窗口启动（起点 `2026-09-21T17:48:35Z`，候选 `701a13b`），分条行 M6-分条-0018-C02 由「窗口作废·待重启」改登「窗口重启·进行中」，**窗口进行中，本批不产生任何 AT 判定结论**。2026-09-22 v0.7：AT-0016 W2a-2 新批次已取得 3 个有效轮并在下方登记「通过」；M6 整体验收仍处于执行中，A1–A4 已完成，A5–A7 尚未执行。2026-09-22 v0.8：A5 两次尝试均未形成可登记通过，A5 总体失败；M6 整体验收仍处于执行中，A1–A4 已完成，A5 失败，A6–A7 尚未执行）
+执行次数：13（v0.8 新增 `M6-复跑-W2a-2-A5-attempt1/attempt2` 两行；v0.7 新增 `M6-复跑-W2a-2-R3/R4/R5` 三行；原有已出结果批次行 8 行保持不变；另有分条检查点行与未执行占位行按原统计口径保留）
+通过：3（v0.7 新增 AT-0016 W2a-2 三个有效轮；三行共同支撑登记用语「通过」，p99 不可得且未作 p99 断言；不表示 M6 全部验收通过）
+失败：4（既有 2026-09-21 v0.5 分条检查点行 M6-分条-0018-C03/C04 保留 2 行；2026-09-22 v0.8 新增 A5 attempt1/attempt2 2 行。attempt1 功能脚本 exit 0、timeline PASS、RPO=3s/RTO=15s，但原始 pg_dump 动态 token 导致证据安全失败，后置脱敏不回填；attempt2 最后额度在源栈临时 READER 登录 HTTP 500 处置前置失败，drill 未启动、无 timeline/RPO/RTO。A5 总体 FAIL，现有证据不足以归因产品 auth 或 fixture/config，不立项）
 阻塞：0（v0.4：W2a 无「阻塞」结果行；第 3 轮未执行登记在「未执行」类，原因见 M6-复跑-W2a-R3 行与下方补充登记；v0.5：本批无「阻塞」结果行，演练未达判定按「失败」登记）
 证据缺陷·待复跑：3（M6-阶段4-R1/R2/R3，改登依据见下方补充登记）；另 2026-09-21 v0.4 新增「无效」结果 2 行（M6-复跑-W2a-R1/R2）
 未执行：44（分条检查点行；2026-09-21 v0.5 由 46 改算——M6-分条-0018-C03/C04 两行本批取得结果）；另有执行批次行「未执行」1 行（M6-复跑-W2a-R3，2026-09-21 v0.4）
 窗口重启·进行中：1（分条行 M6-分条-0018-C02，2026-09-21 v0.6 由「窗口作废·待重启」改登；窗口起点 2026-09-21T17:48:35Z，窗口进行中尚未收口；已作废第一窗口事实见 M6-阶段4-C02 行与 v0.3 补充登记，两行互不替代）
-验收证据：`artifacts/m6-acceptance/`（AT-0016 三轮证据于 `phase4/at-0016/`，其结论改登证据缺陷·待复跑；已作废观察窗口归档于 `observation/archived-window-20260920/`，观察原件于 `observation/` 保留原状）（2026-09-21 v0.4 追加：AT-0016 W2a 复跑证据于 `phase-w2/at-0016-run1/` 与 `phase-w2/at-0016-run2/`，汇总登记于 `phase-w2/perf/AT-0016-W2a-rerun-summary.md`）（2026-09-21 v0.5 追加：AT-0018 C03/C04 演练证据于 `phase-w2/drill/`，逐条对齐见 `phase-w2/drill/README.md`）（2026-09-21 v0.6 追加：Env-O 第二观察窗口证据于 `phase-w2/observation/`，窗口事实与门禁见该目录 `README.md`；第一窗口作废归档仍在 `observation/archived-window-20260920/`，其原件保留原状）
+验收证据：`artifacts/m6-acceptance/`（AT-0016 三轮证据于 `phase4/at-0016/`，其结论改登证据缺陷·待复跑；已作废观察窗口归档于 `observation/archived-window-20260920/`，观察原件于 `observation/` 保留原状）（2026-09-21 v0.4 追加：AT-0016 W2a 复跑证据于 `phase-w2/at-0016-run1/` 与 `phase-w2/at-0016-run2/`，汇总登记于 `phase-w2/perf/AT-0016-W2a-rerun-summary.md`）（2026-09-21 v0.5 追加：AT-0018 C03/C04 演练证据于 `phase-w2/drill/`，逐条对齐见 `phase-w2/drill/README.md`）（2026-09-21 v0.6 追加：Env-O 第二观察窗口证据于 `phase-w2/observation/`，窗口事实与门禁见该目录 `README.md`；第一窗口作废归档仍在 `observation/archived-window-20260920/`，其原件保留原状）（2026-09-22 v0.7 追加：AT-0016 W2a-2 run3/run4/run5 证据于 `phase-w2/at-0016-run3/`、`run4/`、`run5/`，汇总与限制见 `phase-w2/perf/AT-0016-W2a-rerun-summary.md` 与 `phase-w2/SANITIZATION-NOTE.md`）（2026-09-22 v0.8 追加：A5 报告与 attempt1 脱敏记录见 `phase-w2/drill/a5-rerun-20260922/A5-REPORT.md`、`SANITIZATION-NOTE.md`；attempt1/attempt2 实际原件及 attempt2 失败记录见同目录 `attempt1/`、`attempt2/ATTEMPT2-FAILURE-SUMMARY.md`）
 
 ## 1. 执行记录
 
@@ -85,6 +96,11 @@
 | M6-复跑-W2a-R1 | `701a13b`（产品树＝`e4eb4ee`＋闭环修复 DEF-M6-001/002/004/006＋DEF-M6-007＋DEF-M6-005-b） | Env-P（自建 scratch 项目 `m6-perf-at0016-r1`；`m6-observation` 全程未启停） | seed-20260910-v3（`dataset.sql` SHA-256 `53ce44a7…dffea`） | 0016 | Zcode | 2026-09-21T14:17:34Z | 2026-09-21T15:10:34Z | 无效（五项判定门禁未全过：run-protocol 0、reconcile 0、write-reality 0，collect-verdicts 1、check-saturation 1） | `artifacts/m6-acceptance/phase-w2/at-0016-run1/` | 无（D1–D3 系候选内判据口径缺陷，未立项） | lingzz（待复核） |
 | M6-复跑-W2a-R2 | `701a13b`（同上） | Env-P（自建 scratch 项目 `m6-perf-at0016-r2`；`m6-observation` 全程未启停） | seed-20260910-v3（同上，逐轮装载校验和比对） | 0016 | Zcode | 2026-09-21T15:48:13Z | 2026-09-21T16:40:45Z | 无效（同一签名复现：run-protocol 0、reconcile 0、write-reality 0，collect-verdicts 1、check-saturation 1） | `artifacts/m6-acceptance/phase-w2/at-0016-run2/` | 无（同 R1） | lingzz（待复核） |
 | M6-复跑-W2a-R3 | —（未执行） | — | — | 0016 | — | — | — | 未执行（D1–D3 未修复前按同一签名必然无效；修复需改动冻结候选，超出该批执行授权） | — | — | — |
+| M6-复跑-W2a-2-R3 | `9a5fea3`（完整值 `9a5fea3b94ce1c3369c389377b0f88163b740626`；D1–D8 修复候选，产品树基线未改写） | Env-P／WSL-Linux 原生命令（自建 scratch 项目 `m6-perf-at0016-r3`；`m6-observation` 六容器保持 exited） | seed-20260910-v3（`dataset.sql` SHA-256 `53ce44a74c96ce4a5748c6b293906ceba8bd26f79f45c40adcf1f2218b8dffea`） | 0016 | Zcode | 2026-09-22T03:44:20Z | 2026-09-22T04:34:21Z | 通过（`protocol valid=true`；五项门禁 `0/0/0/0/0`，`round valid`；本轮为 AT-0016 三轮有效的第 1 轮；p99 不可得，未作 p99 断言） | `artifacts/m6-acceptance/phase-w2/at-0016-run3/`（README、`verdicts/verdicts-summary.md`、`gates/gates-summary.txt`、`gates/check-saturation-verdict.json`、`reconcile/reconcile-steady.md`、`reconcile/reconcile-peak.md`、`write-reality.txt`） | 无（D1–D8 修复已随候选落地；证据限制见 v0.7 补充登记） | lingzz（待复核） |
+| M6-复跑-W2a-2-R4 | `9a5fea3`（同上） | Env-P／WSL-Linux 原生命令（自建 scratch 项目 `m6-perf-at0016-r4`；`m6-observation` 六容器保持 exited） | seed-20260910-v3（同上，逐轮装载校验和比对） | 0016 | Zcode | 2026-09-22T04:41:31Z | 2026-09-22T05:31:29Z | 通过（`protocol valid=true`；五项门禁 `0/0/0/0/0`，`round valid`；本轮为 AT-0016 三轮有效的第 2 轮；p99 不可得，未作 p99 断言） | `artifacts/m6-acceptance/phase-w2/at-0016-run4/`（README、`verdicts/verdicts-summary.md`、`gates/gates-summary.txt`、`gates/check-saturation-verdict.json`、`reconcile/reconcile-steady.md`、`reconcile/reconcile-peak.md`、`write-reality.txt`） | 无（同 R3） | lingzz（待复核） |
+| M6-复跑-W2a-2-R5 | `9a5fea3`（同上） | Env-P／WSL-Linux 原生命令（自建 scratch 项目 `m6-perf-at0016-r5`；`m6-observation` 六容器保持 exited） | seed-20260910-v3（同上，逐轮装载校验和比对） | 0016 | Zcode | 2026-09-22T05:35:06Z | 2026-09-22T06:25:00Z | 通过（`protocol valid=true`；五项门禁 `0/0/0/0/0`，`round valid`；本轮为 AT-0016 三轮有效的第 3 轮；p99 不可得，未作 p99 断言） | `artifacts/m6-acceptance/phase-w2/at-0016-run5/`（README、`verdicts/verdicts-summary.md`、`gates/gates-summary.txt`、`gates/check-saturation-verdict.json`、`reconcile/reconcile-steady.md`、`reconcile/reconcile-peak.md`、`write-reality.txt`） | 无（同 R3） | lingzz（待复核） |
+| M6-复跑-W2a-2-A5-attempt1 | `9a5fea3b94ce1c3369c389377b0f88163b740626`（D1–D8 修复候选） | Env-P2／WSL-Linux 原生命令（自建源栈 `m6-a5-src`→独立目标栈 `m6-a5-tgt`，目标前端 18092；`m6-observation` 六容器保持 exited） | seed-20260910-v3（`dataset.sql` SHA-256 `53ce44a74c96ce4a5748c6b293906ceba8bd26f79f45c40adcf1f2218b8dffea`） | 0018-C03/C04 | Zcode | 2026-09-22T07:50:16Z | 2026-09-22T07:50:35Z | 失败（功能脚本 exit 0，timeline `status=completed`/`verdict=pass`，RPO=3s/RTO=15s；原始 pg_dump 的 `public.idempotency_key.response_snapshot` 含动态 token，证据安全失败；后置脱敏不回填 A5 通过） | [`A5-REPORT.md`](../../../artifacts/m6-acceptance/phase-w2/drill/a5-rerun-20260922/A5-REPORT.md)、[`SANITIZATION-NOTE.md`](../../../artifacts/m6-acceptance/phase-w2/drill/a5-rerun-20260922/SANITIZATION-NOTE.md)、`attempt1/a5-timeline-gate-evidence.txt`、`attempt1/backup-sanitization.json` | 无（证据安全失败；后置脱敏不回填；现有证据不足以归因产品 auth 或 fixture/config，不立项） | lingzz（待复核） |
+| M6-复跑-W2a-2-A5-attempt2 | `9a5fea3b94ce1c3369c389377b0f88163b740626`（D1–D8 修复候选） | Env-P2／WSL-Linux 原生命令（自建源栈 `m6-a5-2-src`；目标项目 `m6-a5-2-tgt` 未启动；`m6-observation` 六容器保持 exited） | seed-20260910-v3（`dataset.sql` SHA-256 `53ce44a74c96ce4a5748c6b293906ceba8bd26f79f45c40adcf1f2218b8dffea`） | 0018-C03/C04 | Zcode | 2026-09-22T08:57:59Z | 2026-09-22T09:02:19Z | 失败（最后额度；源栈临时 READER 登录 HTTP 500，业务写入断言失败；drill 未启动，无 timeline/RPO/RTO/续行；不得归因产品 auth 或 fixture/config） | [`A5-REPORT.md`](../../../artifacts/m6-acceptance/phase-w2/drill/a5-rerun-20260922/A5-REPORT.md)、[`ATTEMPT2-FAILURE-SUMMARY.md`](../../../artifacts/m6-acceptance/phase-w2/drill/a5-rerun-20260922/attempt2/ATTEMPT2-FAILURE-SUMMARY.md)、`attempt2/source/business-write/failure-stage.txt`、`attempt2/final-boundary.txt` | 无（前置登录失败，现有证据不足以归因产品 auth 或 fixture/config，不立项） | lingzz（待复核） |
 
 补充登记（AT-0018-C02 窗口事实）：宿主设备重启导致计划外停机 2026-09-20T14:56:30Z–2026-09-21T00:22:56Z（约 9.4 小时），按缺测槽位计入可用率口径；无预登记维护时段；窗口按 lingzz 2026-09-20 裁定不真实等待，签署时点由 lingzz 决定。
 
@@ -113,6 +129,26 @@
 - **首次起栈尝试与探针前置缺口（如实登记）**：第一次起栈（2026-09-21T17:46:53Z 起）栈与迁移均正常，但观察库 catalog 为空（`book_title=0`／`book_copy=0`），冻结候选五探针脚本的 `detail` 探针每周期记 `status:0`（该脚本自注该状态「无可用性证据」），而 `scripts/observation-report.mjs:89-90` 把 `status 0` 计为该槽失败——两者口径不一致，计入窗口会把「探针前置缺口」误记成服务不可用（该尝试其余四探针均 2xx）。该尝试原始数据**原样归档**于 `phase-w2/observation/setup-attempt-1-precondition-gap/`（不删除、不改写），窗口原始文件在补齐前置后另起。前置缺口来源：含 detail／loans 的五探针版本由 `877c64c`（W1 整改 R04–R11）引入，晚于第一窗口（三探针）失活时点，此前从未对真实观察环境执行；且受控数据集 seed-20260910-v3 全库不含 `library` 一词，故即使装载数据集，探针默认检索词仍取不到条目。补齐方式：以 `phase3/probe-seed.sql` 既有机制植入**环境专用**探针前置（书目 710001、副本 810001–810002，`ON CONFLICT DO NOTHING`），**不属受控数据集**，不得并入数据集使用。
 - **处置与边界**：探针前置缺口与「报工具把 status 0 计为失败」两项，本批**只登记不立项**，是否立项与缺陷编号分配待裁定；修复其一需改动冻结候选（脚本或判据），超出本批执行授权。本窗口全程未做破坏性动作（未 `down`、未删卷、未删除或覆盖 `artifacts/` 既有材料），未对仓库执行任何 git 写操作。窗口事实、文件清单与判定边界见 `artifacts/m6-acceptance/phase-w2/observation/README.md`。
 
+补充登记（2026-09-22 v0.7，AT-0016 W2a-2 run3/run4/run5 重登）：
+
+- **新批次与既有记录关系**：按「重新执行使用新的执行批次，不覆盖既有失败、阻塞或通过记录」另立 `M6-复跑-W2a-2-R3`、`M6-复跑-W2a-2-R4`、`M6-复跑-W2a-2-R5` 三行。原 `M6-复跑-W2a-R1/R2` 两行的「无效」和原 `M6-复跑-W2a-R3` 的「未执行」均保留，原阶段 4 三行「证据缺陷·待复跑」亦保留。
+- **执行事实**：三轮均在 WSL/Linux 原生命令下的 Env-P scratch 项目执行，候选为 `9a5fea3b94ce1c3369c389377b0f88163b740626`，数据集为 `seed-20260910-v3`（`dataset.sql` SHA-256 `53ce44a74c96ce4a5748c6b293906ceba8bd26f79f45c40adcf1f2218b8dffea`）。run3 时间为 `2026-09-22T03:44:20Z–04:34:21Z`，run4 为 `04:41:31Z–05:31:29Z`，run5 为 `05:35:06Z–06:25:00Z`；每轮前置断言 10/10 PASS，工作树干净，`m6-observation` 六容器全程保持 exited，scratch teardown 后无容器、卷、网络残留。
+- **三层判定口径**：三轮 `attempt.json.valid=true` 只表示完整协议在各自 attempt 目录内完成，且窗口采集器均 `enabled=true`、`status=done:0`；三轮五项门禁均为 `run-protocol=0`、`collect-verdicts=0`、`check-saturation=0`、`reconcile=0`、`write-reality=0`，故三轮均为 `round valid`。历史 run1/run2 的 `attempt.json.valid=true` 仍只表示协议完成，其五项门禁为 `0/1/1/0/0`，因此继续登记为无效轮，不计入有效轮数。
+- **逐轮证据与场景结果**：run3、run4、run5 的完整逐场景样本、`samples_insufficient` 标记、p95、饱和、对账与回调数字见 `artifacts/m6-acceptance/phase-w2/perf/AT-0016-W2a-rerun-summary.md` 第十一节；逐轮原始登记见各自 `README.md` 与 `verdicts/verdicts-summary.md`。三轮 steady 的 payment 有效样本分别为 22、24、22，均按 D-b 标记不足而不判轮无效；peak 的预期 401 已按修复后的有效样本口径计入 `normal_read`。
+- **饱和与真实性**：三轮七个脚本维度均 `evaluated`，`saturated=false`、`violationCount=0`、`notEvaluated=[]`、`invalidWindows=[]`；三轮 `reconcile` 报告均标记完整且退出码为 0；支付回调分别为 11、12、11，成功回调与支付单均对应，`write-reality` 退出码均为 0。三方计数差异按各报告的 k6、应用侧 status、日志窗口口径保留，不转写为对账零差异。
+- **AT-0016 结论**：本批达到三轮有效事实条件，AT-0003 新增三行结果登记为「通过」，共同支撑以下唯一登记用语：**「通过（W2a-2 新执行批次取得 3 个有效轮；p99 在本批证据中不可得，未作 p99 断言；该用语仅表示 AT-0016 性能复跑结论，不表示 M6 全部验收已完成）」**。该结论不替代 M6 总体退出结论；A1–A4 已完成，A5–A7 尚未执行。
+- **p99 限制**：三轮 k6 默认汇总只产生 p90/p95，证据中没有 p99。登记册不臆造 p99 数字，不把 p95 表述为 p99，也不以缺失的 p99 证据宣称所有性能断言均已覆盖。
+- **敏感证据限制**：历史 summary 的脱敏是后置且可审计的处置，不回填为历史源头已脱敏；run3/run4/run5 后置处理涉及的动态运行时值集共 33 个，使用后由 trap 删除，当前无法以同一值集重放，故不得声称动态 token 浅扫或深扫 clean。一次后续诊断命令曾将一个运行时 token 写到工具 stdout，该值未写入证据目录或报告且临时文件已清理，但仍作为一次未满足「禁止输出 token 到终端」的执行偏差登记。
+- **扫描值集口径**：run3/run4/run5 的 `round-log.txt` 记录 `secret values: 12`，窗口采集器 `env-collector/run-log.txt` 记录 `secret values: 9`，各轮 `gates/sensitive-evidence-scan.txt` 与 `sensitive-evidence-deep-scan.txt` 使用 `.env` 派生值集记录 `secret values: 6`。三者来源文件范围不同；6 值集门禁退出 0 不能推出动态 33 值集已被扫描，亦不得据此写成全流程零偏差。
+- **证据边界**：产品源码未修改，未提交、未推送；`9a5fea3` 为本批实际候选。除本登记册三行外，A5–A7 不建立完成记录。
+
+补充登记（2026-09-22 v0.8，W2a-2 A5 失败登记）：
+
+- **新执行批次与历史关系**：按「重新执行使用新的执行批次，不覆盖既有失败、阻塞或通过记录」另立 `M6-复跑-W2a-2-A5-attempt1` 与 `M6-复跑-W2a-2-A5-attempt2` 两行。既有 `M6-分条-0018-C03` 与 `M6-分条-0018-C04` 的 2026-09-21 失败行保留，不以本批两次 attempt 覆盖。
+- **attempt1 功能事实与安全判定分层**：在 Env-P2／WSL-Linux 原生命令下，`m6-a5-src` 源栈与独立 `m6-a5-tgt` 目标栈完成恢复演练；功能脚本退出码为 `0`，时间线 `status=completed`、`verdict=pass`、五项续行检查均 `ok=true`，`RPO=3s`、`RTO=15s`。独立功能/结构门禁复核的 PASS 只确认上述功能事实，不等同于 A5 总体证据通过。原始 pg_dump 曾进入长期证据目录，`public.idempotency_key.response_snapshot` 含动态 token，故原始证据安全失败；后置结构化脱敏、raw 删除与 sanitized 复核均不回填本次 A5 通过结论。
+- **attempt2 最后额度**：在 `2026-09-22T08:57:59Z–09:02:19Z`，源栈 `m6-a5-2-src` 的数据集装载、规模断言与 `database/backend/frontend` healthy 完成，但临时 READER 登录返回 HTTP 500，业务写入断言失败；目标恢复栈未启动，`scripts/drill-backup-restore.sh` 未启动，不存在该次的 `drill-timeline.json`、脚本退出码、RPO/RTO 或续行判定。该失败不能归因于产品 auth 或 fixture/config，当前不立项、不臆断。
+- **A5 总结与后续边界**：两次 attempt 统计为 2 次，A5 总体判定 **FAIL**；`AT-0018-C03/C04` 未达判定、不登记通过。不得执行第三次尝试，A6 未放行；AT-0016 v0.7 三轮通过结论保持不变。attempt2 无 raw pg_dump，`.env` 值集扫描也不覆盖动态 token，不据此声称动态 token scan clean 或全流程零偏差。
+
 没有执行批次时不得添加占位通过记录。未来每个 `AT ID` 的每次实际执行均单独登记，不以汇总数字替代原始证据。
 
 ## 2. 结果登记规则
@@ -134,6 +170,8 @@
 | 2026-09-21 | v0.4 | AT-0016 复跑后重登（依 2026-09-21 裁定「改登待复跑，复跑后重登」）：①W2a 复跑批结果按「重新执行使用新的执行批次」另立三行——M6-复跑-W2a-R1／R2 登「无效」（五项判定门禁未全过，`collect-verdicts` 与 `check-saturation` 退出码 1，成因为冻结候选内 D1–D3 判据口径缺陷，非环境饱和／非负载不达标），M6-复跑-W2a-R3 登「未执行」；②**AT-0016 复跑未达三轮有效（有效轮数 0），不登记通过**；既有 M6-阶段4-R1/R2/R3 三行不删改；③总体状态与计数改算：执行次数 4→6（已出结果批次行），新增「无效」结果 2 行、「未执行」执行批次行 1 行，通过／失败／阻塞维持 0；④新增结果值「无效」并登记其含义；⑤全文与逐条对齐见 `artifacts/m6-acceptance/phase-w2/perf/AT-0016-W2a-rerun-summary.md` |
 | 2026-09-21 | v0.5 | AT-0018 C03/C04 演练执行登记（Env-P2，自建项目对）：①两行分条检查点行（M6-分条-0018-C03/C04）由「未执行」改登「失败」——两次产生测量的尝试（`phase-w2/drill/run1`、`run2`）演练脚本退出码均 1、时间线 `tReadyEpoch=null`、续行检查 0 行 ⇒ 未达判定；改登对象为占位行，无既有结果被覆盖；②失败成因为候选内 `scripts/drill-backup-restore.sh` 两处端口核验缺陷（`:447` 用了 Docker CLI 不支持的 `.Publishers` 模板字段 ⇒ 端口占用预检静默失效；`:553`／`:435` 的 `.Publishers` 渲染与 `127.0.0.1:<port>` 正则不符 ⇒ 演练必定 `die`），均已确定性复现，**非产品侧恢复失败**；③已实测项如实登记：恢复与恢复库回读成功、`t_data=1790011784`、RPO 实测 68 s／542 s、备份 SHA-256，但因时间线不齐全不登记通过；恢复栈辅助观察（登录＋检索＋写入通过）明确不构成判定依据；④计数改算：失败 0→2、未执行 46→44、已出结果行合计 8 行（批次行 6＋分条行 2）；⑤修复需改动冻结候选，未修复、未以替代口径重跑，是否立项与编号待裁定；⑥逐条对齐见 `artifacts/m6-acceptance/phase-w2/drill/README.md` |
 | 2026-09-21 | v0.6 | Env-O 观察窗口重启登记（第二窗口）：①分条行 M6-分条-0018-C02 由「窗口作废·待重启」改登「窗口重启·进行中」，登记窗口起点 `2026-09-21T17:48:35Z`、候选 `701a13b`、镜像摘要、Env-O 标识、daemon 与宿主共存披露、预登记维护时段＝无；改登对象为状态占位值，无既有结果被覆盖；②本窗口起栈、Flyway（V1–V9 全 success＋1 行可重复迁移）、6 容器配额 inspect（§4.1 七项中 `k6` 因 `profiles: [perf]` 不起，差异如实登记）已实测；③三项门禁退出码均 0（栈健康／探针数据合法性 `12 行 0 坏行 覆盖 327 s`／失败探针路径抽查），**不构成 C02 判定**，窗口进行中未收口；④首次起栈尝试因「观察库 catalog 为空 ⇒ detail 探针恒记 status:0，而 `observation-report.mjs:89-90` 把 status 0 计为失败槽」的做法口径不一致，其原始数据原样归档于 `phase-w2/observation/setup-attempt-1-precondition-gap/`；探针前置以环境专用种子（书目 710001／副本 810001–810002，沿用 `phase3/probe-seed.sql` 机制，非受控数据集）补齐后另起窗口原始文件；⑤探针凭据经环境注入、证据树内明文命中 0；⑥全过程无破坏性动作、无 git 写操作；⑦窗口事实与文件清单见 `artifacts/m6-acceptance/phase-w2/observation/README.md` |
+| 2026-09-22 | v0.7 | AT-0016 W2a-2 A4 重登：①按 12 列新增 `M6-复跑-W2a-2-R3/R4/R5` 三行，既有 run1/run2 无效与旧 R3 未执行行不删改；②三轮候选均为 `9a5fea3`，`protocol valid=true`，五项门禁均 `0/0/0/0/0`，故 `round valid`，有效轮数为 3；③三行结果登记「通过」，AT-0016 唯一登记用语包含「p99 不可得，未作 p99 断言」，不扩展为 M6 全部验收结论；④更新当前计数为执行次数 11、通过 3，失败/阻塞/历史无效及未执行占位按实际记录保留；⑤补充历史后置脱敏、动态 33 值集不可重放、一次诊断 stdout token 偏差、12/9/6 扫描值集口径差异及 A1–A4 已完成、A5–A7 尚未执行的当前边界；⑥汇总与逐轮证据见 `artifacts/m6-acceptance/phase-w2/perf/AT-0016-W2a-rerun-summary.md`。 |
+| 2026-09-22 | v0.8 | W2a-2 A5 失败登记：①按 12 列新增 `M6-复跑-W2a-2-A5-attempt1/attempt2` 两行，既有 `M6-分条-0018-C03/C04` 失败历史不覆盖；②attempt1 分开登记功能脚本 exit 0、timeline PASS、RPO=3s/RTO=15s 与原始 pg_dump 动态 token 造成的证据安全失败，后置脱敏不回填；③attempt2 最后额度在源栈临时 READER 登录 HTTP 500 前置失败，drill 未启动、无 timeline/RPO/RTO/续行；④A5 总体 FAIL，AT-0018-C03/C04 未达判定、不登记通过，不执行第三次，A6 未放行；⑤现有证据不足以归因产品 auth 或 fixture/config，不立项；⑥AT-0016 v0.7 通过结论保持不变，计数更新为执行次数 13、失败 4。 |
 
 ---
 
@@ -145,3 +183,9 @@
 > - [代码复用候选台账](../evidence/MLS-DOC-EVD-0002.md)
 > - [需求评审清单](../reviews/MLS-DOC-REV-0001.md)
 > - [需求基线记录](../reviews/MLS-DOC-REV-0002.md)
+> - [M6 系统验收执行清单](../../agents/M6-ACCEPTANCE-PLAN-20260919.md)
+> - [M6 验收剩余工作流执行约束](../../agents/M6-W2-EXECUTION-CONSTRAINTS-20260922.md)
+> - [AT-0016 W2a-2 汇总登记](../../../artifacts/m6-acceptance/phase-w2/perf/AT-0016-W2a-rerun-summary.md)
+> - [W2a-2 A5 复跑报告](../../../artifacts/m6-acceptance/phase-w2/drill/a5-rerun-20260922/A5-REPORT.md)
+> - [A5 attempt1 备份证据安全处置记录](../../../artifacts/m6-acceptance/phase-w2/drill/a5-rerun-20260922/SANITIZATION-NOTE.md)
+> - [A5 attempt2 失败记录](../../../artifacts/m6-acceptance/phase-w2/drill/a5-rerun-20260922/attempt2/ATTEMPT2-FAILURE-SUMMARY.md)
