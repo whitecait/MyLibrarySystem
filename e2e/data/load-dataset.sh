@@ -45,15 +45,22 @@ done
 # Environment-only probe staff (NOT part of the versioned dataset manifest):
 # the steady mixed load (e2e/perf/scenarios/steady.js) needs an authenticated
 # LIBRARIAN for audit queries and the damaged-return leg of the payment
-# chain. Public registration only creates READERs, so the account is injected
-# here with a PBKDF2 hash in the backend PasswordHasher format
+# chain, and a separate ADMIN for the simulated-payment scheduling call
+# (DEF-M6-008: CONTROLLED_TEST_OPERATOR maps to ADMIN, so ordinary traffic
+# keeps the LIBRARIAN session). Public registration only creates READERs, so
+# the accounts are injected here with PBKDF2 hashes in the backend
+# PasswordHasher format
 # (pbkdf2$<iter>$<saltHex>$<hashHex>; same 210k iterations as the e2e
-# fixtures). Password: Perf-Librarian-2026! (documented in
-# e2e/perf/lib/common.js, never a real credential).
+# fixtures). Passwords: Perf-Librarian-2026! / Perf-Admin-2026! (documented in
+# e2e/perf/lib/common.js, never real credentials).
 lib_hash="$(node -e 'const{pbkdf2Sync}=require("node:crypto");const salt=Buffer.from("9f8e7d6c5b4a3928170f1e2d3c4b5a69","hex");process.stdout.write("pbkdf2$210000$"+salt.toString("hex")+"$"+pbkdf2Sync("Perf-Librarian-2026!",salt,210000,32,"sha256").toString("hex"))')"
 psql -q -c "INSERT INTO account (username, password_hash, display_name, role, status, version, created_at, updated_at)
   SELECT 'perf-probe-librarian', '${lib_hash}', '性能探针馆员', 'LIBRARIAN', 'ACTIVE', 0, now(), now()
   WHERE NOT EXISTS (SELECT 1 FROM account WHERE username = 'perf-probe-librarian');"
+admin_hash="$(node -e 'const{pbkdf2Sync}=require("node:crypto");const salt=Buffer.from("2b7c9d4e6f8a1b3c5d7e9f0a1b2c3d4e","hex");process.stdout.write("pbkdf2$210000$"+salt.toString("hex")+"$"+pbkdf2Sync("Perf-Admin-2026!",salt,210000,32,"sha256").toString("hex"))')"
+psql -q -c "INSERT INTO account (username, password_hash, display_name, role, status, version, created_at, updated_at)
+  SELECT 'perf-probe-admin', '${admin_hash}', '性能探针管理员', 'ADMIN', 'ACTIVE', 0, now(), now()
+  WHERE NOT EXISTS (SELECT 1 FROM account WHERE username = 'perf-probe-admin');"
 psql -q -c "SELECT setval(pg_get_serial_sequence('account','id'), (SELECT max(id) FROM account));" > /dev/null
 
 echo "loaded: $(psql -tA -c 'SELECT count(*) FROM borrow_transaction;') transactions, $(psql -tA -c 'SELECT count(*) FROM book_title;') titles"

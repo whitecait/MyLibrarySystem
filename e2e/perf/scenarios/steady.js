@@ -17,7 +17,7 @@
 // hot title, so hot-weighted picks can actually proceed instead of being
 // forced to the tail.
 import { check } from 'k6'
-import { api, req, login, auth, thresholds, readerName, probePassword, librarianName, librarianPassword } from '../lib/common.js'
+import { api, req, login, auth, thresholds, readerName, probePassword, librarianName, librarianPassword, adminName, adminPassword } from '../lib/common.js'
 
 export { handleSummary } from '../lib/common.js'
 
@@ -54,7 +54,13 @@ export function setup() {
   if (tokensLocal.length === 0) throw new Error('no probe account could log in — warmup did not run against this instance?')
   const librarianToken = login(librarianName, librarianPassword)
   if (!librarianToken) throw new Error('perf-probe-librarian could not log in — run the updated e2e/data/load-dataset.sh (staff injection) against this instance')
-  return { tokens: tokensLocal, librarianToken }
+  // DEF-M6-008 (2026-09-22 ruling): the simulated-payment scheduling call is
+  // an ADMIN-only operation (CONTROLLED_TEST_OPERATOR maps to ADMIN), so the
+  // payment chain authenticates that one call with its own ADMIN session
+  // while all ordinary circulation traffic stays on the librarian probe.
+  const adminToken = login(adminName, adminPassword)
+  if (!adminToken) throw new Error('perf-probe-admin could not log in — run the updated e2e/data/load-dataset.sh (ADMIN injection) against this instance')
+  return { tokens: tokensLocal, librarianToken, adminToken }
 }
 
 let queryCursor = 0
@@ -124,8 +130,9 @@ export function paymentChain(data) {
   // scheduled. Target selection follows the 80/20 hot/tail weighting with
   // same-pool retries (as writes). Lost races (copy taken between list and
   // borrow) are expected. Copy listing is a LIBRARIAN capability, so the
-  // staff token performs the lookup (and the simulator call); business
-  // writes stay with the reader.
+  // staff token performs the lookup and the return; business writes stay with
+  // the reader, and the simulated-payment scheduling call is authenticated
+  // with the separate ADMIN probe session (DEF-M6-008).
   const token = data.tokens[payCursor % data.tokens.length]
   payCursor++
   const pool = pickPool()
@@ -165,8 +172,9 @@ export function paymentChain(data) {
     [{ status: 409, reason: 'MLS-PAY-001' }], auth(token))
   const orderId = order.json()?.data?.orderId
   if (!orderId) return
-  // conflicting callback events: 409 / MLS-PAY-003
+  // conflicting callback events: 409 / MLS-PAY-003. Scheduling is ADMIN-only
+  // (DEF-M6-008): the call carries the dedicated ADMIN probe session.
   req('POST', api('/payment-simulator/results'), 'payment',
     { orderId: String(orderId), result: 'SUCCESS', delayMs: 0, duplicateCount: 0 },
-    [{ status: 409, reason: 'MLS-PAY-003' }], auth(data.librarianToken))
+    [{ status: 409, reason: 'MLS-PAY-003' }], auth(data.adminToken))
 }

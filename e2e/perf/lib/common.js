@@ -137,9 +137,14 @@ export const probePassword = 'Perf-Probe-2026!'
 
 // Environment staff injected by e2e/data/load-dataset.sh (not part of the
 // versioned dataset): the steady load needs an authenticated LIBRARIAN for
-// audit queries and the damaged-return leg of the payment chain.
+// audit queries and the damaged-return leg of the payment chain, and a
+// separate ADMIN for the simulated-payment scheduling call (DEF-M6-008,
+// widened 2026-09-22: CONTROLLED_TEST_OPERATOR maps to ADMIN, so ordinary
+// circulation traffic keeps using the librarian probe).
 export const librarianName = 'perf-probe-librarian'
 export const librarianPassword = 'Perf-Librarian-2026!'
+export const adminName = 'perf-probe-admin'
+export const adminPassword = 'Perf-Admin-2026!'
 
 // End-of-test summary: prints the four-class counts, the derived aggregate
 // and the threshold verdicts. The raw `--summary-export` JSON file is still
