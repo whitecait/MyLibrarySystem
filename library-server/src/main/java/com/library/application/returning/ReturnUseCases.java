@@ -1,6 +1,9 @@
 package com.library.application.returning;
 
 import com.library.contract.ModuleResult;
+import com.library.contract.audit.AuditAppender;
+import com.library.contract.audit.AuditEventTypes;
+import com.library.contract.audit.BusinessOutcome;
 import com.library.contract.error.StableErrorCode;
 import com.library.contract.outbox.OutboxAppender;
 import com.library.contract.security.ActorContext;
@@ -23,6 +26,8 @@ import java.util.Locale;
 /**
  * 归还应用用例（MLS-DOC-MD-0004 §3/§4）：流通迁移、罚款形成、Outbox 登记
  * 在同一事务内整体提交或回滚（IT-CIRC-003；归还＝借阅结束＋副本迁移＋罚款＋事件）。
+ * 成功路径审计（DEF-M6-011）与事件登记同点写入；detail 携带 relatedId（罚款用 fineId、
+ * 归还用 txId）与 outcome。
  * 罚款规则（待确认业务参数，批次报告登记）：LOST/DAMAGED 按书价全额；
  * INTACT 逾期按 100 分/日、封顶书价（BR-0017）。
  * TitleQuery 注入为 §3 表按需补全（罚款封顶基数需书目价格）。
@@ -42,7 +47,8 @@ record ReturnUseCasesImpl(AuthorizationCheck authorization,
                           ReturnCommands returns,
                           FineCommands fines,
                           TitleQuery titleQuery,
-                          OutboxAppender outbox) implements ReturnUseCases {
+                          OutboxAppender outbox,
+                          AuditAppender audit) implements ReturnUseCases {
 
     private static final long OVERDUE_FINE_PER_DAY = 100;
 
@@ -68,11 +74,15 @@ record ReturnUseCasesImpl(AuthorizationCheck authorization,
                     outbox.append("SETTLEMENT_FINE", fineId, "FINE_CREATED",
                             java.util.Map.of("sourceTxId", returned.txId().value(),
                                     "amountCents", amount, "readerId", returned.readerId()));
+                    audit.appendWithBusinessFact(AuditEventTypes.FINE_CREATED,
+                            actor.accountId().value(), new BusinessOutcome(fineId, "CREATED"));
                 }
             }
             outbox.append("CIRCULATION_TX", returned.txId().value(), "COPY_RETURNED",
                     java.util.Map.of("copyId", command.copyId().value(),
                             "condition", conditionOf(command), "readerId", returned.readerId()));
+            audit.appendWithBusinessFact(AuditEventTypes.COPY_RETURNED, actor.accountId().value(),
+                    new BusinessOutcome(returned.txId().value(), returned.outcome()));
             return ModuleResult.Accepted.of(new ReturnResult(returned, fineId));
         }
         if (result instanceof ModuleResult.Rejected<ReturnedCopy> moduleRejected) {

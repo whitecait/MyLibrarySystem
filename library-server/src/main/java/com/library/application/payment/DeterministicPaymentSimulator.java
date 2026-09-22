@@ -1,6 +1,9 @@
 package com.library.application.payment;
 
 import com.library.contract.ModuleResult;
+import com.library.contract.audit.AuditAppender;
+import com.library.contract.audit.AuditEventTypes;
+import com.library.contract.audit.BusinessOutcome;
 import com.library.settlement.contract.OrderCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 调度被接受后由本组件自行投递通知：delayMs=0 同步投递，否则经单线程
  * 延迟执行器投递；duplicateCount 次重复通知沿用同一 eventId，复现网关
  * 重发并依赖 applyCallback 的 eventId 幂等（首次有效通知至多结算一次）。
+ * 调度被接受即登记成功审计（DEF-M6-011），关联对象为 orderId、操作者为发起调度的账户。
  */
 @Component
 public final class DeterministicPaymentSimulator implements PaymentSimulatorPort {
@@ -24,14 +28,16 @@ public final class DeterministicPaymentSimulator implements PaymentSimulatorPort
 
     private final AtomicLong sequence = new AtomicLong();
     private final OrderCommands orders;
+    private final AuditAppender audit;
     private final ScheduledExecutorService deferred = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "payment-simulator-delivery");
         t.setDaemon(true);
         return t;
     });
 
-    public DeterministicPaymentSimulator(OrderCommands orders) {
+    public DeterministicPaymentSimulator(OrderCommands orders, AuditAppender audit) {
         this.orders = orders;
+        this.audit = audit;
     }
 
     @Override
@@ -44,6 +50,9 @@ public final class DeterministicPaymentSimulator implements PaymentSimulatorPort
             return ModuleResult.Rejected.of("MLS-PAY-006", "模拟参数无效");
         }
         long simulationId = sequence.incrementAndGet();
+        audit.appendWithBusinessFact(AuditEventTypes.SIMULATION_SCHEDULED,
+                c.actorId() <= 0 ? null : c.actorId(),
+                new BusinessOutcome(c.orderId(), "SCHEDULED"));
         Runnable delivery = () -> deliver(simulationId, c);
         if (c.delayMs() == 0) {
             delivery.run();

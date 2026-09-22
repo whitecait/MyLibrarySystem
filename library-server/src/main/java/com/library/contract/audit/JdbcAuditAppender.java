@@ -25,16 +25,35 @@ public class JdbcAuditAppender implements AuditAppender {
     @Override
     public void append(String eventType, Long actorId, Object detail) {
         try {
-            var json = mapper.writeValueAsString(detail == null ? java.util.Map.of() : detail);
+            var json = jsonOf(detail);
             // 失败审计独立提交（DD-0004 §1）；登记失败只记日志，不影响主响应
             var independent = new TransactionTemplate(transactions.getTransactionManager());
             independent.setPropagationBehavior(Propagation.REQUIRES_NEW.value());
-            independent.executeWithoutResult(status -> jdbc.update("""
-                    INSERT INTO audit_event (occurred_at, actor_id, event_type, detail)
-                    VALUES (now(), ?, ?, ?::jsonb)
-                    """, actorId == null ? 0L : actorId, eventType, json));
+            independent.executeWithoutResult(status -> insert(eventType, actorId, json));
         } catch (Exception e) {
             log.warn("审计登记失败: {}", eventType, e);
         }
+    }
+
+    @Override
+    public void appendWithBusinessFact(String eventType, Long actorId, Object detail) {
+        try {
+            // 成功审计加入当前事务（JdbcTemplate 复用线程绑定的连接）；
+            // 登记失败只记日志，不把审计故障升级为业务失败
+            insert(eventType, actorId, jsonOf(detail));
+        } catch (Exception e) {
+            log.warn("成功路径审计登记失败: {}", eventType, e);
+        }
+    }
+
+    private String jsonOf(Object detail) throws Exception {
+        return mapper.writeValueAsString(detail == null ? java.util.Map.of() : detail);
+    }
+
+    private void insert(String eventType, Long actorId, String json) {
+        jdbc.update("""
+                INSERT INTO audit_event (occurred_at, actor_id, event_type, detail)
+                VALUES (now(), ?, ?, ?::jsonb)
+                """, actorId == null ? 0L : actorId, eventType, json);
     }
 }

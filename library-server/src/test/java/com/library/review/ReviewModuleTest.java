@@ -2,6 +2,7 @@ package com.library.review;
 
 import com.library.contract.ModuleResult;
 import com.library.review.contract.*;
+import com.library.contract.audit.RecordingAuditAppender;
 import com.library.review.internal.ReviewModuleImpl;
 import com.library.review.internal.adapter.persistence.InMemoryReviewStore;
 import org.junit.jupiter.api.Test;
@@ -13,14 +14,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ReviewModuleTest {
     @Test void utRev001_onlyClosedHighRiskTypesCanBeRequested() {
-        var module=new ReviewModuleImpl(new InMemoryReviewStore());
+        var module=new ReviewModuleImpl(new InMemoryReviewStore(), new RecordingAuditAppender());
         assertThat(module.request(new ReviewCommand(2,"UNKNOWN",9,"RUN",Map.of(),"理由",0))).isInstanceOf(ModuleResult.Rejected.class);
         assertThat(accepted(module.request(new ReviewCommand(2,"REFUND",9,"REFUND",Map.of(),"理由",0))).status()).isEqualTo("PENDING");
     }
     @Test
     void utRev002_changedTargetIsRejectedWithoutExecutingAction() {
         var store=new InMemoryReviewStore();
-        var module=new ReviewModuleImpl(store);
+        var module=new ReviewModuleImpl(store, new RecordingAuditAppender());
         var review=accepted(module.request(new ReviewCommand(2,"REFUND",9,"REFUND",Map.of("amountCents",500),"读者申请",3)));
         var executed=new AtomicBoolean();
         ReviewedAction action=new ReviewedAction(){ public long currentVersion(){return 4;} public ModuleResult<String> execute(Map<String,Object> payload){executed.set(true);return ModuleResult.Accepted.of("REFUNDED");}};
@@ -32,7 +33,7 @@ class ReviewModuleTest {
         assertThat(executed).isFalse();
     }
     @Test void utRev003_decisionIsTerminalAndApprovedActionRunsOnce() {
-        var module=new ReviewModuleImpl(new InMemoryReviewStore());
+        var module=new ReviewModuleImpl(new InMemoryReviewStore(), new RecordingAuditAppender());
         var review=accepted(module.request(new ReviewCommand(2,"REFUND",9,"REFUND",Map.of(),"理由",3)));
         var calls=new java.util.concurrent.atomic.AtomicInteger();
         ReviewedAction action=new ReviewedAction(){public long currentVersion(){return 3;}public ModuleResult<String> execute(Map<String,Object> p){calls.incrementAndGet();return ModuleResult.Accepted.of("REFUNDED");}};

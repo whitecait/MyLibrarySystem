@@ -1,6 +1,9 @@
 package com.library.application.loan;
 
 import com.library.contract.ModuleResult;
+import com.library.contract.audit.AuditAppender;
+import com.library.contract.audit.AuditEventTypes;
+import com.library.contract.audit.BusinessOutcome;
 import com.library.contract.error.StableErrorCode;
 import com.library.contract.model.Role;
 import com.library.contract.outbox.OutboxAppender;
@@ -22,6 +25,7 @@ import org.springframework.stereotype.Component;
  * 借出应用用例（MLS-DOC-MD-0004 §3）：预约、现场借阅、取书、续借、人工处置。
  * 提交时重验读者资格（READER 且 ACTIVE），资格拒绝 MLS-CIRC-011；
  * 事件登记与业务写入同一事务（事件随 UnitOfWork 提交/回滚）。
+ * 成功路径审计（DEF-M6-011）与事件登记同点写入，detail 携带 relatedId 与 outcome。
  * AuthorizationCheck/DebtQuery/ReaderQuery 为 §3 表的按需补全（批次报告登记）。
  */
 public interface LoanUseCases {
@@ -46,7 +50,8 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
                         DebtQuery debtQuery,
                         ReservationCommands reservations,
                         LoanCommands loans,
-                        OutboxAppender outbox) implements LoanUseCases {
+                        OutboxAppender outbox,
+                        AuditAppender audit) implements LoanUseCases {
 
     private static final String TX_AGG_TYPE = "CIRCULATION_TX";
 
@@ -65,7 +70,7 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
         var result = reservations.reserve(new ReservationCommands.ReservationCommand(
                 readerId, command.titleId(), command.reservationDate(), command.pickupSlot(),
                 command.channel(), command.confirmWaitlist(), actor));
-        appendTxEvent(result, "RESERVATION_DECIDED", readerId);
+        appendTxEvent(result, AuditEventTypes.RESERVATION_DECIDED, readerId, actor);
         return result;
     }
 
@@ -77,7 +82,7 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
             return ModuleResult.Rejected.propagate(authorized);
         }
         var result = reservations.cancel(command);
-        appendTxEvent(result, "RESERVATION_CANCELLED", null);
+        appendTxEvent(result, AuditEventTypes.RESERVATION_CANCELLED, null, actor);
         return result;
     }
 
@@ -95,7 +100,8 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
         }
         var result = loans.lend(new LoanCommands.WalkInLoanCommand(
                 readerId, command.items(), command.channel(), actor));
-        appendTxEvent(result, "WALKIN_LOAN_BATCH", readerId);
+        appendTxEvent(result, AuditEventTypes.WALKIN_LOAN_BATCH, readerId, actor);
+        appendLoanBatchAudit(result, actor);
         return result;
     }
 
@@ -106,7 +112,7 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
             return ModuleResult.Rejected.propagate(rejected);
         }
         var result = loans.claim(command);
-        appendTxEvent(result, "PICKUP_CLAIMED", null);
+        appendTxEvent(result, AuditEventTypes.PICKUP_CLAIMED, null, actor);
         return result;
     }
 
@@ -118,7 +124,7 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
             return ModuleResult.Rejected.propagate(rejected);
         }
         var result = loans.applyManualAction(command);
-        appendTxEvent(result, "MANUAL_ACTION_APPLIED", null);
+        appendTxEvent(result, AuditEventTypes.MANUAL_ACTION_APPLIED, null, actor);
         return result;
     }
 
@@ -136,7 +142,7 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
             return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_012.code(), "存在未缴罚款，暂不能续借");
         }
         var result = loans.renew(command);
-        appendTxEvent(result, "LOAN_RENEWED", null);
+        appendTxEvent(result, AuditEventTypes.LOAN_RENEWED, null, actor);
         return result;
     }
 
@@ -179,8 +185,9 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
         return null;
     }
 
-    /** 事件登记（同一事务；仅 Accepted 且携带 txId 的事实登记）。 */
-    private void appendTxEvent(ModuleResult<?> result, String eventType, Long readerId) {
+    /** 事件登记与成功审计（同一事务；仅 Accepted 且携带 txId 的事实登记）。 */
+    private void appendTxEvent(ModuleResult<?> result, String eventType, Long readerId,
+                               ActorContext actor) {
         if (!(result instanceof ModuleResult.Accepted<?> accepted)) {
             return;
         }
@@ -188,6 +195,32 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
         if (aggId > 0) {
             outbox.append(TX_AGG_TYPE, aggId, eventType,
                     java.util.Map.of("readerId", readerId == null ? 0 : readerId));
+            audit.appendWithBusinessFact(eventType, actor.accountId().value(),
+                    new BusinessOutcome(aggId, extractOutcome(accepted.value())));
+        }
+    }
+
+    /** 现场借阅批次无聚合行（LoanBatch），按册登记成功审计（每成功册一条）。 */
+    private void appendLoanBatchAudit(ModuleResult<LoanCommands.LoanBatch> result, ActorContext actor) {
+        if (!(result instanceof ModuleResult.Accepted<LoanCommands.LoanBatch> accepted)) {
+            return;
+        }
+        for (var item : accepted.value().items()) {
+            if (item.txId() == null || !"LENT".equals(item.outcome())) {
+                continue;
+            }
+            audit.appendWithBusinessFact(AuditEventTypes.WALKIN_LOAN_BATCH, actor.accountId().value(),
+                    new BusinessOutcome(item.txId().value(), item.outcome()));
+        }
+    }
+
+    /** 结果记录的业务结果字段（Reservation/Transaction/Renewal 均以 outcome 表达）。 */
+    private String extractOutcome(Object value) {
+        try {
+            var outcome = value.getClass().getMethod("outcome").invoke(value);
+            return outcome == null ? "OK" : outcome.toString();
+        } catch (Exception reflectiveFailure) {
+            return "OK";
         }
     }
 

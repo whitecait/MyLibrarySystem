@@ -1,6 +1,9 @@
 package com.library.review.internal;
 
 import com.library.contract.ModuleResult;
+import com.library.contract.audit.AuditAppender;
+import com.library.contract.audit.AuditEventTypes;
+import com.library.contract.audit.BusinessOutcome;
 import com.library.contract.error.StableErrorCode;
 import com.library.review.contract.Review;
 import com.library.review.contract.ReviewCommand;
@@ -13,6 +16,8 @@ import java.util.Set;
 /**
  * REVIEW 模块实现（B1：发起；B3 扩展决定与目标执行）。
  * 只有已批准的高风险动作类型可以发起复核。
+ * 成功路径审计（DEF-M6-011）：发起以 applicantId 为 actor、决定以 decidedBy 为 actor，
+ * 使 AT-0002 §2.3 R5「L 发起与 S 复核可分别追溯」可按 actor_id 与时间核对。
  */
 @Component
 public class ReviewModuleImpl implements ReviewRequesting, com.library.review.contract.ReviewDeciding,
@@ -22,9 +27,11 @@ public class ReviewModuleImpl implements ReviewRequesting, com.library.review.co
     private static final Set<String> ACCOUNT_CHANGE_ACTIONS = Set.of("SUSPEND", "RESTORE", "CHANGE_ROLE");
 
     private final ReviewStore reviews;
+    private final AuditAppender audit;
 
-    public ReviewModuleImpl(ReviewStore reviews) {
+    public ReviewModuleImpl(ReviewStore reviews, AuditAppender audit) {
         this.reviews = reviews;
+        this.audit = audit;
     }
 
     @Override
@@ -47,6 +54,8 @@ public class ReviewModuleImpl implements ReviewRequesting, com.library.review.co
         }
         var id = reviews.insert(new ReviewStore.NewReview(command.applicantId(), command.targetType(),
                 command.targetId(), action, command.payload(), command.reason(), command.targetVersion()));
+        audit.appendWithBusinessFact(AuditEventTypes.REVIEW_REQUESTED, command.applicantId(),
+                new BusinessOutcome(id, "PENDING"));
         return ModuleResult.Accepted.of(new Review(id, "PENDING"));
     }
 
@@ -60,6 +69,8 @@ public class ReviewModuleImpl implements ReviewRequesting, com.library.review.co
         var row=review.get();
         if("REJECTED".equals(command.decision())) {
             reviews.decide(row.id(),row.version(),"REJECTED",command.decidedBy(),null);
+            audit.appendWithBusinessFact(AuditEventTypes.REVIEW_DECIDED, command.decidedBy(),
+                    new BusinessOutcome(row.id(),"REJECTED"));
             return ModuleResult.Accepted.of(new com.library.review.contract.ReviewDeciding.ReviewDecision(row.id(),"REJECTED",null));
         }
         if(!"APPROVED".equals(command.decision()))
@@ -72,6 +83,8 @@ public class ReviewModuleImpl implements ReviewRequesting, com.library.review.co
         var outcome=((ModuleResult.Accepted<String>)executed).value();
         if(!reviews.decide(row.id(),row.version(),"APPROVED",command.decidedBy(),outcome))
             return ModuleResult.Rejected.conflict(StableErrorCode.MLS_REV_001.code(),row.version()+1,"复核已变化");
+        audit.appendWithBusinessFact(AuditEventTypes.REVIEW_DECIDED, command.decidedBy(),
+                new BusinessOutcome(row.id(),"APPROVED"));
         return ModuleResult.Accepted.of(new com.library.review.contract.ReviewDeciding.ReviewDecision(row.id(),"APPROVED",outcome));
     }
 
