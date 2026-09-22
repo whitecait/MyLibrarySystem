@@ -14,7 +14,7 @@
 
 ## 当前待办
 
-以下为 2026-09-22 A5 失败后的未完成事项。已完成事实不在本文件登记，唯一登记区为 [HANDOFF.md](HANDOFF.md)。
+以下为 2026-09-22 M6 恢复批次 R0–R4 执行后的未完成事项。已完成事实不在本文件登记，唯一登记区为 [HANDOFF.md](HANDOFF.md)。
 
 ### Windows 环境推迟项
 
@@ -25,13 +25,13 @@
 
 执行规程见 [恢复计划](docs/agents/M6-RECOVERY-PLAN-20260922.md)；新批次与依赖规则已由 lingzz 确认；满足计划准入后执行，旧 A5 批次禁止第三次仍有效。
 
-R0、R1b、R1c、R3 与 R4 的前置核验、AT-0016 缩减协议单轮及验收登记均已完成，其事实与去向登记于 [HANDOFF.md](HANDOFF.md)「2026-09-22 M6 恢复批次执行（R0–R4 缩减协议单轮）」一节与 `artifacts/m6-recovery-20260922/RUN-REPORT.md`，本文件不再逐项保留。
+R0、R1a 两轮登录诊断、R1b、R1c、R2 准备核验与覆盖映射、R3 冻结、R4 前置核验、AT-0016 缩减协议单轮及验收登记均已完成，其事实与去向登记于 [HANDOFF.md](HANDOFF.md)「2026-09-22 M6 恢复批次执行（R0–R4 完整单次执行结果）」一节与 `artifacts/m6-recovery-20260922/RUN-REPORT.md`，本文件不再逐项保留。
 
-- [ ] R1a：诊断 A5 源栈登录 HTTP 500，明确 fixture/config 或产品根因，完成空库前置回归后再申请正式演练准入。开工窗口内 WSL 内 docker 不可用（`which docker=NOT_FOUND`、无 `/var/run/docker.sock`）致诊断轮未开展；2026-09-22 后一时点实测 docker 已恢复（`context=default`、客户端/服务端 29.7.2、`docker ps -a` 退出码 0），计划体见 `artifacts/m6-recovery-20260922/diag/diag-plan.md`。
-- [ ] R2 遗留：AI 接线（WSL `.env` 的 `MODEL` 与 `API_KEY` 为空，`bash scripts/prepare-acceptance-env.sh` 实测 FAIL、`.env.acceptance` 未生成；解除路径为 Env-W 副本本地 `.env`）；AT-0030 九场景资产（确定性交错 harness、`commit-crash`/`closing-fail` 故障注入、`ds-concurrency` 数据集与时间线／审计导出／断言查询三件套证据管道）在 `e2e/`、`scripts/` 内全量缺失；六浏览器正式版本准备（edge-previous 未安装且企业离线 MSI 可获得性待核实、firefox-current 无 juggler 不可自动驱动、firefox-previous 正式槽位须装官方 155 线）。
+- [ ] R1a：登录 500 的归因缺口。两轮诊断已按 `artifacts/m6-recovery-20260922/diag/diag-plan.md` 第 3–4 节执行、产物永久标 `diagnostic`，归因分类＝**未归因**——500 的唯一实测充分条件限于 fixture 侧注入的畸形 `password_hash` 值，而 attempt2 的实际注入值、`creds.env`、账户创建命令原文与 backend 日志不可恢复（缺失清单见该目录 `round2-result.md` 第 6 节）。对冻结候选仅有「无证据表明该 500 仍影响 `e8d0523`＋重建镜像」之限定判断，不得升格为修复结论；正式演练准入须待该缺口按已批准新批次规则处置后另行申请。
+- [ ] R2 遗留：AT-0030 九场景资产（确定性交错 harness、`commit-crash`/`closing-fail` 故障注入、`ds-concurrency` 数据集与时间线／审计导出／断言查询三件套证据管道）在 `e2e/`、`scripts/` 内全量缺失；六浏览器正式版本准备（edge-previous 未安装且企业离线 MSI 可获得性待核实、firefox-current 无 juggler 不可自动驱动、firefox-previous 正式槽位须装官方 155 线）。（AI 接线已就绪：`bash scripts/prepare-acceptance-env.sh` 退出码 0、判定 `DERIVED`、`.env.acceptance` 已派生；两项运行件 `scripts/collect-ai-connection-evidence.sh` 与端点 smoke 前置为运行栈与出网，尚未运行。）
 - [ ] R2/R5 覆盖缺口：126 项 GAP（P0 14／P1 27／P2 9／P3 62／P4 9／P5 5）与 29 项阻断/待裁定项须先由 lingzz 或 R1b 裁定，未裁定前对应检查点不可执行；逐项清单见 `artifacts/m6-recovery-20260922/coverage.md` 第 3 节。
 - [ ] 缺陷遗留：DEF-M6-009 与 DEF-M6-010 本批未实施、仅登记处置建议（010 口径须 lingzz 裁定「枚举外取值返回 400」或「显式登记宽容语义」）；闭馆路径两处既有 SQL 缺陷为本批新发现并已修复，是否新立编号待裁定；005-b/007 的实页与角色回归闭环待 R5。
-- [ ] R4 遗留：正式恢复演练 C03/C04 未执行（前置核验四项通过而 R1a 未归因、准入不满足，依恢复计划未归因不消费正式演练额度），须在 R1a 闭环后按已批准新批次规则另行申请准入；`artifacts/m6-acceptance/phase-w2/drill/setup-source.sh:107` 的规模期望 `account=1001` 在 `941150d` 后已陈旧（当前实测 1002），复用前须修正。
+- [ ] R4 遗留：正式恢复演练 C03/C04 未执行——前置核验四项按恢复计划第 62 行全部通过，而演练准入要求 R1a 登录诊断闭环，本批归因分类为未归因，依恢复计划第 46 行「未归因则保持待诊断，不消费正式演练额度」，演练执行行 `M6-演练-R4-01` 登记「未执行（准入不满足）」；须在 R1a 缺口处置后按已批准新批次规则另行申请准入。另：`artifacts/m6-acceptance/phase-w2/drill/setup-source.sh:107` 的规模期望 `account=1001` 在 `941150d` 后已陈旧（当前实测 1002），复用前须修正。
 - [ ] R5：Windows 原生执行 A~E 全部范围及 AT-0017（六浏览器正式矩阵与执行日版本资格、批次 A~E 实页断言、DEF-M6-005-b/007 实页与角色回归闭环、E2E-001/02 支付链回归复核）；入口清单见 `artifacts/m6-recovery-20260922/RUN-REPORT.md` 第 5 节、`artifacts/m6-recovery-20260922/R1b/deferred-realpage.md` 与 `artifacts/m6-recovery-20260922/readiness.md` 第 1 节。
 - [ ] R6：观察窗口与收口复核（C01/C05、C02 实际时长统计、全包清单、独立复核）。窗口未启动且须置于性能测量之后；按已获裁定的实际积累时长口径报告，不足七日必须 `window incomplete`；要点见 `artifacts/m6-recovery-20260922/RUN-REPORT.md` 第 6 节。
 - [ ] R7：lingzz 确认实际窗口口径、允许遗留风险和最终签署；材料清单见 `artifacts/m6-recovery-20260922/RUN-REPORT.md` 第 7 节；满足退出准则后更新 AT-0003 与状态文档，不预填通过。
@@ -41,6 +41,8 @@ R0、R1b、R1c、R3 与 R4 的前置核验、AT-0016 缩减协议单轮及验收
 本文件不登记已完成明细。已完成事实的唯一登记区为 [HANDOFF.md](HANDOFF.md)。
 
 ## 修订记录
+
+- 2026-09-22（R0–R4 完整单次执行结果）：按批次最终状态收敛 M6 节。R1a 项由「诊断轮未开展、docker 不可用」改写为两轮已执行、归因分类＝未归因（列明唯一实测充分条件位于注入侧畸形 `password_hash` 值、缺失输入不可恢复、对冻结候选仅有「无证据表明仍影响」的限定判断）；R2 遗留项移除 AI 接线（已就绪：`prepare-acceptance-env.sh` 退出码 0、判定 `DERIVED`、`.env.acceptance` 已派生）并补记两项运行件前置，保留 AT-0030 九场景资产与六浏览器准备；R4 遗留项改按「前置核验四项全通过、演练执行行登记未执行（准入不满足）」表述并引 `M6-演练-R4-01`；本文件顶部未完成事项的时点改为 R0–R4 执行后；已完成项指向 HANDOFF 新节名。未勾选任何未完成项，未新增批准或通过结论。
 
 - 2026-09-22（R0–R4 执行后）：按 M6 恢复批次实际结果重排 M6 节。已完成项（R0、R1b、R1c、R3、R4 前置核验与 AT-0016 缩减协议单轮及验收登记）不再逐项保留，改为一句指向 HANDOFF 与 `artifacts/m6-recovery-20260922/RUN-REPORT.md`；未完成项保留并补 R5~R7 入口，新增 R2 遗留（AI 接线、AT-0030 资产、六浏览器准备）、R2/R5 覆盖缺口（126 GAP／29 阻断）、缺陷遗留（009/010 未实施）与 R4 遗留（演练未执行、`setup-source.sh:107` 陈旧规模期望）四项。未勾选任何未完成项，未新增批准或通过结论。
 
