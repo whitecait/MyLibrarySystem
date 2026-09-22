@@ -8,6 +8,7 @@
 > - [文档交叉审计与维护报告](HANDOFF-AUDIT-20260913.md)
 > - [开发任务规划](TODO.md)
 > - [M6 验收恢复与完成计划](docs/agents/M6-RECOVERY-PLAN-20260922.md)
+> - [M6 恢复批次执行报告](artifacts/m6-recovery-20260922/RUN-REPORT.md)
 > - [工程运行与验证](ENGINEERING.md)
 > - [工程文档唯一入口](docs/README.md)
 > - [模块设计评审与基线记录](docs/04-module-design/reviews/MLS-DOC-REV-0005.md)
@@ -200,18 +201,32 @@
 - lingzz 在本会话明确确认：“确认采用新批次，模拟支付限定ADMIN。更新到计划中。”已同步恢复计划及旧计划入口、TODO；新批次准入与重试规则生效，旧 A5 两次失败及旧批次禁止 attempt3 不变。
 - CONTROLLED_TEST_OPERATOR 限定 ADMIN，perf 模拟器调度使用独立 ADMIN 会话，普通流通角色不变；实施与回归尚未完成。此次确认不代表产品修复完成或最终验收签署，本轮仅更新文档。
 
+### 2026-09-22 M6 恢复批次执行（R0–R4 缩减协议单轮）
+
+- 批次按 [恢复计划](docs/agents/M6-RECOVERY-PLAN-20260922.md) R0–R4 在 WSL 权威目录执行，全部产物落 `artifacts/m6-recovery-20260922/`（不入库）；逐包判定、证据定位、提交与阻断汇总于 `artifacts/m6-recovery-20260922/RUN-REPORT.md`。批次链八笔提交：`4ba4474`（R0 harness）、`467922a`（R0 docs）、`941150d`／`54e2e49`（DEF-M6-008）、`3d49c49`／`5d92252`／`07275d0`（DEF-M6-011/012）、`e8d0523`（R1c 协议缩减与判定门禁）；其后登记提交 `79cc4b6`。
+- R0（记录／安全回归／保全，三子包均通过）：基线 `9a5fea3`、工作树 7 项 `M` + 5 项 `??`、无 mode change 残留；四条指定安全检查与八项语法检查退出码全 0，并修好 `scripts/test-sanitize-idempotency-snapshots.py` 的用例登记缺陷（9 个 `test_*` 中 2 个从未被 `main()` 调用，复跑 7→9 全通过并加登记守卫）；受跟踪 `100755` 文件 16 项与报告清单集合差为空、逐文件 `git hash-object` 与 HEAD 内容比对 diff=0，故**补提交对象为 0、工作树保留不动**。证据 `R0/baseline.md`、`R0/safety-checks.md`。
+- R1a（**受阻**）：产出 `diag/diag-plan.md`（405 行，diagnostic，H1~H9 九条假设），但未执行任何诊断轮次——开工窗口内 WSL 内 docker 不可用（`which docker=NOT_FOUND`、`/usr/bin/docker` 悬空、无 `/var/run/docker.sock`、退出码 127）。attempt2 登录 500 根因**未归因**，未改产品。该 docker 前置在 R4 时点已不成立（`context=default`、29.7.2、`docker ps -a` 退出码 0），但 R1a 未补跑。
+- R1b（通过）：静态核验 008/009/010/011/012 均无未登记修复（`R1b/verification.md`）。**已实施** 008（`SettlementController.java:32` 补 ADMIN 角色检查、无权 403/MLS-ID-005；`IdentityModuleImpl.java:172` 映射 `CONTROLLED_TEST_OPERATOR→ADMIN`；新增 `DEFM6008PaymentSimulatorRoleMatrixTest` 与 `IdentityModuleCapabilitiesTest` 映射断言，单跑 8/8 通过并在 `54e2e49` 工作树副本复跑同样 8/8；harness 侧 `steady.js`/`common.js`/`load-dataset.sh` 改用独立 ADMIN 探针会话）与 011/012（审计端口新增 `appendWithBusinessFact` 与 13 类 eventType 词表、成功路径落 `audit_event`；落地应用内 Outbox 分发器与 `WAITLIST_ASSIGNED`/`WAITLIST_EXPIRED` 生产者，`Tests run: 27, Failures: 0, Errors: 0`）。实施中首次在真库执行闭馆，发现并修复两处**既有** SQL 缺陷（`closing_control."current_date"` 未加引号、`UPDATE book_copy…FROM borrow_transaction` 的 `SET version` 歧义）——闭馆与开放命令此前在真实数据库上必然失败。**未实施** 009/010（仅登记处置建议）。台账 008/011/012 节末追加 2026-09-22 实施记录（状态口径「已修复待批次回归」）；005-b/007 实页与角色回归登记为 Windows 原生缓办（`R1b/deferred-realpage.md`）。全量 `mvnw clean verify` 未执行，单类测试结果不构成门禁通过主张。
+- R1c（通过）：2026-09-22 裁定的缩减协议落地——预热 60 s、稳态四场景各 300 s、检索四子场景各 180 s、峰值 120 s 爬升＋180 s 保持（并发 50 不变）、恢复 300 s，单轮约 28 分钟；阈值与采样语义未变。新增统一判定门禁 `e2e/perf/judge-attempt.sh`（四项门禁，全过退 0）。两份 guards 测试 18/18 通过、五个改动脚本 `bash -n` 通过。证据 `R1c/protocol-reduction.md`。
+- R2（覆盖映射 A1/A2/B/C/D/E/F 与汇总通过；**准备核验受阻**）：七份来源件合并为 `coverage.md`（1997 行），33 个 AT 去重逐个在列、47 个分条检查点逐项在列、AT 级检查点行 388；登记 126 项 GAP（P0 14／P1 27／P2 9／P3 62／P4 9／P5 5）与 29 项阻断/待裁定项，全部「结果」列留空。唯一未达成项是 AI 接线：WSL `.env` 的 `MODEL` 与 `API_KEY` 为空，`bash scripts/prepare-acceptance-env.sh` 实测 FAIL（stderr `line 39: model: Set MODEL in .env`）、`.env.acceptance` 未生成，解除路径为 Env-W 副本。另有 AT-0030 九场景在 `e2e/`、`scripts/` 内全量 GAP、`ds-concurrency` 数据集缺失、六浏览器槽位未执行（`readiness.md`）。
+- R3（通过）：最终候选 `e8d05232c853b23e91c112974d65ced214cde0b1`（`main`，工作树干净，`ahead 82`）；`docker compose -p m6-recovery-20260922-build -f compose.yaml build backend frontend` 退 0，镜像摘要 backend `sha256:1071074f75…e2af00f`、frontend `sha256:b199e4ed43…db72e`（backend 的 `COPY src/main/` 未命中缓存、`mvnw` 实跑 4 分 34 秒且日志含 `Compiling 186 source files`；批次 52 个改动路径不含任何 `library-frontend` 文件）；`dataset.sql` `53ce44a7…8b8dffea` 与 manifest／fixtures-manifest 全部吻合；受影响 AT 判定经覆核并补齐五项漏项，新增逐 AT 判定覆盖核对节。证据 `R3/freeze.md`、`R3/impact-matrix.md`。候选尚未进入 `origin/main`。
+- R4（前置核验通过；AT-0016 缩减协议单轮通过；**正式演练未执行、准入不满足**；验收登记通过）：前置核验五项实测完成——两个全新空卷项目 `m6-recovery-20260922-pre1`/`pre2` 各十五条判定全 PASS 且归一化后 diff 为空、Flyway 9 条全 `success`、四表规模 1002/10000/30000/100000、临时 READER 结构回读一致；两次登录均 HTTP 200（被测镜像为重建后 `1071074f75…`，与 attempt2 的 `0b31902912a8…` 不同，故不构成 R1a 归因）；隔离与数据/镜像校验通过；两项目 `down -v` 退 0、残留各 0、`m6-observation` 六容器全程保持 `exited`。AT-0016 单轮窗口 `2026-09-22T12:34:28Z–13:06:19Z`，统一判定门禁五项退出码 `0/0/0/0/0`、`attempt.json valid=true`、窗口采集器 `done:0`，八场景 `unexpected_failures=0`、饱和七维全 `evaluated` 且零越限，`steady` 的 `audit`（62）／`payment`（20）与 `warmup.public_read`（61）低于 100 下限登记 `samples_insufficient` 且不判轮无效；`peak` 实测窗口 330 s（含 `gracefulRampDown` 30 s）、`at-0016/gates/teardown.exitcode` 残留 1（`grep -c` 计数缺陷，修正后重跑 `ALL-PASS`，未以重跑结果覆盖）均如实登记。**正式演练 C03/C04 因 R1a 未归因而准入不满足，本批未执行**，无 timeline／RPO／RTO，既有 `M6-分条-0018-C03/C04` 失败行不改写。结果登记入 AT-0003 v0.9（新增 `M6-复跑-R4-R1` 通过行与 `M6-演练-R4-准入` 受阻行，新增结果值「受阻」，计数执行次数 14／通过 4／失败 4／受阻 1），提交 `79cc4b6`。
+- 本批次全部结论不替代 M6 总体退出结论：A1–A4 已完成，A5 失败，A6–A7 尚未执行。实页与 Windows GUI 事项（六浏览器正式矩阵、批次 A~E 实页断言、AT-0017）本批全部未执行、未缩减。批次全程未 push、未建 PR、未动分支或 stash、未用 `git add -f`，未对 `m6-observation` 做任何启停、未执行全局 prune。
+
 ## 未完成责任
 
 本表与 [TODO.md](TODO.md) 当前待办按类别对应，逐项完成条件以 TODO.md 和 REV-0005 §3 为准：
 
 | 类别 | 未完成责任 |
 | ---- | ---------- |
-| 缺陷修复 | 执行者诊断登录 500、核验整改 008/011/012；005-b/007 回归闭环；执行者落实已批准的 008 ADMIN 权限限定 |
-| 集成与验收 | 执行者依 TODO 完成恢复计划准入、全覆盖验证与证据；复核者实际复核；新批次规则已批准；lingzz 决定风险接受与签署 |
+| 缺陷修复 | R1a 登录 500 诊断与归因（诊断轮未开展）；DEF-M6-009/010 未实施，010 口径待 lingzz 裁定；005-b/007 实页与角色回归闭环（Windows 原生）；DEF-M6-008/011/012 已实施，待批次回归；闭馆两处既有 SQL 缺陷是否新立编号待裁定 |
+| 集成与验收 | 执行者依 TODO 完成 R2 遗留（AI 接线、AT-0030 九场景资产、六浏览器准备）、126 项 GAP 与 29 项阻断/待裁定的裁定与补缺；R4 遗留的 C03/C04 恢复演练须在 R1a 闭环后另行申请准入；R5 的 Windows 原生 A~E 与 AT-0017 批次、R6 观察窗口与收口复核、R7 lingzz 签署（实际窗口口径、Sev-3 风险接受、复核方式、最终签署）均待执行；复核者实际复核；新批次规则与模拟支付 ADMIN 限定已批准 |
 
 原型及 `artifacts/` 取证目录不入库；历史交接原文可经提交 `3181a9f` 恢复，不意味着本地证据已随 git 发布。
 
 ## 修订记录
+
+- 2026-09-22（R0–R4 恢复批次执行后）：新增「2026-09-22 M6 恢复批次执行（R0–R4 缩减协议单轮）」一节，登记批次链八笔提交与 `79cc4b6`、R0 三子包、R1a 受阻、R1b 008/011/012 实施与两处既有闭馆 SQL 缺陷处置、R1c 缩减协议、R2 覆盖映射与 AI 接线受阻、R3 冻结候选与镜像摘要、R4 前置核验与 AT-0016 单轮判定、演练准入不满足与 AT-0003 v0.9 登记；同步刷新「未完成责任」表两行以对应 TODO 新状态。只登记执行事实，未新增任何验收通过或批准结论。
 
 - 2026-09-22（用户确认）：追加新批次恢复与模拟支付 ADMIN 限定批准记录，更新未完成责任；实施、验收和最终签署状态不变。
 
