@@ -42,6 +42,11 @@ public class PostgresAiSessionStore implements AiSessionStore {
         return jdbc.queryForObject("INSERT INTO ai_message(session_id,role,content,tool_payload,created_at) VALUES (?,?,?,?::jsonb,?) RETURNING id",
                 Long.class, sessionId, role, content, write(payload), timestamp(now));
     }
+    @Override public List<StoredMessage> messagesBefore(long sessionId, long beforeMessageId, int limit) {
+        return jdbc.query("SELECT id,role,content FROM ai_message WHERE session_id=? AND id<? AND role IN ('USER','ASSISTANT') ORDER BY id DESC LIMIT ?",
+                (rs,n) -> new StoredMessage(rs.getLong("id"), rs.getString("role"), rs.getString("content")),
+                sessionId, beforeMessageId, limit);
+    }
     @Override public long appendEvent(long sessionId, String type, Map<String,Object> payload, Instant now) {
         return jdbc.queryForObject("INSERT INTO ai_event(session_id,event_type,payload,occurred_at) VALUES (?,?,?::jsonb,?) RETURNING id",
                 Long.class, sessionId, type, write(payload), timestamp(now));

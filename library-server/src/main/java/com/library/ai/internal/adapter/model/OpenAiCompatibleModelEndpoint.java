@@ -30,7 +30,7 @@ public class OpenAiCompatibleModelEndpoint implements ModelEndpoint {
         if (endpoint.isBlank() || model.isBlank() || apiKey.isBlank()) throw new ModelUnavailable("AI 端点未配置");
         try {
             var toolSchemas=request.tools().stream().map(t->Map.of("type","function","function",Map.of(
-                    "name",t.name(),"description",t.level()+" "+t.requiredCapability(),
+                    "name",t.name(),"description",t.description()+" capability="+t.requiredCapability(),
                     "parameters",parseSchema(t.inputSchema())))).toList();
             var body=new LinkedHashMap<String,Object>();
             body.put("model",model); body.put("messages",request.messages()); body.put("tools",toolSchemas);

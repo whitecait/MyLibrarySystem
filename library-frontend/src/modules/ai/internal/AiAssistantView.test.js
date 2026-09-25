@@ -90,6 +90,36 @@ describe('AiAssistantView', () => {
     expect(wrapper.find('[data-testid="ai-quota-remaining"]').text()).toBe('9')
   })
 
+  it('renders Markdown structure while keeping raw HTML inert', async () => {
+    installMockTransport({
+      fixtures: {
+        startAiSession: sharedFixtures.startAiSession,
+        sendAiMessage: {
+          code: 'MLS-AI-S001',
+          message: 'ok',
+          data: {
+            messageId: '7103',
+            answer: `## 预约入口\n\n书目**可以预约**。\n\n| 渠道 | 说明 |\n| --- | --- |\n| ONLINE | 服务端判定 |\n\n<img src=x onerror=alert(1)>\n\n[恶意链接](javascript:alert(1))\n\n\`\`\`text\n${'x'.repeat(600)}<svg onload=alert(1)>\n\`\`\``,
+            citations: [],
+            actions: [],
+            quota: { remaining: 9 },
+          },
+        },
+      },
+    })
+    const wrapper = await mountAssistant()
+    await sendMessage(wrapper, '这本书怎么预约？')
+
+    expect(wrapper.find('[data-testid="ai-messages"] h2').text()).toBe('预约入口')
+    expect(wrapper.find('[data-testid="ai-messages"] strong').text()).toBe('可以预约')
+    expect(wrapper.find('[data-testid="ai-messages"] table').text()).toContain('ONLINE')
+    expect(wrapper.find('[data-testid="ai-messages"] img').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-messages"] svg').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-messages"] a').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-messages"] pre code').text()).toContain('x'.repeat(600))
+    expect(wrapper.find('[data-testid="ai-messages"] .markdown-table-scroll').exists()).toBe(true)
+  })
+
   it('keeps the L2 entry inert without a hosting form and explains why', async () => {
     installMockTransport({ fixtures: sharedFixtures })
     const wrapper = await mountAssistant()
@@ -171,6 +201,80 @@ describe('AiAssistantView', () => {
 
     const eventRequest = calls.find((call) => call.operationId === 'listAiEvents')
     expect(eventRequest.options.params.sessionId).toBe('7001')
+  })
+
+  it('paginates all events, deduplicates overlap, and refreshes after send and reopen', async () => {
+    const calls = []
+    const initialEvents = Array.from({ length: 20 }, (_, index) => ({
+      eventId: String(index + 1), type: 'MODEL_REQUEST', payload: {}, occurredAt: '2026-09-24T12:00:00Z',
+    }))
+    const laterEvents = Array.from({ length: 6 }, (_, index) => ({
+      eventId: String(index + 20), type: 'MODEL_RESPONSE', payload: {}, occurredAt: '2026-09-24T12:00:01Z',
+    }))
+    setTransport({
+      mode: 'mock',
+      async request(operationId, options = {}) {
+        calls.push({ operationId, options })
+        if (operationId === 'startAiSession') return sharedFixtures.startAiSession
+        if (operationId === 'sendAiMessage') return sharedFixtures.sendAiMessage
+        if (operationId === 'listAiEvents') {
+          const cursor = options.query?.cursor
+          if (!cursor) return { code: 'MLS-AI-S002', message: 'ok', data: { items: initialEvents, nextCursor: '20' } }
+          if (cursor === '20') return { code: 'MLS-AI-S002', message: 'ok', data: { items: laterEvents, nextCursor: null } }
+          if (cursor === '25') return { code: 'MLS-AI-S002', message: 'ok', data: { items: [{ eventId: '26', type: 'USER_MESSAGE', payload: {}, occurredAt: '2026-09-24T12:00:02Z' }], nextCursor: null } }
+          return { code: 'MLS-AI-S002', message: 'ok', data: { items: [], nextCursor: null } }
+        }
+        throw new Error(`Unexpected operation: ${operationId}`)
+      },
+    })
+    const wrapper = await mountAssistant()
+    const toggle = wrapper.find('[data-testid="ai-events-toggle"]')
+    await toggle.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findAll('[data-testid="ai-events-table"] tbody tr')).toHaveLength(25)
+    expect(new Set(wrapper.findAll('[data-testid="ai-events-table"] tbody tr').map((row) => row.find('td').text())).size).toBe(25)
+    expect(wrapper.find('[data-testid="ai-events-scroll"]').exists()).toBe(true)
+
+    await sendMessage(wrapper, '新问题')
+    expect(wrapper.findAll('[data-testid="ai-events-table"] tbody tr')).toHaveLength(26)
+    expect(wrapper.find('[data-testid="ai-events-table"]').text()).toContain('26')
+
+    await toggle.trigger('click')
+    await toggle.trigger('click')
+    await flushPromises()
+    expect(calls.filter((call) => call.operationId === 'listAiEvents')).toHaveLength(4)
+    expect(wrapper.findAll('[data-testid="ai-events-table"] tbody tr')).toHaveLength(26)
+  })
+
+  it('ignores a stale event response after the panel is closed and reopened', async () => {
+    const pending = []
+    let requestCount = 0
+    setTransport({
+      mode: 'mock',
+      request(operationId) {
+        if (operationId === 'startAiSession') return Promise.resolve(sharedFixtures.startAiSession)
+        if (operationId === 'listAiEvents') {
+          requestCount += 1
+          return new Promise((resolve) => pending.push(resolve))
+        }
+        throw new Error(`Unexpected operation: ${operationId}`)
+      },
+    })
+    const wrapper = await mountAssistant()
+    const toggle = wrapper.find('[data-testid="ai-events-toggle"]')
+    await toggle.trigger('click')
+    await toggle.trigger('click')
+    await toggle.trigger('click')
+    expect(requestCount).toBe(2)
+
+    pending[1]({ code: 'MLS-AI-S002', message: 'ok', data: { items: [{ eventId: '2', type: 'CURRENT', payload: {}, occurredAt: '2026-09-24T12:00:00Z' }], nextCursor: null } })
+    await flushPromises()
+    pending[0]({ code: 'MLS-AI-S002', message: 'ok', data: { items: [{ eventId: '1', type: 'STALE', payload: {}, occurredAt: '2026-09-24T11:59:00Z' }], nextCursor: null } })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="ai-events-table"]').text()).toContain('CURRENT')
+    expect(wrapper.find('[data-testid="ai-events-table"]').text()).not.toContain('STALE')
   })
 
   it('presents a wrong visitor cookie as an invisible session when events return 404', async () => {

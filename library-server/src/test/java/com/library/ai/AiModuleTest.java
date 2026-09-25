@@ -38,7 +38,7 @@ class AiModuleTest {
     @Autowired AssistantUseCases assistant; @Autowired ScriptedModelEndpoint model; @Autowired JdbcTemplate jdbc;
     @BeforeEach void reset(){model.reset();jdbc.update("TRUNCATE ai_event,ai_message,ai_session,ai_visitor_quota_usage,ai_quota_usage RESTART IDENTITY CASCADE");}
 
-    @Test void utAi001_visitorReceivesAndExecutesOnlyPublicL1Tools(){jdbc.update("INSERT INTO book_title(title,price_cents) VALUES ('Open Catalog',100)");var owner=visitor('a');var session=accepted(assistant.start(owner,null));model.then(new ModelEndpoint.ModelResponse("",List.of(),List.of(new ModelEndpoint.ToolCall("provider-call-1","search_titles",Map.of("q","Open")))));model.then(ModelEndpoint.ModelResponse.answer("found"));accepted(assistant.turn(session.sessionId(),"开放馆藏",owner,null));assertThat(model.requests().getFirst().tools()).extracting(AiTool::name).containsExactlyInAnyOrder("search_titles","get_title","get_reading_content","get_reservation_calendar");assertThat(model.requests().getFirst().tools()).allMatch(t->t.level().equals("L1"));assertThat(model.requests().getFirst().tools()).allSatisfy(t->assertThat(t.inputSchema()).contains("\"additionalProperties\":false"));var messages=model.requests().get(1).messages();assertThat(messages.toString()).contains("Open Catalog","provider-call-1","tool_call_id");var assistant=(Map<String,Object>)messages.get(1);var function=(Map<String,Object>)((Map<String,Object>)((List<?>)assistant.get("tool_calls")).getFirst()).get("function");assertThat(function.get("arguments")).isInstanceOf(String.class).isEqualTo("{\"q\":\"Open\"}");}
+    @Test void utAi001_visitorReceivesAndExecutesOnlyPublicL1Tools(){jdbc.update("INSERT INTO book_title(title,price_cents) VALUES ('Open Catalog',100)");var owner=visitor('a');var session=accepted(assistant.start(owner,null));model.then(new ModelEndpoint.ModelResponse("",List.of(),List.of(new ModelEndpoint.ToolCall("provider-call-1","search_titles",Map.of("q","Open")))));model.then(ModelEndpoint.ModelResponse.answer("found"));accepted(assistant.turn(session.sessionId(),"开放馆藏",owner,null));assertThat(model.requests().getFirst().tools()).extracting(AiTool::name).containsExactlyInAnyOrder("search_titles","get_title","get_reading_content","get_reservation_calendar");assertThat(model.requests().getFirst().tools()).allMatch(t->t.level().equals("L1"));assertThat(model.requests().getFirst().tools()).allSatisfy(t->assertThat(t.inputSchema()).contains("\"additionalProperties\":false"));var messages=model.requests().get(1).messages();assertThat(messages.toString()).contains("Open Catalog","provider-call-1","tool_call_id");var assistant=(Map<String,Object>)messages.get(2);var function=(Map<String,Object>)((Map<String,Object>)((List<?>)assistant.get("tool_calls")).getFirst()).get("function");assertThat(function.get("arguments")).isInstanceOf(String.class).isEqualTo("{\"q\":\"Open\"}");}
     @Test void utAi002_eachAccountRoleReceivesItsCompleteApprovedMatrix(){
         var reader=actor(Role.READER);var librarian=actor(Role.LIBRARIAN);var admin=actor(Role.ADMIN);
         turn(reader);turn(librarian);turn(admin);
@@ -89,6 +89,35 @@ class AiModuleTest {
     @Test void utAi012_accountSessionRequiresSameCurrentAccount(){var actor=actor(Role.READER);var owner=new AccountAiOwner(actor.accountId());var s=accepted(assistant.start(owner,actor));var other=actor(Role.READER);assertThat(code(assistant.turn(s.sessionId(),"越权",new AccountAiOwner(other.accountId()),other))).isEqualTo("MLS-AI-005");}
     @Test void utAi013_wrongVisitorCredentialAndBearerDoNotUpgradeSession(){var owner=visitor('1');var s=accepted(assistant.start(owner,null));var actor=actor(Role.READER);assertThat(code(assistant.turn(s.sessionId(),"wrong",visitor('2'),actor))).isEqualTo("MLS-AI-005");accepted(assistant.turn(s.sessionId(),"仍是访客",owner,actor));assertThat(model.requests().getFirst().tools()).extracting(AiTool::name).doesNotContain("get_my_business");}
     @Test void utAi014_accountAndVisitorUseSeparateDefaultTenCallPools(){var visitor=visitor('9');var vs=accepted(assistant.start(visitor,null));var actor=actor(Role.READER);var account=new AccountAiOwner(actor.accountId());var as=accepted(assistant.start(account,actor));assertThat(accepted(assistant.turn(vs.sessionId(),"v",visitor,null)).quota().remaining()).isEqualTo(9);assertThat(accepted(assistant.turn(as.sessionId(),"a",account,actor)).quota().remaining()).isEqualTo(9);}
+    @Test void utAi015_nextTurnSendsPriorCompleteTurnAndCurrentUserOnlyOnce(){
+        var owner=visitor('0');var session=accepted(assistant.start(owner,null));
+        model.then(ModelEndpoint.ModelResponse.answer("previous assistant answer"));
+        accepted(assistant.turn(session.sessionId(),"previous user question",owner,null));
+        model.then(ModelEndpoint.ModelResponse.answer("current assistant answer"));
+        accepted(assistant.turn(session.sessionId(),"current user question",owner,null));
+        var messages=model.requests().get(1).messages();
+        assertThat(messages).contains(Map.of("role","user","content","previous user question"),
+                Map.of("role","assistant","content","previous assistant answer"),
+                Map.of("role","user","content","current user question"));
+        assertThat(messages.stream().filter(m->"user".equals(m.get("role"))&&"current user question".equals(m.get("content"))).count()).isEqualTo(1);
+    }
+    @Test void utAi015_historyIsSessionScopedAndDropsAnUnansweredFailedTurn(){
+        var owner=visitor('3');var first=accepted(assistant.start(owner,null));
+        model.then(ModelEndpoint.ModelResponse.answer("private-session-answer"));
+        accepted(assistant.turn(first.sessionId(),"private-session-question",owner,null));
+        var second=accepted(assistant.start(owner,null));
+        model.then(ModelEndpoint.ModelResponse.answer("isolated answer"));
+        accepted(assistant.turn(second.sessionId(),"isolated current",owner,null));
+        var isolated=model.requests().get(1).messages().toString();
+        assertThat(isolated).contains("isolated current").doesNotContain("private-session-question","private-session-answer");
+
+        model.fail("failure one");model.fail("failure two");model.fail("failure three");
+        assertThat(code(assistant.turn(second.sessionId(),"unanswered failed turn",owner,null))).isEqualTo("MLS-AI-003");
+        model.then(ModelEndpoint.ModelResponse.answer("recovered"));
+        accepted(assistant.turn(second.sessionId(),"after failure",owner,null));
+        var recovered=model.requests().getLast().messages().toString();
+        assertThat(recovered).contains("after failure").doesNotContain("unanswered failed turn");
+    }
 
     private void assertToolRejected(ModelEndpoint.ToolCall call){var owner=visitor('8');var s=accepted(assistant.start(owner,null));model.then(new ModelEndpoint.ModelResponse("",List.of(),List.of(call)));assertThat(code(assistant.turn(s.sessionId(),"bad",owner,null))).isEqualTo("MLS-AI-004");}
     private void turn(ActorContext actor){var owner=new AccountAiOwner(actor.accountId());var s=accepted(assistant.start(owner,actor));accepted(assistant.turn(s.sessionId(),"matrix",owner,actor));}

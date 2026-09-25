@@ -22,6 +22,10 @@ import java.util.*;
 @Component
 public class AiModuleImpl implements AiModule {
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final int MAX_HISTORY_TURNS = 6;
+    private static final int MAX_HISTORY_CANDIDATE_MESSAGES = 36;
+    private static final int MAX_HISTORY_CHARS = 12_000;
+    private static final int MAX_HISTORY_MESSAGE_CHARS = 6_000;
     private final AiSessionStore sessions;
     private final ModelEndpoint model;
     private final AuthorizationCheck authorization;
@@ -75,6 +79,8 @@ public class AiModuleImpl implements AiModule {
         long userMessage = sessions.appendMessage(command.sessionId(), "USER", command.message(), Map.of(), clock.now());
         sessions.appendEvent(command.sessionId(), "USER_MESSAGE", Map.of("messageId", userMessage), clock.now());
         var conversation = new ArrayList<Map<String,Object>>();
+        conversation.add(Map.of("role", "system", "content", AiModelGuidance.SYSTEM_MESSAGE));
+        conversation.addAll(historyMessages(command.sessionId(), userMessage));
         conversation.add(Map.of("role","user","content",command.message()));
         var actions = new ArrayList<AiAction>();
         var citations = new ArrayList<String>();
@@ -144,6 +150,50 @@ public class AiModuleImpl implements AiModule {
         sessions.status(sessionId,"ERROR",clock.now());
         return ModuleResult.Rejected.of(StableErrorCode.MLS_AI_003.code(), "模型端点失败");
     }
+
+    private List<Map<String,Object>> historyMessages(long sessionId, long currentUserMessageId) {
+        var stored = new ArrayList<>(sessions.messagesBefore(sessionId, currentUserMessageId, MAX_HISTORY_CANDIDATE_MESSAGES));
+        Collections.reverse(stored);
+        var completeTurns = new ArrayList<HistoryTurn>();
+        String pendingUser = null;
+        for (var message : stored) {
+            if ("USER".equals(message.role())) {
+                // A later unanswered USER supersedes an earlier failed request; never send orphaned turns.
+                pendingUser = message.content();
+            } else if ("ASSISTANT".equals(message.role()) && pendingUser != null) {
+                completeTurns.add(new HistoryTurn(pendingUser, message.content()));
+                pendingUser = null;
+            }
+        }
+
+        var selectedNewestFirst = new ArrayList<HistoryTurn>();
+        int remainingChars = MAX_HISTORY_CHARS;
+        for (int index = completeTurns.size() - 1; index >= 0 && selectedNewestFirst.size() < MAX_HISTORY_TURNS; index--) {
+            var turn = completeTurns.get(index);
+            String user = tail(turn.user(), MAX_HISTORY_MESSAGE_CHARS);
+            String answer = tail(turn.assistant(), MAX_HISTORY_MESSAGE_CHARS);
+            int turnChars = user.length() + answer.length();
+            if (turnChars > remainingChars) break;
+            selectedNewestFirst.add(new HistoryTurn(user, answer));
+            remainingChars -= turnChars;
+        }
+
+        Collections.reverse(selectedNewestFirst);
+        var messages = new ArrayList<Map<String,Object>>(selectedNewestFirst.size() * 2);
+        for (var turn : selectedNewestFirst) {
+            messages.add(Map.of("role", "user", "content", turn.user()));
+            messages.add(Map.of("role", "assistant", "content", turn.assistant()));
+        }
+        return messages;
+    }
+
+    private String tail(String value, int maxChars) {
+        if (value.length() <= maxChars) return value;
+        String marker = "[较早内容已截断]\n";
+        return marker + value.substring(value.length() - (maxChars - marker.length()));
+    }
+
+    private record HistoryTurn(String user, String assistant) { }
 
     private ModuleResult<String> executeTool(long sessionId, AiSessionOwner owner, ActorContext actor,
             ModelEndpoint.ToolCall call, List<AiAction> actions) {

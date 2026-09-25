@@ -68,10 +68,26 @@ public final class ToolRegistry {
     }
 
     private static AiTool l1(String name, String capability, Set<String> roles, String properties, String required) {
-        return new AiTool(name, capability, schema(properties,required), "query:" + name, "L1", roles);
+        return new AiTool(name, capability, schema(properties,required), "query:" + name, "L1", roles,
+                "只读查询，不提交或改变业务状态。" + switch (name) {
+                    case "search_titles" -> "搜索公开书目；书目可借状态不能保证预约成功或实体副本可用。";
+                    case "get_title" -> "读取书目详情。详情页提供“预约此书”表单；availability 仅为书目级展示，不保证预约成功或有副本可借。";
+                    case "get_reservation_calendar" -> "查询书目预约日期状态；日历结果不代表预约请求已受理或预约成功。";
+                    default -> "结果用于回答用户问题，业务提交须由现行业务页面完成。";
+                });
     }
     private static AiTool action(String name, String capability, String level, Set<String> roles, String properties, String required) {
-        return new AiTool(name, capability, schema(properties,required), "action:" + name, level, roles);
+        String description = "L2".equals(level)
+                ? "仅预填现有业务表单，不提交请求；须由用户在现有页面核对并提交。"
+                : "仅引导至现有业务办理入口，不提交请求或产生业务事实。";
+        if ("prefill_reservation".equals(name)) {
+            description += "书目详情页有“预约此书”表单，支持 ONLINE 线上与 DESK 到台渠道。提交需读者本人登录，或馆员代办；访客仅能查询、不能提交。预约是否成立由服务端裁定，不得承诺成功。ONLINE 日期最早为次一开馆日，DESK 可当日。预约不会直接借出。";
+        } else if ("prefill_walk_in_loan".equals(name)) {
+            description += "这是现场借阅表单预填，不代表现场借阅已提交或已借出。";
+        } else if ("open_pickup_claim".equals(name)) {
+            description += "到馆取书后须由现有流程校验预约已绑定副本，校验通过才完成借出。";
+        }
+        return new AiTool(name, capability, schema(properties,required), "action:" + name, level, roles, description);
     }
     private static AiTool navigation(String name, String capability, Set<String> roles) {
         return action(name, capability, "L3", roles, fields(), none());

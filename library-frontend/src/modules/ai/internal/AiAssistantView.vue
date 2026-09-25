@@ -11,7 +11,9 @@
     <div class="messages" data-testid="ai-messages">
       <p v-if="turns.length === 0" class="hint">向 AI 助手描述你的需求，例如“帮我预填续借”。</p>
       <div v-for="(turn, index) in turns" :key="index" class="turn" :class="turn.role">
-        <p class="bubble">{{ turn.role === 'user' ? turn.text : turn.data.answer }}</p>
+        <div class="bubble">
+          <SafeMarkdown :source="turn.role === 'user' ? turn.text : turn.data.answer" />
+        </div>
         <ul v-if="turn.role === 'assistant' && turn.data.citations.length" class="citations" data-testid="ai-citations">
           <li v-for="citation in turn.data.citations" :key="citation">{{ citation }}</li>
         </ul>
@@ -56,23 +58,26 @@
       <el-button type="primary" native-type="submit" data-testid="ai-send" :disabled="quotaExhausted" :loading="sendState.status === 'loading'">
         发送
       </el-button>
-      <el-button data-testid="ai-events-toggle" @click="toggleEvents">事件流</el-button>
+      <el-button native-type="button" data-testid="ai-events-toggle" @click="toggleEvents">事件流</el-button>
     </form>
 
     <div v-if="eventsVisible" class="events">
-      <p v-if="eventsState.status === 'loading'">加载中…</p>
-      <table v-else-if="events.length" class="events-table" data-testid="ai-events-table">
-        <thead>
-          <tr><th>事件</th><th>类型</th><th>时间</th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="event in events" :key="event.eventId">
-            <td>{{ event.eventId }}</td>
-            <td>{{ event.type }}</td>
-            <td>{{ event.occurredAt }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <p v-if="eventsLoading" aria-live="polite">加载中…</p>
+      <div v-if="events.length" class="events-scroll" data-testid="ai-events-scroll" tabindex="0" aria-label="AI 会话事件列表，可横向滚动">
+        <table class="events-table" data-testid="ai-events-table">
+          <thead>
+            <tr><th>事件</th><th>类型</th><th>时间</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="event in events" :key="event.eventId">
+              <td>{{ event.eventId }}</td>
+              <td>{{ event.type }}</td>
+              <td>{{ event.occurredAt }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p v-else-if="eventsState.status !== 'failure' && !eventsLoading">暂无事件</p>
       <ErrorAlert v-if="eventsState.status === 'failure'" :failure="eventsState.failure" />
     </div>
     <ErrorAlert v-if="sendState.status === 'failure' && !quotaExhausted" :failure="sendState.failure" />
@@ -80,11 +85,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { FailureKind } from '@/platform/http'
 import { useApiRequest } from '@/platform/http'
 import { listAiEvents, sendAiMessage, startAiSession } from '../index'
+import SafeMarkdown from './SafeMarkdown'
 
 const props = defineProps({ canApplyPrefill: { type: Boolean, default: false } })
 const emit = defineEmits(['prefill'])
@@ -96,10 +102,14 @@ const turns = ref([])
 const draft = ref('')
 const events = ref([])
 const eventsVisible = ref(false)
+const eventsCursor = ref(null)
+const eventsLoading = ref(false)
+const eventsRequestVersion = ref(0)
+const eventsSessionId = ref(null)
+const eventsState = reactive({ status: 'idle', failure: null })
 
 const sessionState = useApiRequest()
 const { state: sendState, run: runSend } = useApiRequest()
-const { state: eventsState, run: runEvents } = useApiRequest()
 
 const quotaExhausted = computed(
   () => sendState.status === 'failure' && sendState.failure?.kind === FailureKind.QUOTA_EXHAUSTED,
@@ -122,6 +132,7 @@ async function send() {
   if (!envelope) return
   turns.value.push({ role: 'assistant', data: envelope.data })
   quota.value = envelope.data.quota.remaining
+  if (eventsVisible.value) await refreshEvents()
 }
 
 function openPrefill(action) {
@@ -130,9 +141,62 @@ function openPrefill(action) {
 
 async function toggleEvents() {
   eventsVisible.value = !eventsVisible.value
-  if (eventsVisible.value && events.value.length === 0) {
-    const envelope = await runEvents(() => listAiEvents({ sessionId: sessionId.value, limit: 20 }))
-    if (envelope) events.value = envelope.data.items
+  if (!eventsVisible.value) {
+    eventsRequestVersion.value += 1
+    eventsLoading.value = false
+    return
+  }
+  await refreshEvents()
+}
+
+async function refreshEvents() {
+  const currentSessionId = sessionId.value
+  if (!eventsVisible.value || !currentSessionId) return
+
+  if (eventsSessionId.value !== currentSessionId) {
+    events.value = []
+    eventsCursor.value = null
+    eventsSessionId.value = currentSessionId
+  }
+
+  const requestVersion = ++eventsRequestVersion.value
+  const requestedCursors = new Set()
+  let cursor = eventsCursor.value
+  eventsLoading.value = true
+  eventsState.status = 'loading'
+  eventsState.failure = null
+  try {
+    while (eventsVisible.value && requestVersion === eventsRequestVersion.value && currentSessionId === sessionId.value) {
+      const cursorKey = cursor ?? '<first-page>'
+      if (requestedCursors.has(cursorKey)) break
+      requestedCursors.add(cursorKey)
+
+      const eventRequest = useApiRequest()
+      const envelope = await eventRequest.run(() => listAiEvents({ sessionId: currentSessionId, cursor: cursor ?? undefined, limit: 20 }))
+      if (requestVersion !== eventsRequestVersion.value || currentSessionId !== sessionId.value || !eventsVisible.value) return
+      if (!envelope) {
+        eventsState.status = 'failure'
+        eventsState.failure = eventRequest.state.failure
+        return
+      }
+      eventsState.status = 'success'
+
+      const knownIds = new Set(events.value.map((event) => String(event.eventId)))
+      for (const event of envelope.data.items) {
+        if (!knownIds.has(String(event.eventId))) {
+          events.value.push(event)
+          knownIds.add(String(event.eventId))
+        }
+      }
+      const lastEvent = envelope.data.items.at(-1)
+      if (lastEvent) eventsCursor.value = String(lastEvent.eventId)
+
+      const nextCursor = envelope.data.nextCursor
+      if (!nextCursor || String(nextCursor) === String(cursor)) break
+      cursor = String(nextCursor)
+    }
+  } finally {
+    if (requestVersion === eventsRequestVersion.value) eventsLoading.value = false
   }
 }
 </script>
@@ -140,6 +204,7 @@ async function toggleEvents() {
 <style scoped>
 .ai-assistant-view {
   max-width: 52rem;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -161,6 +226,14 @@ async function toggleEvents() {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bubble {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .turn.user .bubble {
@@ -175,6 +248,38 @@ async function toggleEvents() {
   background: #f2f4f6;
   padding: 0.5rem 0.85rem;
   border-radius: 0.75rem;
+}
+
+.bubble :deep(.safe-markdown > :first-child) {
+  margin-top: 0;
+}
+
+.bubble :deep(.safe-markdown > :last-child) {
+  margin-bottom: 0;
+}
+
+.bubble :deep(.markdown-table-scroll) {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.bubble :deep(.markdown-table) {
+  min-width: 24rem;
+  border-collapse: collapse;
+}
+
+.bubble :deep(.markdown-table th),
+.bubble :deep(.markdown-table td) {
+  border: 1px solid #cad8e3;
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+}
+
+.bubble :deep(pre) {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre;
 }
 
 .hint {
@@ -210,15 +315,25 @@ async function toggleEvents() {
 
 .composer {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
 .composer .el-input {
-  flex: 1;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.events-scroll {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
 }
 
 .events-table {
   width: 100%;
+  min-width: 24rem;
   border-collapse: collapse;
 }
 
@@ -227,5 +342,10 @@ async function toggleEvents() {
   text-align: left;
   padding: 0.35rem 0.6rem;
   border-bottom: 1px solid #e2eaf0;
+}
+
+.events {
+  max-width: 100%;
+  min-width: 0;
 }
 </style>

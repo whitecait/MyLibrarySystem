@@ -2,7 +2,25 @@
   <div class="app-shell">
     <header class="app-header">
       <RouterLink to="/" class="brand">MyLibrarySystem</RouterLink>
-      <nav class="app-nav" data-testid="app-nav">
+      <button
+        type="button"
+        class="mobile-nav-toggle"
+        data-testid="mobile-nav-toggle"
+        aria-controls="app-nav"
+        :aria-expanded="String(mobileNavOpen)"
+        aria-label="切换主导航"
+        @click="toggleMobileNav"
+      >
+        <span aria-hidden="true">{{ mobileNavOpen ? '收起菜单' : '菜单' }}</span>
+      </button>
+      <nav
+        id="app-nav"
+        class="app-nav"
+        data-testid="app-nav"
+        :class="{ 'is-mobile-open': mobileNavOpen }"
+        aria-label="主导航"
+        @click="closeMobileNav"
+      >
         <RouterLink to="/">首页</RouterLink>
         <RouterLink to="/catalog">书目检索</RouterLink>
         <RouterLink to="/assistant" data-testid="assistant-link">AI 助手</RouterLink>
@@ -39,17 +57,26 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { getRole, isAuthenticated, logout } from '@/platform/auth/session'
 import { endCurrentSession } from '@/modules/identity'
 
 const router = useRouter()
+const mobileNavOpen = ref(false)
 const authenticated = computed(() => isAuthenticated())
 const roleLabel = computed(() => getRole() ?? '')
 const isAdmin = computed(() => getRole() === 'ADMIN')
 const isLibrarian = computed(() => getRole() === 'LIBRARIAN')
 const isReader = computed(() => getRole() === 'READER')
+
+function toggleMobileNav() {
+  mobileNavOpen.value = !mobileNavOpen.value
+}
+
+function closeMobileNav() {
+  mobileNavOpen.value = false
+}
 
 async function onLogout() {
   // getTransport() 在请求时读取会话令牌：注销必须先于本地清理发出，
@@ -77,6 +104,7 @@ async function onLogout() {
 .app-header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 1.5rem;
   padding: 0.75rem 1.5rem;
   border-bottom: 1px solid #d9e4ec;
@@ -91,8 +119,28 @@ async function onLogout() {
 
 .app-nav {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 1rem;
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.app-nav a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mobile-nav-toggle {
+  display: none;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #9aafc1;
+  border-radius: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  background: #fff;
+  color: #162033;
 }
 
 .session-area {
@@ -103,6 +151,53 @@ async function onLogout() {
 
 .app-main {
   flex: 1;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   padding: 1.5rem;
+}
+
+@media (max-width: 48rem) {
+  .app-header {
+    gap: 0.65rem;
+    padding: 0.75rem;
+  }
+
+  .mobile-nav-toggle {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  .app-nav {
+    display: none;
+    flex: 1 0 100%;
+    gap: 0.5rem;
+  }
+
+  .app-nav.is-mobile-open {
+    display: flex;
+  }
+
+  .app-nav a {
+    flex: 1 1 9rem;
+  }
+
+  .session-area {
+    margin-left: 0;
+  }
+
+  .app-main {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 24rem) {
+  .app-nav a {
+    flex-basis: 100%;
+  }
+
+  .actor-role {
+    display: none;
+  }
 }
 </style>

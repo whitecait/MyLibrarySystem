@@ -71,4 +71,23 @@ describe('AppShell onLogout session teardown order (DEF-M6-004 reopen)', () => {
     expect(isAuthenticated()).toBe(false)
     expect(routerPush).toHaveBeenCalledWith({ name: 'home' })
   })
+
+  it('offers a keyboard-operable collapsed navigation control for long role menus', async () => {
+    login({ accessToken: 'token-shell-admin', expiresAt: null, actor: { role: 'ADMIN' } })
+    const wrapper = mountShell()
+
+    const toggle = wrapper.find('[data-testid="mobile-nav-toggle"]')
+    expect(toggle.attributes('aria-controls')).toBe('app-nav')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    expect(wrapper.find('[data-testid="app-nav"]').classes()).not.toContain('is-mobile-open')
+
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-expanded')).toBe('true')
+    expect(wrapper.find('[data-testid="app-nav"]').classes()).toContain('is-mobile-open')
+    expect(wrapper.find('[data-testid="app-nav"]').text()).toContain('账户管理')
+
+    await wrapper.find('[data-testid="app-nav"]').trigger('click')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    expect(wrapper.find('[data-testid="app-nav"]').classes()).not.toContain('is-mobile-open')
+  })
 })
