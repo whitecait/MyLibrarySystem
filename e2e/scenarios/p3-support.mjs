@@ -271,4 +271,3 @@ export async function sendRealAiMessage(page, message, { allowRoleDenied = false
   }
   return { status, envelope, data: envelope.data }
 }
-
