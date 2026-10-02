@@ -51,5 +51,33 @@
     ],
     "timeout_seconds": 180,
     "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
+  },
+  {
+    "model": "NotificationNavigation",
+    "config": "NotificationNavigation.cfg",
+    "safety": [
+      "TypeOK",
+      "InvOneBanner",
+      "InvBannerNearest",
+      "InvSourceReaderOwnsUnread",
+      "InvBannerRouteMatchesRelatedId",
+      "InvDetailIsCurrentBorrowRow"
+    ],
+    "probes": [
+      "ProbeNotNearestSelection",
+      "ProbeNotReadAdvances",
+      "ProbeNotReadHides",
+      "ProbeNotPageKeepsBanner",
+      "ProbeNotBannerClickKeepsUnread",
+      "ProbeNotRelatedIdPreserved",
+      "ProbeNotStaleNotificationDiscarded",
+      "ProbeNotStaleDetailDiscarded",
+      "ProbeNotBorrowKindWinsCollision",
+      "ProbeNotFineOrderRejected",
+      "ProbeNotForeignRowRejected",
+      "ProbeNotMissingRowRejected"
+    ],
+    "timeout_seconds": 180,
+    "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
   }
 ]

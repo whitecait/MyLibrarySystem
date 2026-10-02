@@ -56,6 +56,29 @@ describe('router guards', () => {
     expect(librarianRouter.currentRoute.value.name).toBe('walk-in')
   })
 
+  it('registers the my-business detail direct URL for readers only', async () => {
+    login({ accessToken: 'reader-token', actor: { accountId: '1001', role: 'READER' } })
+    const readerRouter = buildRouter()
+    await readerRouter.push('/me/business/4003')
+    expect(readerRouter.currentRoute.value.name).toBe('my-business-detail')
+    expect(readerRouter.currentRoute.value.params.txId).toBe('4003')
+
+    logout()
+    const anonymousRouter = buildRouter()
+    await anonymousRouter.push('/me/business/4003')
+    expect(anonymousRouter.currentRoute.value.name).toBe('login')
+    expect(peekContinuation()).toEqual({
+      intent: 'navigate',
+      path: '/me/business/4003',
+      params: null,
+    })
+
+    login({ accessToken: 'librarian-token', actor: { accountId: '1002', role: 'LIBRARIAN' } })
+    const librarianRouter = buildRouter()
+    await librarianRouter.push('/me/business/4003')
+    expect(librarianRouter.currentRoute.value.name).toBe('forbidden')
+  })
+
   it('keeps public routes public', async () => {
     const router = buildRouter()
     await router.push('/')

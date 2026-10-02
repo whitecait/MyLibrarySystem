@@ -38,7 +38,8 @@ result.json 记录实际检出提交、PR head 提交、工作树是否存在未
 | 罚款订单独占、关闭释放原子性、支付终态、重复回调、关闭后迟到成功回调记录冲突；AC-0051／AT-0032 | OrderOccupancy：类型、至多一未释放订单、占用一致性、已支付结清；14 个出口探针 | SettlementModuleTest、ITCirculationCoreTest、DEFM6008PaymentSimulatorRoleMatrixTest。抽象为一笔罚款、三个订单、类型化事件；冲突日志抽象为 tags，不代表真实审计写入或重复事件持久化已被证明 |
 | 注册、每日开馆、上架与最早外借日期、RESTORE 例外 | 这两组共享模型不直接覆盖这些独立规则 | RegistrationContractProbeTest、P1CoreCirculationRulesTest、V13MigrationTest；这是覆盖边界，不能以共享模型通过代替这些测试或未来新增能力的专属映射 |
 | 读者对象归属、订单关闭角色、同键降权重放、AI 草稿确认与权限 | 模型动作只抽象已通过入口鉴权的合法业务事件；Closing 的 adminAuth 是当前命令权限与追平的合取，不证明动态权限存储 | SettlementControllerTest、ITID002PermissionAndInvisibilityTest、前端 guard／草稿测试及 Windows 核心冒烟；真实鉴权与重放守卫仍需对应结果 |
-| 通知事实、已读归属、审计、看板及原三组混合验收 | 不声明形式化覆盖 | ITDefM6012NotificationChainTest、ITDefM6011AuditTrailTest 及 AT-0002 逐项执行状态。原完整统计、时间轴、Banner 堆叠与未验证的保留呈现按适用清单分别处理 |
+| 通知产生、互斥与持久化归属；审计、看板及原三组混合验收 | 不声明形式化覆盖 | ITDefM6012NotificationChainTest、ITDefM6011AuditTrailTest 及 AT-0002 逐项执行状态。原完整统计、时间轴和 Banner 堆叠按适用清单分别处理 |
+| 单条未读 Banner 的最近预约日期选择、关联事务点击、成功标记已读后的推进／隐藏；中心列表分页不清空 Banner 来源；会话或路由变化后丢弃旧响应。GOV-0008／AT-0002 §1.44 保留单条呈现，明确不覆盖已移出范围的堆叠卡片和“另有 N 条”计数 | NotificationNavigation：类型、单个或无 Banner、最近日期候选、Banner 来源账号、关联 ID 保持、本人业务详情类型／ID／状态；12 个独立反取反 probe 给出成功路径的可达轨迹 | AppShell.test.js、DeliveryViews.test.js、MyBusinessDetailView.test.js、ITDefM6012NotificationChainTest 和 ITReleaseAuditRegressionTest 分别覆盖呈现、前端请求边界、通知持久化关联，以及服务端本人业务投影的类型筛选／分页／同号行。模型将成功响应抽象为一步，假定通知查询和本人业务投影已经由服务端按当前读者过滤；只将相关 ID 作为路由事务 ID，再从 RESERVATION／LOAN 投影解析类型。有限样本显式含同号 FINE／ORDER、他人唯一事务和不存在事务。模型不证明 HTTP 鉴权、数据库查询／提交、DOM、浏览器、游标算法、通知生产／互斥或活性；同日通知没有规定先后 |
 | 交付停写备份与新项目恢复 | Closing 的隔离／追平思想仅作为关联抽象，不是运维脚本的证明 | delivery/manage.py 的故障拒绝测试与独立 Docker 操作验证；Windows 原生运行、恢复数据及核心写入分别取证 |
 
 2026-10-02 独立审计整改保留原业务 HTTP 形状和 V1–V13：书目更新仅修正既有字段的列绑定；通知仍使用原数值游标，由所属模块按该读者锚点的日期／创建时间／ID 定位；QUERY 的既有只读 SQL 挪归数据所有者，通过公开窄快照组合，书名按批量 CATALOG 快照取得。这些修复不新增业务状态转换；当前两模型抽象保持，新增 ITReleaseAuditRegressionTest 用真实 PG 验证字段、分页、已读游标、归属和组合结果。该回归不表示原完整统计或未验证页面呈现已实现。当前代码与旧 P4 性能输入不同，原结果按原候选保留，不声明新 QUERY 性能通过。
@@ -48,6 +49,8 @@ result.json 记录实际检出提交、PR head 提交、工作树是否存在未
 2026-10-02 增量复审修正 QUERY 混合分页同号遗漏并统一公开快照领域值／ModuleResult。这些只读投影不引入共享模型中的状态迁移，仍以 ITReleaseAuditRegressionTest 真实 PG 覆盖；同号复合游标、旧游标和错误游标分别验证，形式化执行结果按新固定提交重新绑定。
 
 ## 修订记录
+
+- 2026-10-02：新增通知呈现与关联事务导航的有限模型、反取反 probe 和实现映射；明确服务端读者过滤为输入假设，未扩展到通知生产、HTTP 鉴权或浏览器证明。
 
 - 2026-10-02：追加增量复审的领域契约与混合分页映射；未扩大形式化证明范围。
 

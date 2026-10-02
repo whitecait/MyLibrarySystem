@@ -13,7 +13,7 @@ import {
   ReservationCalendarView,
   WalkInLoansView,
 } from '../modules/circulation/index.js'
-import { ArrivalDashboardView, MyBusinessView } from '../modules/query/index.js'
+import { ArrivalDashboardView, MyBusinessView, queryRoutes } from '../modules/query/index.js'
 import { AiAssistantView } from '../modules/ai/index.js'
 import { FineSettlementView, PaymentSimulatorView } from '../modules/settlement/index.js'
 import { ReviewListView } from '../modules/review/index.js'
@@ -32,6 +32,7 @@ export const routes = [
   { path: '/titles/:titleId/calendar', name: 'title-calendar', component: ReservationCalendarView, props: true, meta: { module: 'circulation', requiresAuth: false, roles: [], title: '预约日历' } },
   { path: '/walk-in', name: 'walk-in', component: WalkInLoansView, meta: { module: 'circulation', requiresAuth: true, roles: ['LIBRARIAN'], title: '现场借阅' } },
   { path: '/me/business', name: 'my-business', component: MyBusinessView, meta: { module: 'query', requiresAuth: true, roles: ['READER'], title: '我的业务' } },
+  ...queryRoutes,
   { path: '/assistant', name: 'ai-assistant', component: AiAssistantView, meta: { module: 'ai', requiresAuth: false, roles: [], title: 'AI 助手' } },
   { path: '/admin/accounts', name: 'account-admin', component: AccountAdminView, meta: { module: 'identity', requiresAuth: true, roles: ['ADMIN'], title: '账户管理' } },
   { path: '/admin/catalog', name: 'catalog-admin', component: CatalogAdminView, meta: { module: 'catalog', requiresAuth: true, roles: ['LIBRARIAN'], title: '书目维护' } },

@@ -18,12 +18,23 @@
     <template v-else-if="state.status === 'success'">
       <table class="notification-table" data-testid="notification-table">
         <thead>
-          <tr><th>类型</th><th>内容</th><th>时间</th><th>状态</th><th></th></tr>
+          <tr><th>类型</th><th>内容</th><th>关联事务</th><th>预约日期</th><th>时间</th><th>状态</th><th></th></tr>
         </thead>
         <tbody>
           <tr v-for="notification in notifications" :key="notification.notificationId">
             <td>{{ notification.type }}</td>
             <td>{{ notification.message }}</td>
+            <td>
+              <RouterLink
+                v-if="isReader && notificationTransactionId(notification)"
+                :to="notificationDetailRoute(notification)"
+                :data-testid="`notification-detail-${notification.notificationId}`"
+              >
+                {{ notification.relatedTxId }}
+              </RouterLink>
+              <span v-else>{{ notification.relatedTxId ?? '—' }}</span>
+            </td>
+            <td>{{ notification.reservationDate ?? '—' }}</td>
             <td>{{ notification.createdAt }}</td>
             <td>{{ notification.read ? '已读' : '未读' }}</td>
             <td>
@@ -46,31 +57,47 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { RouterLink } from 'vue-router'
+import { getRole } from '@/platform/auth/session'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
-import { listNotifications, markNotificationRead } from '../index'
+import {
+  getNotificationSessionKey,
+  listNotifications,
+  markNotificationRead,
+  notificationTransactionId,
+} from '../index'
 
 const notifications = ref([])
 const nextCursor = ref(null)
 const unreadOnly = ref(false)
+const isReader = computed(() => getRole() === 'READER')
 const { state, run } = useApiRequest()
 const { run: runRead } = useApiRequest()
 
 async function load(cursor) {
+  const sessionKey = getNotificationSessionKey()
   const envelope = await run(() =>
     listNotifications({ unreadOnly: unreadOnly.value || undefined, cursor, limit: 20 }),
   )
-  if (!envelope) return
+  if (!envelope || sessionKey !== getNotificationSessionKey()) return
   notifications.value = cursor ? [...notifications.value, ...envelope.data.items] : envelope.data.items
   nextCursor.value = envelope.data.nextCursor
 }
 
 async function markRead(notification) {
+  const sessionKey = getNotificationSessionKey()
   const envelope = await runRead(() => markNotificationRead({ notificationId: notification.notificationId }))
+  if (sessionKey !== getNotificationSessionKey()) return
   if (envelope?.data.read) {
     notification.read = true
   }
+}
+
+function notificationDetailRoute(notification) {
+  const txId = notificationTransactionId(notification)
+  return txId ? { name: 'my-business-detail', params: { txId } } : null
 }
 
 load()
