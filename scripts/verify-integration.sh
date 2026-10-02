@@ -102,7 +102,7 @@ base="http://$address"
 # Public proxy and migration baseline.
 request health GET /api/health 200
 assert_json "$scratch/health.json" 'value == {"status":"UP"}'
-test "$(dc exec -T database psql -U library -d library -Atc "SELECT string_agg(version, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE version IS NOT NULL AND success")" = "1,2,3,4,5,6,7,8,9"
+python3 scripts/check-migrations.py --actual "$(dc exec -T database psql -U library -d library -Atc "SELECT string_agg(version, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE version IS NOT NULL AND success")"
 
 # Visitor session start. Header is kept only in scratch because it contains the opaque credential.
 status="$(curl --silent --show-error --connect-timeout 3 --max-time 30 --request POST \

@@ -16,6 +16,7 @@ run_id="$(date -u +%Y%m%d%H%M%S)-$$"
 project="mls-obs-${run_id}"
 export DB_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
 export GRAFANA_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
+export AI_VISITOR_COOKIE_SIGNING_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 export FRONTEND_PORT=0
 K6_IMAGE='grafana/k6:1.0.0@sha256:f21270290d702cbf0a7d6ba5d7ed100b63bcb233b558b885ed787547b3488279'
 
@@ -27,7 +28,7 @@ dc() { docker compose --env-file /dev/null -p "$project" -f compose.yaml -f comp
 redact() { python3 -c '
 import os, sys
 data = sys.stdin.read()
-for name in ("DB_PASSWORD", "GRAFANA_PASSWORD"):
+for name in ("DB_PASSWORD", "GRAFANA_PASSWORD", "AI_VISITOR_COOKIE_SIGNING_KEY"):
     data = data.replace(os.environ[name], "[REDACTED]")
 sys.stdout.write(data)'; }
 say() { printf '[c1-verify] %s\n' "$*"; }
@@ -56,7 +57,7 @@ trap 'exit 143' TERM
   echo '--- pinned observability images ---'
   grep -E 'image:' compose.observability.yaml
 } > "$evidence/environment.txt" 2>&1
-dc config > "$evidence/compose-config.yaml" 2>&1
+dc config 2>&1 | redact > "$evidence/compose-config.yaml"
 say "evidence: $evidence"
 
 # ---------- start full chain ----------

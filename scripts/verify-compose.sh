@@ -67,8 +67,7 @@ check() {
   python3 -c 'import json,sys; assert json.load(open(sys.argv[1])) == {"status":"UP"}' "$evidence/$phase-health.json"
   test "$(sql 'SELECT 1')" = 1
   test "$(sql "SELECT count(*) FROM flyway_schema_history WHERE script = 'R__infrastructure_probe.sql' AND success")" = 1
-  test "$(sql 'SELECT count(*) FROM flyway_schema_history WHERE version IS NOT NULL AND success')" = 9
-  test "$(sql "SELECT string_agg(version, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE version IS NOT NULL AND success")" = "1,2,3,4,5,6,7,8,9"
+  python3 scripts/check-migrations.py --actual "$(sql "SELECT string_agg(version, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE version IS NOT NULL AND success")"
   sql 'SELECT installed_rank, version, description, type, script, checksum, installed_by, installed_on, execution_time, success FROM flyway_schema_history ORDER BY installed_rank' > "$evidence/$phase-history.txt"
   sql 'SHOW server_version' > "$evidence/$phase-postgres-version.txt"
   printf '%s: three healthy services; page, proxy, SQL and migration assertions passed\n' "$phase"

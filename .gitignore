@@ -114,3 +114,15 @@ e2e/browsers/installs/
 !scripts/sanitize-evidence-traces.sh
 !scripts/collect-env-evidence.sh
 !scripts/redact-evidence-values.sh
+
+# Reproducible release gates; original verification/ remains local-only.
+!formal/
+!formal/**
+formal/.cache/
+formal/output/
+formal/**/__pycache__/
+!scripts/check-migrations.py
+!scripts/test-check-migrations.py
+!scripts/delivery/
+!scripts/delivery/**
+scripts/delivery/__pycache__/

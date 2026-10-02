@@ -1,0 +1,55 @@
+[
+  {
+    "model": "Closing",
+    "config": "Closing.cfg",
+    "safety": [
+      "TypeOK",
+      "InvOrder",
+      "InvFreeze",
+      "InvReopenGated",
+      "InvAwaitGated",
+      "InvOpenCoherent",
+      "InvNoOldPermit"
+    ],
+    "probes": [
+      "ProbeNotNormalAwaiting",
+      "ProbeNotBacklogAwaiting",
+      "ProbeNotDraining",
+      "ProbeNotReopen",
+      "ProbeNotAwaiting",
+      "ProbeNotManual",
+      "ProbeNotAdminFail",
+      "ProbeNotRetry"
+    ],
+    "timeout_seconds": 180,
+    "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
+  },
+  {
+    "model": "OrderOccupancy",
+    "config": "OrderOccupancy.cfg",
+    "safety": [
+      "TypeOK",
+      "InvOneUnreleased",
+      "InvCoherent",
+      "InvPaidSettled"
+    ],
+    "probes": [
+      "ProbeNotClosedPayConflict",
+      "ProbeNotD1",
+      "ProbeNotD2",
+      "ProbeNotD3",
+      "ProbeNotD4",
+      "ProbeNotD5",
+      "ProbeNotD6",
+      "ProbeNotD7",
+      "ProbeNotD8",
+      "ProbeNotD14",
+      "ProbeNotD15tp",
+      "ProbeNotD15tc",
+      "ProbeNotD15cc",
+      "ProbeNotD8p"
+    ],
+    "timeout_seconds": 180,
+    "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
+  }
+]
