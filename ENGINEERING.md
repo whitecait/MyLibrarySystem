@@ -29,6 +29,12 @@ lingzz 于 2026-10-01 明确批准 A–E，并追加新增功能 TLA 形式化�
 - Windows 原生运维入口与干净提交打包入口已实现，见 [交付运维](scripts/delivery/README.md)。独立 Linux 运维试验通过，未计为 Windows 原生通过。
 - 本地标准 Compose 首轮构建失败：容器中 Maven Wrapper 下载发生 SSLHandshakeException，三段 Compose 未完成。本地失败证据保留；远端 CI、独立 PR 审计、合并、目标机实测与 P5 另行登记。
 
+## 2026-10-02 独立审计整改验证
+
+本轮新真实 PG 回归六项在原冻结提交上五项失败，在修复后六项通过；完整后端 verify 为214／214。观测配置隔离不继承真实模型参数，保存证据前脱敏并有实际 Compose config 负例。基架以已存在书目查询的404来校验预期4xx，并对两个选定 API 路径计数合计，四项初次远端 CI 已成功，最新全五项另按冻结提交核对。
+
+WSL 本轮重新编译需要完整 JDK21：默认 java 是 JRE21而默认 javac 为17，不能据 java -version 推定编译器可用。独立临时 Temurin21.0.8 JDK 来自项目固定容器镜像；仅用于 WSL，不修改系统或共享 Windows 工具链。打包 host 模式从同提交源快照编译并使用固定 JRE镜像，显式记录构建方式及摘要。
+
 ## 所需环境
 
 在 Linux 或启用 Docker Desktop 集成的 WSL 中运行。需要 Bash、Git、Python 3、curl、Docker Linux 引擎及支持 `up --wait` 的 Compose v2 或 v5；后端测试必须可连接 Docker，不能跳过数据库测试。
@@ -109,6 +115,8 @@ docker compose -p mls-dev down
 原型仍为本地资产，不进入 CI、镜像或干净检出的测试输入。远端通过证据及对应提交记录在行动计划中；工作流存在不代表运行通过，也不代表已配置 GitHub 分支保护。
 
 ## 修订记录
+
+- 2026-10-02：追加五项审计整改的真实回归、JDK边界和观测计数修复，不预填新CI／发布通过。
 
 - 2026-10-01：登记形式化／迁移／原生运维入口和本地测试，明确容器 TLS 失败及 Windows／远端未完成边界。
 

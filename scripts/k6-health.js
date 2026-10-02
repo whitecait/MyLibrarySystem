@@ -6,7 +6,7 @@ import { Counter } from 'k6/metrics';
 // fixed low-rate probes against the engineering health endpoint only,
 // executed through the frontend proxy (nginx -> backend).
 const TARGET = __ENV.TARGET || 'http://frontend:80/api/health';
-const MISSING_TARGET = __ENV.MISSING_TARGET || 'http://frontend:80/api/does-not-exist';
+const MISSING_TARGET = __ENV.MISSING_TARGET || 'http://frontend:80/api/v1/titles/9223372036854775807';
 const VUS = Number(__ENV.VUS || 3);
 const SUCCESS_ITERS = Number(__ENV.SUCCESS_ITERS || 280);
 const MISSING_ITERS = Number(__ENV.MISSING_ITERS || 20);

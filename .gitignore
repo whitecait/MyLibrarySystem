@@ -126,3 +126,6 @@ formal/**/__pycache__/
 !scripts/delivery/
 !scripts/delivery/**
 scripts/delivery/__pycache__/
+
+!scripts/observability-env.sh
+!scripts/test-observability-env.sh

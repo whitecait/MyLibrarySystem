@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Build a local delivery archive from an exact clean Git commit and pinned base images."""
 import argparse
+import os
+import re
 import gzip
 import io
 import json
@@ -12,7 +14,7 @@ from manage import digest,POSTGRES,invoke
 
 ROOT=Path(__file__).resolve().parents[2]
 
-def build(output,commit):
+def build(output,commit,backend_build="container"):
     head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
     requested=subprocess.check_output(['git','rev-parse',commit],cwd=ROOT,text=True).strip()
     if head!=requested or subprocess.check_output(['git','status','--porcelain'],cwd=ROOT):
@@ -26,8 +28,27 @@ def build(output,commit):
     bin_dir=package/'bin';bin_dir.mkdir();config=package/'config';config.mkdir()
     for name in ['manage.py','windows.ps1']:shutil.copyfile(source/'scripts/delivery'/name,bin_dir/name)
     backend='mls-backend:release-'+head[:12];frontend='mls-frontend:release-'+head[:12]
+    build_metadata = {'backend_mode': backend_build}
     for directory,tag in [('library-server',backend),('library-frontend',frontend)]:
-        invoke(['docker','build','--label','org.opencontainers.image.revision='+head,'-t',tag,str(source/directory)])
+        context = source/directory
+        if directory == 'library-server' and backend_build == 'host':
+            # No arbitrary precompiled input is accepted: compile the archived Git source here.
+            compiler = invoke(['javac','-version'],capture_output=True,text=True)
+            version = compiler.stdout + compiler.stderr
+            if not re.search(r'javac 21(?:\.|$)',version):
+                raise ValueError('Host backend build requires JDK 21 (not merely a JRE)')
+            maven = context/('mvnw.cmd' if os.name == 'nt' else 'mvnw')
+            invoke([str(maven),'-B','-ntp','compile','jar:jar','spring-boot:repackage'],cwd=context)
+            runtime = package/'runtime-build';runtime.mkdir()
+            jar=context/'target/library-server-1.0.0-SNAPSHOT.jar'
+            build_metadata['jar_sha256'] = digest(jar)
+            build_metadata['javac_version'] = version.strip()
+            shutil.copyfile(jar,runtime/'app.jar')
+            shutil.copyfile(source/'scripts/delivery/runtime.Dockerfile',runtime/'Dockerfile')
+            # Generated target/ is excluded from the archived-source deliverable.
+            shutil.rmtree(context/'target')
+            context = runtime
+        invoke(['docker','build','--label','org.opencontainers.image.revision='+head,'-t',tag,str(context)])
     invoke(['docker','pull',POSTGRES])
     images=[]
     for tag in [backend,frontend,POSTGRES]:
@@ -47,14 +68,17 @@ def build(output,commit):
     template=re.sub(r'^DB_PASSWORD=.*$','DB_PASSWORD=REPLACE_WITH_RANDOM_VALUE',template,flags=re.M)
     template=re.sub(r'^AI_VISITOR_COOKIE_SIGNING_KEY=.*$','AI_VISITOR_COOKIE_SIGNING_KEY=REPLACE_WITH_64_HEX_CHARACTERS',template,flags=re.M)
     for key in ['AI_ENDPOINT_URL','AI_MODEL','AI_API_KEY']:
-        template=re.sub(r'^'+key+r'=.*$',key+'=',template,flags=re.M)
+        if re.search(r'^'+key+r'=',template,flags=re.M):
+            template=re.sub(r'^'+key+r'=.*$',key+'=',template,flags=re.M)
+        else:
+            template+=key+'=\n'
     template+='BACKEND_IMAGE='+backend+'\nFRONTEND_IMAGE='+frontend+'\n'
     (config/'runtime.env.example').write_text(template)
     (config/'compose.images.yaml').write_text('services:\n  database:\n    image: '+POSTGRES+'\n')
     instructions=(source/'scripts/delivery/README.md').read_text()
     instructions=instructions.replace('../../docs/','source/docs/').replace('../../formal/','source/formal/').replace('../../ENGINEERING.md','source/ENGINEERING.md').replace('(manage.py)','(bin/manage.py)').replace('(package.py)','(source/scripts/delivery/package.py)')
     (package/'README.md').write_text(instructions)
-    (package/'release.json').write_text(json.dumps({'commit':head,'images':images,'ci':'Verify PR and merged-commit CI separately; package creation is not acceptance.','data':'Dedicated learning data; loopback only.'},indent=2)+'\n')
+    (package/'release.json').write_text(json.dumps({'commit':head,'images':images,'ci':'Verify PR and merged-commit CI separately; package creation is not acceptance.','data':'Dedicated learning data; loopback only.','build':build_metadata},indent=2)+'\n')
     files=sorted(p for p in package.rglob('*') if p.is_file())
     (package/'SHA256SUMS').write_text(''.join(digest(path)+'  '+str(path.relative_to(package)).replace('\\','/')+'\n' for path in files))
     target=output/(package.name+'.tar.gz')
@@ -64,6 +88,6 @@ def build(output,commit):
     print('Package sealed:',target)
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output-dir',type=Path,required=True);p.add_argument('--commit',required=True)
-    args=p.parse_args();build(args.output_dir,args.commit)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output-dir',type=Path,required=True);p.add_argument('--commit',required=True);p.add_argument('--backend-build',choices=['container','host'],default='container')
+    args=p.parse_args();build(args.output_dir,args.commit,args.backend_build)
 if __name__=='__main__':main()

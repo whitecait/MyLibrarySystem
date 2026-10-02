@@ -51,4 +51,22 @@ class DeliverySafetyTest(unittest.TestCase):
                     with self.assertRaises(RuntimeError):m.restore(root,env,'source',sql,target,'restore')
                     self.assertEqual(compose.call_count,2)
 
+    def test_empty_backup_is_rejected_before_any_docker_call(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);env=root/'source.env';target=root/'target.env';sql=root/'empty.sql'
+            env.write_text('source');target.write_text('target');sql.touch()
+            with patch.object(m,'invoke') as invoke, patch.object(m,'compose') as compose:
+                with self.assertRaises(ValueError):m.restore(root,env,'source',sql,target,'restore')
+                invoke.assert_not_called();compose.assert_not_called()
+
+    def test_explicit_file_configuration_is_not_overridden_by_shell_secrets(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);env=root/'runtime.env';env.write_text('DB_PASSWORD=file-fixture\nAI_API_KEY=file-model-fixture\n')
+            with patch.dict(m.os.environ, {'DB_PASSWORD':'shell-fixture','AI_API_KEY':'shell-model-fixture'}):
+                with patch.object(m,'invoke') as invoke:
+                    m.compose(root,env,'source','config','--quiet')
+                    inherited=invoke.call_args.kwargs['env']
+                    self.assertNotIn('DB_PASSWORD',inherited)
+                    self.assertNotIn('AI_API_KEY',inherited)
+
 if __name__=='__main__':unittest.main()

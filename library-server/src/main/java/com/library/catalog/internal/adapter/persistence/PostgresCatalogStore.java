@@ -105,8 +105,8 @@ public class PostgresCatalogStore implements CatalogStore {
                     version = version + 1, updated_at = now()
                 WHERE id = ? AND version = ?
                 RETURNING version
-                """, Long.class, u.isbn(), u.title(), u.authorsJoined(), u.category(),
-                u.publisher(), u.publishYear(), u.priceCents(), u.titleId(), u.version());
+                """, Long.class, u.isbn(), u.title(), u.authorsJoined(), u.publisher(),
+                u.category(), u.publishYear(), u.priceCents(), u.titleId(), u.version());
         return updated.isEmpty() ? null : updated.get(0);
     }
 

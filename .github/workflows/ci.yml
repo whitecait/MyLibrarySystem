@@ -78,6 +78,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: bash scripts/test-observability-env.sh
       - name: Run C1 measurement scaffold verification
         run: bash scripts/verify-observability.sh
         env:

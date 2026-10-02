@@ -25,12 +25,7 @@ mkdir -p "$evidence"
 evidence="$(cd "$evidence" && pwd)"
 
 dc() { docker compose --env-file /dev/null -p "$project" -f compose.yaml -f compose.observability.yaml "$@"; }
-redact() { python3 -c '
-import os, sys
-data = sys.stdin.read()
-for name in ("DB_PASSWORD", "GRAFANA_PASSWORD", "AI_VISITOR_COOKIE_SIGNING_KEY"):
-    data = data.replace(os.environ[name], "[REDACTED]")
-sys.stdout.write(data)'; }
+source "$PWD/scripts/observability-env.sh"
 say() { printf '[c1-verify] %s\n' "$*"; }
 
 cleanup() {
@@ -171,7 +166,7 @@ say 'trace: real HTTP requests produced spans, trace ids verified in collector e
 
 # ---------- [2] fixed-window reconciliation of k6 / nginx / prometheus counts ----------
 t0="$(date -u +%Y-%m-%dT%H:%M:%S)"
-c0="$(prom_query 'sum(http_server_requests_seconds_count{uri="/api/health"})')"
+c0="$(prom_query 'sum(http_server_requests_seconds_count{uri="/api/health"}) + (sum(http_server_requests_seconds_count{uri="/api/v1/titles/{titleId}"}) or vector(0))')"
 f404_0="$(prom_query 'sum(http_server_requests_seconds_count{status="404"})' 2 || printf 0)"
 docker run --rm --user "$(id -u):$(id -g)" --network "${project}_default" -v "$PWD/scripts:/scripts:ro" -v "$evidence:/evidence" \
   -e SUCCESS_ITERS=280 -e MISSING_ITERS=20 -e VUS=3 \
@@ -189,7 +184,7 @@ print(f"k6 totals ok: success={succ} expected_4xx={miss} total={reqs}")
 PYEOF
 c1="$c0"
 for ((i = 0; i < 12; i++)); do
-  c1="$(prom_query 'sum(http_server_requests_seconds_count{uri="/api/health"})')"
+  c1="$(prom_query 'sum(http_server_requests_seconds_count{uri="/api/health"}) + (sum(http_server_requests_seconds_count{uri="/api/v1/titles/{titleId}"}) or vector(0))')"
   if python3 -c "import sys; exit(0 if float(sys.argv[1])-float(sys.argv[2])>=300 else 1)" "$c1" "$c0"; then break; fi
   sleep 5
 done
@@ -209,7 +204,7 @@ for line in open(log_path, encoding="utf-8", errors="replace"):
         continue
     if '/api/health ' in line and '" 200 ' in line:
         nginx200 += 1
-    elif '/api/does-not-exist' in line and '" 404 ' in line:
+    elif '/api/v1/titles/9223372036854775807' in line and '" 404 ' in line:
         nginx404 += 1
 c0f, c1f, f0v, f1v = float(c0), float(c1), float(f0), float(f1)
 total_delta = c1f - c0f
@@ -220,7 +215,7 @@ report = {
     "window": {"from": t0, "to": t1, "seconds": window},
     "k6": {"success": 280, "expected_4xx": 20, "total": 300},
     "nginx_access_log": {"api_health_200": nginx200, "api_404": nginx404},
-    "prometheus_delta": {"uri_health_total": total_delta, "status_404_total": delta404},
+    "prometheus_delta": {"selected_api_total": total_delta, "status_404_total": delta404},
     "checks": {
         "nginx_success_equals_k6": nginx200 == 280,
         "nginx_404_equals_k6": nginx404 == 20,
@@ -229,7 +224,7 @@ report = {
     },
     "explanations": {
         "prometheus_total": (
-            "prometheus counts ALL backend /api/health requests including the compose "
+            "prometheus counts the selected /api/health and /api/v1/titles/{titleId} requests including the compose "
             "healthcheck that hits backend:8080 directly every 3s (not via nginx, ~window/3 "
             "requests) plus up to two scrape-interval window skews on the c0/c1 reads"
         ),
@@ -266,8 +261,8 @@ import json, sys
 json.dump({
   "rules": {
     "success": "HTTP 200 through the proxy",
-    "expected_4xx": "proxied 4xx from a defined missing route (/api/does-not-exist -> backend 404)",
-    "unexpected_5xx": "any 5xx; not producible by the real scaffold (no 5xx code path exists); rule recorded for future use",
+    "expected_4xx": "proxied 4xx from a defined public title lookup of a nonexistent positive ID (backend MLS-CAT-002 / 404)",
+    "unexpected_5xx": "any unexpected 5xx response from the selected API paths is a failure; recorded separately from expected business 404",
     "timeout": "no response within the k6 client budget (default 2000ms); produced only by an isolated blackhole fixture (192.0.2.1), labeled as fixture and NOT app traffic",
     "network_error": "connection-level failure without a response that is not a timeout (e.g. immediate network-unreachable from the NAT path); recorded separately from timeout"
   },

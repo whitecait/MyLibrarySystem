@@ -7,7 +7,9 @@ import com.library.contract.security.ActorContext;
 import com.library.circulation.contract.model.BusinessDate;
 import com.library.query.contract.ArrivalQuery;
 import com.library.query.contract.MyBusinessQuery;
-import com.library.query.internal.adapter.persistence.QueryStore;
+import com.library.circulation.contract.CirculationReadSnapshots;
+import com.library.settlement.contract.SettlementReadSnapshots;
+import com.library.catalog.contract.CatalogReadSnapshots;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -24,15 +26,23 @@ public class QueryModuleImpl implements ArrivalQuery, MyBusinessQuery {
 
     private static final Set<String> KINDS = Set.of("RESERVATION", "LOAN", "FINE", "ORDER");
 
-    private final QueryStore store;
+    private final CirculationReadSnapshots circulation;
+    private final SettlementReadSnapshots settlement;
+    private final CatalogReadSnapshots catalog;
 
-    public QueryModuleImpl(QueryStore store) {
-        this.store = store;
+    public QueryModuleImpl(CirculationReadSnapshots circulation, SettlementReadSnapshots settlement,
+                           CatalogReadSnapshots catalog) {
+        this.circulation = circulation;
+        this.settlement = settlement;
+        this.catalog = catalog;
     }
+
+    private record BusinessRow(String kind, long id, String status, String title,
+                               LocalDate businessDate, Long amountCents) {}
 
     @Override
     public ModuleResult<ArrivalDashboard> arrivals(BusinessDate date, ActorContext actor) {
-        var counts = store.arrivals(date.value());
+        var counts = circulation.arrivals(date.value());
         return ModuleResult.Accepted.of(new ArrivalDashboard(date, counts.expected(),
                 counts.arrived(), counts.pending(), counts.exceptions()));
     }
@@ -46,8 +56,26 @@ public class QueryModuleImpl implements ArrivalQuery, MyBusinessQuery {
         var cursor = criteria.page() == null ? PageCursor.first() : criteria.page();
         var beforeId = cursor.cursor() == null ? Long.MAX_VALUE : Long.parseLong(cursor.cursor());
         var wanted = kind == null ? List.of("RESERVATION", "LOAN", "FINE") : List.of(kind);
-        var rows = store.myBusiness(actor.accountId().value(), wanted, criteria.status(),
-                beforeId, cursor.limit() + 1);
+        var status = criteria.status() == null || criteria.status().isBlank() ? null : criteria.status();
+        var snapshots = new ArrayList<BusinessRow>();
+        var transactions = circulation.readerTransactions(actor.accountId().value(), wanted,
+                status, beforeId, cursor.limit() + 1);
+        var names = catalog.titleNames(transactions.stream().map(
+                CirculationReadSnapshots.TransactionSnapshot::titleId).distinct().toList());
+        for (var fact : transactions) {
+            snapshots.add(new BusinessRow(fact.kind(), fact.id(), fact.status(), names.get(fact.titleId()),
+                    fact.businessDate(), null));
+        }
+        if (wanted.contains("FINE")) {
+            for (var fact : settlement.readerFines(actor.accountId().value(), status,
+                    beforeId, cursor.limit() + 1)) {
+                snapshots.add(new BusinessRow("FINE", fact.id(), fact.status(), null, null,
+                        fact.amountCents()));
+            }
+        }
+        var rows = snapshots.stream()
+                .sorted(java.util.Comparator.comparingLong(BusinessRow::id).reversed())
+                .limit(cursor.limit() + 1).toList();
         var hasNext = rows.size() > cursor.limit();
         var pageRows = rows.stream().limit(cursor.limit()).toList();
         var items = pageRows.stream().map(row -> new MyBusinessQuery.BusinessItem(

@@ -38,8 +38,14 @@ def invoke(command,**kwargs):
 
 def compose(root,env,project,*args,**kwargs):
     if not env.is_file():raise ValueError('Private environment file is missing; run init first')
+    child_env = dict(os.environ)
+    # Explicit private-file inputs take precedence over unrelated shell exports.
+    for line in env.read_text(encoding='utf-8').splitlines():
+        if line.startswith('#') or '=' not in line: continue
+        key = line.split('=', 1)[0].strip()
+        if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', key): child_env.pop(key, None)
     return invoke(['docker','compose','--env-file',str(env),'-p',project_name(project),
-                   '-f',str(root/'source/compose.yaml'),'-f',str(root/'config/compose.images.yaml'),*args],**kwargs)
+                   '-f',str(root/'source/compose.yaml'),'-f',str(root/'config/compose.images.yaml'),*args],env=child_env,**kwargs)
 
 def init(root,env,port):
     if not 1024<=port<=65535:raise ValueError('Port must be between 1024 and 65535')
@@ -74,6 +80,7 @@ def restore(root,source_env,source_project,path,target_env,target_project):
     if target_project==source_project:raise ValueError('Restore project must differ from source')
     if target_env.resolve()==source_env.resolve():raise ValueError('Restore requires a separate target environment')
     if not path.is_file() or not target_env.is_file():raise ValueError('Backup and target environment files must exist')
+    if path.stat().st_size == 0:raise ValueError('Empty backup cannot be restored')
     for command in [ ['docker','ps','-aq','--filter',f'label=com.docker.compose.project={target_project}'],
                      ['docker','volume','ls','-q','--filter',f'label=com.docker.compose.project={target_project}'] ]:
         if invoke(command,capture_output=True,text=True).stdout.strip():
