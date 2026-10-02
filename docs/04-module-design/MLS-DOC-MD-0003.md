@@ -4,12 +4,14 @@
 | -------- | -------------------------- |
 | 文档编号 | `MLS-DOC-MD-0003`          |
 | 文档状态 | `Approved`                 |
-| 文档版本 | `v0.5`                     |
+| 文档版本 | `v0.9`                     |
 | 编制日期 | `2026-09-13`               |
 | 阶段     | M5 模块设计收尾与单元测试  |
 | 权威性质 | 已批准的前后端共同契约     |
 
 > 引用文档：
+>
+> - [限定范围交付与 DevOps 阶段规则](../00-governance/MLS-DOC-GOV-0008.md)
 >
 > - [功能需求](../01-requirements/requirements/MLS-DOC-RA-0010.md)
 > - [业务规则](../01-requirements/requirements/MLS-DOC-RA-0011.md)
@@ -19,40 +21,51 @@
 > - [共同场景样例](contracts/examples/contract-scenarios.json)
 > - [共同场景 Schema](contracts/examples/contract-scenarios.schema.json)
 > - [HTTP 机器契约](contracts/http/openapi.yaml)
+> - [P1 裁剪与核心修复结果](../agents/delivery-closeout-20260925/results/P1.md)
+
+## 2026-10-01 当前适用范围与批准修订
+
+lingzz 于 2026-10-01 明确批准 A–E，并追加新增功能 TLA 形式化回归、CI 验证及完整 PR 流程要求。本节与[限定范围交付与 DevOps 阶段规则](../00-governance/MLS-DOC-GOV-0008.md)共同限定当前适用内容；下文相冲突的范围、角色、状态和准入表述保留为原基线历史，其余约束继续有效。批准修订与执行验证分别登记。
+
+当前规则：预约日期暂按每天开馆，线上最早次日、馆员服务台可同日；注册按浏览器会话每小时最多 5 次请求，失败也计数，第 6 次 429；日结默认按 Asia/Shanghai 每日零点触发，逐日追平后保持隔离，由 ADMIN 受控重开。当天 SHELVE 允许上架，登记、正常归还、释放当天仍不允许实际借出；RESTORE 沿用已有同日例外，歧义存量保守延至次日。订单关闭为 READER 本人、LIBRARIAN/ADMIN 他人及合法 SYSTEM，其他接口权限不因此扩大。馆员现场 AI 草稿可显式应用到现行表单，提交仍由人确认；读者现场 AI 预填已移出，既有读者续借草稿保留。
+
+HTTP OpenAPI 与生成物本轮保持既有运行内容；本文补齐 ADMIN 关闭订单文字契约及授权先于幂等/终态返回的语义。新阶段合同变化通过模型、生成物一致性和 CI 后进入完整 PR 流程。关闭权限的扩展不自动扩大 ADMIN 查他人支付单或 AI 导航范围。
 
 ## 1. 共同规则
 
 - 根路径为 `/api/v1`；所有响应使用 `{code,message,data}`。成功码为模块稳定码，错误不得放进成功响应伪装办理成功。
 - ID 为十进制字符串，金额为整数分，业务日为 `YYYY-MM-DD`，时间戳为带偏移 ISO-8601；可选值缺失时省略，有业务意义的空值显式为 `null`。
 - 未认证、无权限、不可见对象、字段错误、业务冲突、规则拒绝和系统失败分别使用 HTTP `401/403/404/400/409/422/500`。
-- 所有写请求携带 `Idempotency-Key`。作用域为认证主体、HTTP 方法、规范路径和键；同键同摘要返回原结果，同键不同摘要返回 `409 MLS-IDEMP-002`。
+- 所有仍启用的业务写请求携带 `Idempotency-Key`。作用域为认证主体、HTTP 方法、规范路径和键；同键同摘要返回原结果，同键不同摘要返回 `409 MLS-IDEMP-002`。退款与对账保留为废弃兼容操作，始终返回 `422 MLS-PAY-009`，不要求身份、幂等键或请求体，也不产生业务事实。
 - `channel`、`readerId`、`onBehalfOf` 和前端隐藏控件都不是权限凭据。服务端以会话身份重新鉴权，并在提交时重新读取权威状态。
 - 列表使用 `?limit=&cursor=`，响应为 `{items,nextCursor}`；`limit` 最大 100。服务端处理上限 10 秒，前端总等待上限 30 秒并允许取消。
-- `contracts/http/openapi.yaml` 是路径、参数名、请求/响应字段、必填性、空值、枚举和成功 HTTP 状态的唯一机器源；全部 45 个操作当前成功状态为 HTTP `200`。本文件是权限、业务语义、幂等、事务及错误条件的规范入口。
+- `contracts/http/openapi.yaml` 是路径、参数名、请求/响应字段、必填性、空值、枚举和成功 HTTP 状态的唯一机器源；43 个启用操作成功状态为 HTTP `200`，退款与对账两个废弃操作只返回 HTTP `422`。本文件是权限、业务语义、幂等、事务及错误条件的规范入口。
 - 前端类型、请求客户端和 mock 结构由 OpenAPI 生成或验证；后端 Controller DTO 与响应也对同一 OpenAPI 验证。前端不得从 Controller 或 Java 类型反推契约，Controller 不得以实体或领域对象作为响应。
 
 ## 2. 身份与书目契约
 
 | 方法与路径 | 权限 | 请求或查询 | 成功 data | 主要错误 | 覆盖 |
 | ---------- | ---- | ---------- | --------- | -------- | ---- |
-| `POST /auth/registrations` | 公开 | `{username,password,displayName}` | `{accountId,role:READER,status:ACTIVE}` | `MLS-ID-002` 重名；`MLS-ID-003` 字段无效 | FR-0002 |
+| `POST /auth/registrations` | 公开 | `{username,password,displayName}`；可选服务端签发浏览器会话 Cookie | `{accountId,role:READER,status:ACTIVE}` | `MLS-ID-002` 重名；`MLS-ID-003` 字段无效；`MLS-ID-008` 会话注册限额（429） | FR-0002 |
 | `POST /auth/sessions` | 公开 | `{username,password}` | `{accessToken,expiresAt,actor}` | `MLS-ID-004` 凭据失败；`MLS-ID-005` 账户不可用 | FR-0003 |
 | `DELETE /auth/sessions/current` | 已登录 | 无 | `{ended:true}` | `MLS-ID-001` | FR-0003 |
 | `GET /accounts` | ADMIN | `role,status,cursor,limit` | 账户摘要列表 | `MLS-ID-001` | FR-0004 |
 | `POST /accounts/{accountId}/change-requests` | LIBRARIAN | `{action:SUSPEND|RESTORE|CHANGE_ROLE,payload,reason}` | `{reviewId,status:PENDING}`；批准前账户不变 | `MLS-ID-006` 状态冲突 | FR-0004 |
 | `POST /accounts/{accountId}/password-reset` | LIBRARIAN/ADMIN | `{reason}` | `{temporaryPassword,forceChange:true}` | `MLS-ID-006` 账户状态冲突 | FR-0004 |
 | `PATCH /readers/{readerId}/status` | LIBRARIAN/ADMIN | `{status,reason}` | 读者状态摘要 | `MLS-ID-006` 状态冲突 | FR-0005 |
-| `GET /titles` | 公开 | `q,category,cursor,limit` | 书目级结果与 `availability` | `MLS-CAT-001` 查询无效 | FR-0001/0040/0041 |
-| `GET /titles/{titleId}` | 公开 | 无 | 书目详情、书目级可借状态、阅读内容入口 | `MLS-CAT-002` 不存在 | FR-0001/0040/0041/0045 |
+| `GET /titles` | 公开 | `q,category,availability,cursor,limit`；`availability=AVAILABLE|UNAVAILABLE|UNKNOWN` | 书目级结果与 `availability` | `MLS-CAT-001` 查询/筛选无效；`MLS-API-001` 参数类型无效 | FR-0001/0040/0041 |
+| `GET /titles/{titleId}` | 公开 | 无 | 书目详情、书目级可借状态、阅读内容入口 | `MLS-CAT-002` 不存在；`MLS-API-001` 标识符类型无效 | FR-0001/0040/0041/0045 |
 | `POST /titles` | LIBRARIAN | 书目字段，金额为 `priceCents` | 书目详情 | `MLS-CAT-003` ISBN/版本冲突 | FR-0006 |
 | `PATCH /titles/{titleId}` | LIBRARIAN | 可维护字段＋`version` | 书目详情 | `MLS-CAT-003` 版本冲突 | FR-0006 |
 | `DELETE /titles/{titleId}` | LIBRARIAN | `{version,reason}` | `{status:REMOVED}` | `MLS-CAT-004` 仍有受约束事实 | FR-0006 |
 | `GET /titles/{titleId}/content` | 公开 | 只读分页参数 | `{contentType,pages}` | `MLS-CAT-005` 无公开内容 | FR-0045 |
 | `POST /titles/{titleId}/copies` | LIBRARIAN | `{copyNo}` | `{copyId,status:PENDING_SHELVING}` | `MLS-CIRC-010` 重复副本 | FR-0007 |
-| `GET /copies` | LIBRARIAN | `titleId,status,cursor,limit` | 逐册状态列表 | `MLS-CIRC-001` 查询无效 | FR-0008 |
+| `GET /copies` | LIBRARIAN | `titleId,status,cursor,limit` | 逐册状态列表 | `MLS-CIRC-001` 查询无效或状态不在契约枚举内；`MLS-API-001` 参数类型无效 | FR-0008 |
 | `PATCH /copies/{copyId}` | LIBRARIAN | `{action:SHELVE|MAINTAIN|RESTORE|REMOVE,version}` | 副本状态 | `MLS-CIRC-003` 非法迁移 | FR-0007/0008 |
 
 `availability` 只取 `AVAILABLE|UNAVAILABLE|UNKNOWN`，是书目级展示，不泄露公众逐册状态，也不保证后续预约成功。
+
+注册按服务端签发的 `mls_registration_session` 浏览器 Cookie 计额；Cookie 为随机 opaque 值、`HttpOnly; SameSite=Strict; Path=/`，仅 HTTPS 请求设置 `Secure`。服务端只存 Cookie 摘要，按一小时窗口累计每个请求（包括校验失败）；每会话前 5 次请求进入注册处理，第 6 次及后续请求返回 `429 MLS-ID-008`。限额按浏览器会话，不按 IP；清除浏览器会话会建立新的额度身份。该会话机制的清除边界不构成 IP 防滥用保证。
 
 ## 3. 流通契约
 
@@ -61,7 +74,7 @@
 | `GET /titles/{titleId}/reservation-calendar` | 公开 | `from,to` | 每业务日 `GUARANTEED|NOT_GUARANTEED|UNAVAILABLE` | `MLS-CIRC-001` 日期无效 | FR-0046 |
 | `POST /reservations` | READER 本人；LIBRARIAN 代办 | `{titleId,reservationDate,pickupSlot,channel,onBehalfOf?,confirmWaitlist?}` | `{txId,outcome,reasons?}` | `MLS-CIRC-002` 隔离；`003` 冲突；`011` 资格拒绝 | FR-0028 |
 | `POST /reservations/{txId}/cancel` | READER 本人；LIBRARIAN | `{reason}` | `{txId,status:NOT_BORROWED}` | `MLS-CIRC-003` 终态/冲突 | FR-0028 |
-| `POST /walk-in-loans` | READER 本人；LIBRARIAN 代办 | `{readerId?,items:[{titleId,copyId?}],channel}` | `{items:[{itemRef,txId?,outcome,reasons?}]}` | 逐册返回规则拒绝；请求级鉴权错误 | FR-0009/0010/0036 |
+| `POST /walk-in-loans` | LIBRARIAN 代办 | `{readerId,items:[{titleId,copyId?}],channel:DESK}` | `{items:[{itemRef,txId?,outcome,reasons?}]}` | 逐册返回规则拒绝；请求级鉴权错误 | FR-0009/0010/0036 |
 | `POST /pickups/{txId}/claim` | LIBRARIAN | `{copyId}` | `{txId,outcome}` | `MLS-CIRC-004` 无效对象/隔离 | FR-0009/0010/0028 |
 | `POST /transactions/{txId}/manual-actions` | LIBRARIAN | `{action:RELEASE|CONFIRM_ENTRY|REJECT,reason}` | `{txId,outcome}` | `MLS-CIRC-005` 守卫不满足，保持人工处理中 | FR-0011/0012/0037 |
 | `POST /loans/{txId}/renewals` | READER 本人 | `{requestedDueDate?}` | `{txId,dueDate,outcome}` | `MLS-CIRC-012` 预约/次数/欠费拒绝 | FR-0015/0016 |
@@ -69,7 +82,7 @@
 | `POST /closing/runs` | SYSTEM | `{businessDate}` | `{batchId,status}` | `MLS-CIRC-013` 已运行；`014` 协调失败 | FR-0038 |
 | `POST /closing/reopen` | ADMIN | `{businessDate}` | `{status:REOPENED,epoch}` | `MLS-CIRC-008` 未追平/无权 | FR-0038 |
 
-预约 `outcome` 为 `CONFIRMED|WAITLIST_PENDING_CONFIRMATION|WAITLIST_ENQUEUED|MANUAL_HANDLING|REJECTED`。待确认结果必须返回 `txId:null`；确认请求复送完整业务字段、使用新幂等键并重新鉴权与判定。现场借阅的每册是独立事务，混合批次逐册呈现。
+预约 `outcome` 为 `CONFIRMED|WAITLIST_PENDING_CONFIRMATION|WAITLIST_ENQUEUED|MANUAL_HANDLING|REJECTED`。待确认结果必须返回 `txId:null`；确认请求复送完整业务字段、使用新幂等键并重新鉴权与判定。现场借阅仅保留馆员到台办理：服务端要求 LIBRARIAN 身份与 DESK 渠道；读者自助扫描/现场借阅会话扩展不属于本次交付。每册是独立事务，混合批次逐册呈现。
 
 ## 4. 结算与复核契约
 
@@ -80,14 +93,16 @@
 | `GET /orders/{orderId}` | READER 本人；LIBRARIAN | 无 | 订单终态或占用状态 | `MLS-PAY-005` 不可见 | FR-0019 |
 | `POST /payment-simulator/results` | 受控测试操作者 | `{orderId,result,delayMs?,duplicateCount?}` | `{simulationId,status}` | `MLS-PAY-006` 非本地模拟器 | FR-0020/0026 |
 | `POST /payment-callbacks` | 模拟器凭据 | `{eventId,orderId,result:SUCCESS|FAILURE,occurredAt}` | 首次或原幂等结果 | `MLS-PAY-003` 冲突事件 | FR-0021/0022 |
-| `POST /orders/{orderId}/close` | READER 本人；LIBRARIAN；SYSTEM | 无 | `{orderId,status:CLOSED}`；终态返回既有状态 | `MLS-PAY-004` 关闭提交失败 | FR-0023/0047 |
-| `POST /orders/{orderId}/refunds` | LIBRARIAN 发起，ADMIN 复核 | `{amountCents,reason}` | `{reviewId,status:PENDING}`；批准前不退款 | `MLS-PAY-007` 金额/终态不合法 | FR-0024 |
-| `POST /reconciliations` | SYSTEM/ADMIN | `{businessDate}` | `{reconciliationId,counts,exceptions}` | `MLS-PAY-008` 日期重复/冲突 | FR-0025 |
+| `POST /orders/{orderId}/close` | READER 本人；LIBRARIAN/ADMIN 他人；合法 SYSTEM | 无 | `{orderId,status:CLOSED}`；终态返回既有状态 | `MLS-PAY-004` 关闭提交失败 | FR-0023/0047 |
+| `POST /orders/{orderId}/refunds` | 已下线；任意角色或匿名调用 | 无 | 无 | `422 MLS-PAY-009` 功能已下线；不新建复核或退款记录 | 当前交付范围不含退款 |
+| `POST /reconciliations` | 已下线；任意角色或匿名调用 | 无 | 无 | `422 MLS-PAY-009` 功能已下线；不插入占位对账记录 | 当前交付范围不含对账 |
 | `POST /reviews` | LIBRARIAN | `{targetType,targetId,action,payload,reason}`；账户变更由 `/accounts/{id}/change-requests` 提交同一命令 | `{reviewId,status:PENDING}` | `MLS-REV-003` 不属高风险动作 | FR-0004/0012 |
 | `POST /reviews/{reviewId}/decision` | ADMIN | `{decision:APPROVED|REJECTED,reason}` | `{reviewId,status,targetOutcome?}` | `MLS-REV-001` 目标已变；`002` 执行失败 | FR-0004/0012 |
 | `GET /reviews` | LIBRARIAN/ADMIN | 状态与分页 | 复核摘要列表 | `MLS-ID-001` | FR-0004/0012 |
 
-支付等待超时是本地等待事件，不伪造成失败回调。成功回调只对合法占用订单生效；重复 `eventId` 返回首次结果，冲突事件留证但不改写业务事实。任何金额的退款都是高风险动作：馆员发起、管理员复核，批准前不生效；迟到关闭或计时器不能自动退款。
+关闭操作先按当前角色和订单归属鉴权，再处理幂等重放或终态返回；身份降权后的同键请求不能沿用旧授权。终态订单保持其既有状态。
+
+支付等待超时是本地等待事件，不伪造成失败回调。成功回调只对合法占用订单生效；重复 `eventId` 返回首次结果，冲突事件留证但不改写业务事实。已批准规则中的退款和日终对账在当前收尾范围中整体移出；旧退款、对账和复核历史保持可读，运行时不再提供相应写效果。
 
 `POST /payment-simulator/results` 权限列的「受控测试操作者」即 `contracts/http/openapi.yaml` 的 `x-permission: CONTROLLED_TEST_OPERATOR`；该 capability 映射到 ADMIN 角色（2026-09-22 lingzz 裁定，`docs/agents/M6-RECOVERY-PLAN-20260922.md` 第 8 节第 2 项）：模拟结果调度仅管理员会话可发起，READER 与 LIBRARIAN 调度返回 `403 MLS-ID-005`，匿名保持 `401 MLS-ID-001`。限定对象是模拟器结果调度操作本身，不改变读者正常支付建单（`POST /fines/{fineId}/orders`）与模拟器回调（`POST /payment-callbacks`）的既有权限。
 
@@ -143,6 +158,12 @@ AI `actions` 只允许 `{actionType,level,prefill,draftId,label}`。L1 可带查
 
 ## 修订记录
 
+
+- 2026-10-01：v0.9，追加当前适用说明并传导 A–E 与新增功能 TLA/CI/完整 PR 要求。原因：限定交付与原完整基线存在范围及状态差异；提出人：lingzz/Codex；影响需求：当前范围和相邻角色、日期规则；影响验收：获批批次边界及迭代验证；内容评审/批准人：lingzz；结论：本轮局部修订 Approved，独立审计及未执行验证另行登记。
+- 2026-09-27，v0.8（P1 裁剪与核心修复）：依据 [P0 范围与基线结果](../agents/delivery-closeout-20260925/results/P0.md) 明确 `/walk-in-loans` 仅允许馆员以 DESK 渠道代办；读者自助扫描扩展从当前交付范围移出。同步 OpenAPI 权限与渠道枚举。影响需求：不改变已批准预约与借阅业务规则；影响验收：读者用任一渠道请求均拒绝且不产生流通事实，馆员 DESK 借出保留；批准事实以 P0 结果为准。
+
+- 2026-09-26，v0.7（P1 裁剪与核心修复）：登记当前交付范围停用退款、退款复核与对账写能力，保留兼容路径但仅返回 `422 MLS-PAY-009`；同步 HTTP 契约和生成接口；登记 `MLS-API-001` 供请求参数类型错误返回 400。退款、对账历史和必要表结构保留。此项是当前交付范围裁剪，不改写原始业务规则基线；执行事实见 P1 结果。
+
 - 2026-09-22，v0.6（DEF-M6-011 实施）：新增 §7 审计事件类型词表，登记 `GET /audit-events` 的类型取值、关联对象与结果取值、操作者语义与两类事务语义。原因：缺陷 DEF-M6-011 的登记事实「audit_event 仅记录 ACCESS_DENIED、成功业务无审计写入」以该词表为可判定前提，而成文时 `AuditEvent` 的 `eventType` 为自由字符串、词表无既有定义。提出人：DEF-M6-011/012 实施员；影响需求：无（落实 `MLS-NFR-AUD-0001` 既有要求）；影响验收：AT-0002 §2.3 R5、§2.14 的类型与关联断言可判；评审人：无；批准人：未新增代录批准；结论：修订候选随实施落地，文档批准状态未变。
 
 - 2026-09-22，v0.5：登记 `CONTROLLED_TEST_OPERATOR` capability 到 ADMIN 角色的映射（依据 2026-09-22 lingzz 批准的 M6 恢复计划第 8 节第 2 项），补记模拟结果调度端点仅管理员会话可发起；`x-permission` 取值与 45 个操作的成功状态未变，故机器契约与前端生成物无需重建。影响需求：FR-0020/0026 的调度权限语义可判；影响验收：批次 B AT-0010 越权负例、AT-0016 支付链调度角色；评审人/批准人：lingzz（2026-09-22 裁定）；结论：登记该裁定，未做结构变更。
@@ -162,3 +183,8 @@ AI `actions` 只允许 `{actionType,level,prefill,draftId,label}`。L1 可带查
 > - [验证映射与测试责任](MLS-DOC-MD-0005.md)
 > - [模块设计评审与基线记录](reviews/MLS-DOC-REV-0005.md)
 > - [模块关系与 4+1 视图](../02-overall-design/MLS-DOC-OD-0002.md)
+> - [P1 裁剪与核心修复结果](../agents/delivery-closeout-20260925/results/P1.md)
+>
+> - [限定范围交付与 DevOps 阶段规则](../00-governance/MLS-DOC-GOV-0008.md)。
+>
+> - [本轮文档维护与独立审计入口](../../artifacts/doc-maintenance-20261001/REPORT.md)。

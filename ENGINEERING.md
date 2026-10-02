@@ -1,12 +1,33 @@
 # 工程基础运行与验证
 
 > 引用文档：
+
+> - [形式化门禁](formal/README.md)。
+> - [交付运维入口](scripts/delivery/README.md)。
+>
+> - [限定范围交付与 DevOps 阶段规则](docs/00-governance/MLS-DOC-GOV-0008.md)
 >
 > - [前端工程说明](library-frontend/README.md)
 > - [后端工程说明](library-server/README.md)
 > - [工程基础行动计划](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-B1-PLAN.md)
 
 本入口用于最小 Vue 状态页、Spring 健康接口及 PostgreSQL/Flyway 基础设施验证，不包含业务功能或业务验收。
+
+## 2026-10-01 当前适用范围与批准修订
+
+lingzz 于 2026-10-01 明确批准 A–E，并追加新增功能 TLA 形式化回归、CI 验证及完整 PR 流程要求。本节与[限定范围交付与 DevOps 阶段规则](docs/00-governance/MLS-DOC-GOV-0008.md)共同限定当前适用内容；下文相冲突的范围、角色、状态和准入表述保留为原基线历史，其余约束继续有效。批准修订与执行验证分别登记。
+
+当前 CI 源码包含前端、后端、Compose、观测及 formal 五作业；formal 可由干净检出获得模型、配置及固定工具入口，参见 [形式化门禁](formal/README.md)。本地结果与 PR 当前提交及合并提交的远端 CI 分别登记，工作流存在不等于远端运行通过。
+
+当前 Compose 已承载 V1～V13 业务迁移和完整应用；根服务入口仍仅本机环回。用户已确定初次交付为 Windows 本机环回访问与专用学习数据，运行配置按目标环境维护。日结后 ADMIN 受控重开；备份/恢复及版本输入按 P4 实证与新部署检查分别记录。
+
+## 2026-10-01 接合实现与本地实测
+
+- 后端完整 verify 为 208／208，无失败、错误或跳过；WSL Node 22.23.2／npm 10.9.8 下前端 lint、223／223 和生产构建通过。
+- 当前共享模型两组安全检查、22 个独立出口探针以及真实 TLC 失败传播自检通过；结构及判定表 GAP=0。模型不覆盖全部身份、日期、通知或 AI 语义；映射与边界见 formal/README.md。
+- Compose／跨侧集成的旧 V9 断言已改为与源码迁移清单严格比较；迁移拒绝测试通过。观测入口补 Cookie 密钥并在写配置证据前脱敏。
+- Windows 原生运维入口与干净提交打包入口已实现，见 [交付运维](scripts/delivery/README.md)。独立 Linux 运维试验通过，未计为 Windows 原生通过。
+- 本地标准 Compose 首轮构建失败：容器中 Maven Wrapper 下载发生 SSLHandshakeException，三段 Compose 未完成。本地失败证据保留；远端 CI、独立 PR 审计、合并、目标机实测与 P5 另行登记。
 
 ## 所需环境
 
@@ -69,9 +90,9 @@ docker compose -p mls-dev up --build -d --wait --wait-timeout 180
 curl --fail http://localhost:8088/api/health
 ```
 
-打开 `http://localhost:8088` 查看状态页。只有前端端口发布到宿主机，且仅绑定 `127.0.0.1`；数据库与后端通过 Compose 内部服务名连接。`FRONTEND_PORT` 可修改前端宿主端口。Nginx 将 `/api/` 请求转发到 `backend:8080`，保留前缀，因此 `/api/health` 到达后端仍是 `/api/health`。
+打开 `http://localhost:8088` 进入应用。只有前端端口发布到宿主机，且仅绑定 `127.0.0.1`；数据库与后端通过 Compose 内部服务名连接。`FRONTEND_PORT` 可修改前端宿主端口。Nginx 将 `/api/` 请求转发到 `backend:8080`，保留前缀，因此 `/api/health` 到达后端仍是 `/api/health`。
 
-数据库使用 `pg_isready -h 127.0.0.1` 检查 TCP，避免将首次初始化期间仅监听 Unix socket 的临时服务误判为可供后端连接；后端在数据库健康后启动并执行 `db/infra-migration` 的 repeatable 占位脚本，健康检查为 `/api/health`；前端在后端健康后启动。占位脚本不创建业务表，也不占用正式 V1。镜像构建只编译打包，Testcontainers 测试由独立验证命令和 CI 后端作业执行。
+数据库使用 `pg_isready -h 127.0.0.1` 检查 TCP，避免将首次初始化期间仅监听 Unix socket 的临时服务误判为可供后端连接；后端在数据库健康后启动并执行业务 Flyway 迁移，当前为 V1～V13，健康检查为 `/api/health`；前端在后端健康后启动。旧工程骨架的占位说明属于历史。镜像构建只编译打包，Testcontainers 测试由独立验证命令和 CI 后端作业执行。
 
 停止开发环境并保留数据：
 
@@ -89,6 +110,10 @@ docker compose -p mls-dev down
 
 ## 修订记录
 
+- 2026-10-01：登记形式化／迁移／原生运维入口和本地测试，明确容器 TLS 失败及 Windows／远端未完成边界。
+
+
+- 2026-10-01：同步实际业务迁移、日结重开责任及新阶段 TLA/CI/PR 门禁，明确 TLA 尚未接入 CI；未修改工作流或执行新远端检查。
 - 2026-09-18：加固 B5 集成证据边界：敏感响应不再复制到证据，Cookie 与 Bearer 改由临时文件传给 curl，退出时显式扫描 ignored evidence。
 
 | 日期       | 内容                                                                                                                                                          |
@@ -108,3 +133,7 @@ docker compose -p mls-dev down
 > - [前端工程说明](library-frontend/README.md)
 > - [后端工程说明](library-server/README.md)
 > - [工程基础行动计划](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-B1-PLAN.md)
+>
+> - [限定范围交付与 DevOps 阶段规则](docs/00-governance/MLS-DOC-GOV-0008.md)。
+>
+> - [本轮文档维护与独立审计入口](artifacts/doc-maintenance-20261001/REPORT.md)。
