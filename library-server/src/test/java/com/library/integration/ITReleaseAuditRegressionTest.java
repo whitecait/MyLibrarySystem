@@ -133,6 +133,40 @@ class ITReleaseAuditRegressionTest {
         });
     }
 
+    @Test
+    void mixedBusinessPagesKeepEqualIdsFromDifferentOwnerSequences() {
+        long owner = account();
+        long title = jdbc.queryForObject("INSERT INTO book_title(isbn,title,price_cents) VALUES (?, 'mixed title', 100) RETURNING id",
+                Long.class, UUID.randomUUID().toString().replace("-", "").substring(0, 16));
+        long older = transaction(owner, title, "RETURNED");
+        long sharedId = jdbc.queryForObject("SELECT greatest((SELECT coalesce(max(id),0) FROM borrow_transaction), (SELECT coalesce(max(id),0) FROM fine)) + 1000", Long.class);
+        jdbc.queryForObject("SELECT setval(pg_get_serial_sequence('borrow_transaction','id'),?,false)", Long.class, sharedId);
+        jdbc.queryForObject("SELECT setval(pg_get_serial_sequence('fine','id'),?,false)", Long.class, sharedId);
+        long tx = transaction(owner, title, "LENT");
+        long fine = jdbc.queryForObject("INSERT INTO fine(reader_id,source_tx_id,amount_cents) VALUES (?,?,125) RETURNING id", Long.class, owner, tx);
+        assertThat(fine).isEqualTo(tx);
+        var first = value(business.myBusiness(new MyBusinessQuery.MyBusinessCriteria(null, null,
+                PageCursor.of(null, 1)), actor(owner)));
+        assertThat(first.items()).singleElement().satisfies(row -> {
+            assertThat(row.kind()).isEqualTo("FINE");assertThat(row.id()).isEqualTo(tx);
+        });
+        var second = value(business.myBusiness(new MyBusinessQuery.MyBusinessCriteria(null, null,
+                PageCursor.of(first.nextCursor(), 1)), actor(owner)));
+        assertThat(second.items()).singleElement().satisfies(row -> {
+            assertThat(row.kind()).isEqualTo("LOAN");assertThat(row.id()).isEqualTo(tx);
+        });
+        assertThat(second.nextCursor()).isNotNull();
+        var third = value(business.myBusiness(new MyBusinessQuery.MyBusinessCriteria(null, null,
+                PageCursor.of(second.nextCursor(), 1)), actor(owner)));
+        assertThat(third.items()).extracting(MyBusinessQuery.BusinessItem::id).containsExactly(older);
+        assertThat(third.nextCursor()).isNull();
+        assertThat(value(business.myBusiness(new MyBusinessQuery.MyBusinessCriteria(null, null,
+                PageCursor.of(Long.toString(tx), 1)), actor(owner))).items())
+                .extracting(MyBusinessQuery.BusinessItem::id).containsExactly(older);
+        assertThat(business.myBusiness(new MyBusinessQuery.MyBusinessCriteria(null, null,
+                PageCursor.of(tx + ":UNKNOWN", 1)), actor(owner))).isInstanceOf(ModuleResult.Rejected.class);
+    }
+
     private long account() {
         return jdbc.queryForObject("INSERT INTO account(username,password_hash,display_name,role) VALUES (?, 'test-hash', 'reader', 'READER') RETURNING id",
                 Long.class, UUID.randomUUID().toString().replace("-", "").substring(0, 16));

@@ -342,7 +342,7 @@ allowed = {"__name__", "job", "instance", "uri", "status", "method", "outcome", 
 unexpected = labels - allowed
 assert not unexpected, f"unexpected labels (cardinality risk): {unexpected}"
 # "/**" is Boot 3.5's uri tag for unmatched routes (404 no-handler); "UNKNOWN" is the pre-3.5 form.
-bad_uris = uris - {"/api/health", "/actuator/prometheus", "/actuator/health", "/**", "UNKNOWN", ""}
+bad_uris = uris - {"/api/v1/titles/{titleId}", "/api/health", "/actuator/prometheus", "/actuator/health", "/**", "UNKNOWN", ""}
 assert not bad_uris, f"unexpected uri values: {bad_uris}"
 print(f"label names ok: {sorted(labels)}")
 print(f"uri values ok: {sorted(u for u in uris if u)}")

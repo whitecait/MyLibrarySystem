@@ -14,6 +14,30 @@ from manage import digest,POSTGRES,invoke
 
 ROOT=Path(__file__).resolve().parents[2]
 
+def host_toolchain(maven):
+    configured = os.environ.get('JAVA_HOME')
+    if configured:
+        home = Path(configured).resolve()
+    else:
+        located = shutil.which('javac')
+        if not located: raise ValueError('Host backend build requires JDK 21')
+        home = Path(located).resolve().parent.parent
+    compiler = home/'bin'/('javac.exe' if os.name == 'nt' else 'javac')
+    if not compiler.is_file(): raise ValueError('Selected JAVA_HOME must contain the JDK compiler')
+    environment = dict(os.environ, JAVA_HOME=str(home))
+    environment['PATH'] = str(home/'bin') + os.pathsep + environment.get('PATH', '')
+    result = invoke([str(compiler), '-version'], capture_output=True, text=True, env=environment)
+    version = result.stdout + result.stderr
+    if not re.search(r'javac 21(?:\.|$)', version):
+        raise ValueError('Host backend build requires JDK 21 (not merely a JRE)')
+    actual = invoke([str(maven), '-B', '-ntp', '-version'], cwd=maven.parent,
+                    capture_output=True, text=True, env=environment)
+    maven_version = actual.stdout + actual.stderr
+    if not re.search(r'Java version: 21(?:\.|,|$)', maven_version):
+        raise ValueError('Maven must run on the selected JDK 21')
+    return environment, {'java_home': str(home), 'javac_version': version.strip(),
+                         'maven_version': maven_version.strip()}
+
 def build(output,commit,backend_build="container"):
     head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
     requested=subprocess.check_output(['git','rev-parse',commit],cwd=ROOT,text=True).strip()
@@ -33,16 +57,13 @@ def build(output,commit,backend_build="container"):
         context = source/directory
         if directory == 'library-server' and backend_build == 'host':
             # No arbitrary precompiled input is accepted: compile the archived Git source here.
-            compiler = invoke(['javac','-version'],capture_output=True,text=True)
-            version = compiler.stdout + compiler.stderr
-            if not re.search(r'javac 21(?:\.|$)',version):
-                raise ValueError('Host backend build requires JDK 21 (not merely a JRE)')
             maven = context/('mvnw.cmd' if os.name == 'nt' else 'mvnw')
-            invoke([str(maven),'-B','-ntp','compile','jar:jar','spring-boot:repackage'],cwd=context)
+            java_env, java_identity = host_toolchain(maven)
+            build_metadata.update(java_identity)
+            invoke([str(maven),'-B','-ntp','compile','jar:jar','spring-boot:repackage'],cwd=context,env=java_env)
             runtime = package/'runtime-build';runtime.mkdir()
             jar=context/'target/library-server-1.0.0-SNAPSHOT.jar'
             build_metadata['jar_sha256'] = digest(jar)
-            build_metadata['javac_version'] = version.strip()
             shutil.copyfile(jar,runtime/'app.jar')
             shutil.copyfile(source/'scripts/delivery/runtime.Dockerfile',runtime/'Dockerfile')
             # Generated target/ is excluded from the archived-source deliverable.
@@ -64,7 +85,6 @@ def build(output,commit,backend_build="container"):
     template=(source/'.env.example').read_text()
     # Ship a dedicated template, not a local private .env.
     template='\n'.join(line for line in template.splitlines() if not line.startswith(('BACKEND_IMAGE=','FRONTEND_IMAGE=')))+'\n'
-    import re
     template=re.sub(r'^DB_PASSWORD=.*$','DB_PASSWORD=REPLACE_WITH_RANDOM_VALUE',template,flags=re.M)
     template=re.sub(r'^AI_VISITOR_COOKIE_SIGNING_KEY=.*$','AI_VISITOR_COOKIE_SIGNING_KEY=REPLACE_WITH_64_HEX_CHARACTERS',template,flags=re.M)
     for key in ['AI_ENDPOINT_URL','AI_MODEL','AI_API_KEY']:
@@ -77,6 +97,7 @@ def build(output,commit,backend_build="container"):
     (config/'compose.images.yaml').write_text('services:\n  database:\n    image: '+POSTGRES+'\n')
     instructions=(source/'scripts/delivery/README.md').read_text()
     instructions=instructions.replace('../../docs/','source/docs/').replace('../../formal/','source/formal/').replace('../../ENGINEERING.md','source/ENGINEERING.md').replace('(manage.py)','(bin/manage.py)').replace('(package.py)','(source/scripts/delivery/package.py)')
+    instructions=instructions.replace('[本轮实际执行报告](../../artifacts/release-gates-20261001/REPORT.md)', '本轮实际执行报告由交付方另行提供（本地审计资产不随源码包提供）')
     (package/'README.md').write_text(instructions)
     (package/'release.json').write_text(json.dumps({'commit':head,'images':images,'ci':'Verify PR and merged-commit CI separately; package creation is not acceptance.','data':'Dedicated learning data; loopback only.','build':build_metadata},indent=2)+'\n')
     files=sorted(p for p in package.rglob('*') if p.is_file())

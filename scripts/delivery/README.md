@@ -18,7 +18,7 @@
 
 ## 标准容器下载受限时的源码构建
 
-本地容器 Maven Wrapper 下载已有 TLS 握手失败实证；标准容器方式仍为默认。--backend-build host 是显式替代入口：要求 JDK 21，从同一 git archive 源码在宿主执行 Maven 编译，再将新生成 JAR 复制进固定 JRE 镜像，记录编译器版本、JAR SHA-256、源码提交及镜像身份。它不接收任意外部 JAR；生成 target/ 不进入源码包。依赖仍可能需要网络，不声明冷缓存离线重建。Windows 执行机运行包内镜像时无需安装 JDK 或 Maven。
+本地容器 Maven Wrapper 下载已有 TLS 握手失败实证；标准容器方式仍为默认。--backend-build host 是显式替代入口：要求 JDK 21，从同一 git archive 源码在宿主执行 Maven 编译，再将新生成 JAR 复制进固定 JRE 镜像，从选定 JAVA_HOME 固定编译器与 Maven 环境，并核对及记录 Maven 的实际 Java 版本、编译器版本、JAR SHA-256、源码提交及镜像身份。它不接收任意外部 JAR；生成 target/ 不进入源码包。依赖仍可能需要网络，不声明冷缓存离线重建。Windows 执行机运行包内镜像时无需安装 JDK 或 Maven。
 
 ## 原生 Windows 操作
 
@@ -53,6 +53,8 @@ python bin/manage.py --project mls-p5-local restore C:/private/library-backup.sq
 恢复后需核对原有数据、登录与核心写入并检查日志。新包构建不会自动完成这些实际测试；新迁移不能假定可随旧镜像回退。
 
 ## 修订记录
+
+- 2026-10-02：增量复审修正 host 入口局部导入错误、绑定同一 JDK／Maven 身份并加入错配拒绝验证；包根目录不链接未随包提供的本地审计报告。
 
 - 2026-10-02：独立审计整改增加空备份拒绝；为已有容器下载限制提供同提交源码宿主编译方式，非任意 JAR 注入。实际包结果另行登记。
 

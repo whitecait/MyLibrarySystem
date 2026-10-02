@@ -63,6 +63,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: python3 scripts/test-check-migrations.py
       - run: python3 scripts/delivery/test_manage.py
+      - run: python3 scripts/delivery/test_package.py
       - name: Verify two empty volumes and retained-volume restart
         run: bash scripts/verify-compose.sh
         env:
