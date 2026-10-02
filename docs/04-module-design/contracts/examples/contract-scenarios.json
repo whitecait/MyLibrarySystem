@@ -22,7 +22,7 @@
     },
     {
       "id": "WALKIN-MIXED-BATCH",
-      "request": {"method": "POST", "path": "/api/v1/walk-in-loans", "headers": {"Idempotency-Key": "sample-walkin-1"}, "body": {"channel": "SELF_SERVICE", "items": [{"titleId": "2001", "copyId": "3001"}, {"titleId": "2002", "copyId": "3002"}]}},
+      "request": {"method": "POST", "path": "/api/v1/walk-in-loans", "headers": {"Idempotency-Key": "sample-walkin-1"}, "body": {"channel": "DESK", "items": [{"titleId": "2001", "copyId": "3001"}, {"titleId": "2002", "copyId": "3002"}]}},
       "response": {"httpStatus": 200, "body": {"code": "MLS-CIRC-S002", "message": "processed", "data": {"items": [{"itemRef": "3001", "txId": "4001", "outcome": "LENT"}, {"itemRef": "3002", "txId": null, "outcome": "REJECTED", "reasons": ["COPY_NOT_AVAILABLE"]}]}}},
       "expect": ["one-transaction-per-copy", "mixed-results-preserved"]
     },

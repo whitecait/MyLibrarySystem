@@ -33,7 +33,7 @@
             <td>{{ item.amountCents != null ? `${(item.amountCents / 100).toFixed(2)} 元` : '—' }}</td>
             <td class="row-actions">
               <el-button
-                v-if="item.kind === 'LOAN'"
+                v-if="item.kind === 'LOAN' && item.status === 'LENT'"
                 size="small"
                 :data-testid="`renew-${item.id}`"
                 :loading="renewState.status === 'loading'"
@@ -42,7 +42,7 @@
                 续借
               </el-button>
               <el-button
-                v-if="item.kind === 'RESERVATION'"
+                v-if="item.kind === 'RESERVATION' && CANCELLABLE_RESERVATION_STATUSES.has(item.status)"
                 size="small"
                 :data-testid="`cancel-${item.id}`"
                 :loading="cancelState.status === 'loading'"
@@ -72,6 +72,7 @@
         来自 AI 助手预填（草稿 {{ aiDraftId }}）；提交时走现行续借接口并重新鉴权，取消不会发送任何请求。
       </p>
       <el-input v-model="renewModalTxId" data-testid="renew-modal-tx-id" placeholder="交易号" />
+      <ErrorAlert v-if="modalRenewState.status === 'failure'" :failure="modalRenewState.failure" />
       <template #footer>
         <el-button data-testid="renew-modal-cancel" @click="closeRenewModal">取消</el-button>
         <el-button type="primary" data-testid="renew-modal-submit" :loading="modalRenewState.status === 'loading'" @click="submitModalRenew">
@@ -93,6 +94,7 @@ import { cancelReservation as cancelReservationRequest, renewLoan } from '../../
 import { AiAssistantView } from '../../ai'
 
 const items = ref([])
+const CANCELLABLE_RESERVATION_STATUSES = new Set(['AWAIT', 'CONFIRMED', 'WAITLIST', 'MANUAL_HANDLING'])
 const nextCursor = ref(null)
 const kind = ref('')
 const { state, run } = useApiRequest()
@@ -103,7 +105,7 @@ const { state: cancelState, run: runCancel } = useApiRequest()
 const renewModalVisible = ref(false)
 const renewModalTxId = ref('')
 const aiDraftId = ref(null)
-const { state: modalRenewState, run: runModalRenew } = useApiRequest()
+const { state: modalRenewState, run: runModalRenew, reset: resetModalRenew } = useApiRequest()
 
 async function load(cursor) {
   const envelope = await run(() => getMyBusiness({ kind: kind.value || undefined, cursor, limit: 20 }))
@@ -118,18 +120,21 @@ async function renew(item) {
 }
 
 async function cancelReservation(item) {
-  await runCancel(() => cancelReservationRequest({ txId: item.id }))
+  await runCancel(() => cancelReservationRequest({ txId: item.id, reason: '读者自助取消预约' }))
   if (cancelState.status === 'success') await load()
 }
 
 function applyAiPrefill(action) {
   if (action.actionType !== 'RENEW_LOAN') return
+  resetModalRenew()
+  renewResult.value = null
   renewModalTxId.value = action.prefill?.txId ?? ''
   aiDraftId.value = action.draftId
   renewModalVisible.value = true
 }
 
 function closeRenewModal() {
+  resetModalRenew()
   renewModalVisible.value = false
   aiDraftId.value = null
   renewModalTxId.value = ''

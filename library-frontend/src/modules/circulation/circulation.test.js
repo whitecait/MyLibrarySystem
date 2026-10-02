@@ -23,7 +23,7 @@ describe('circulation module facade', () => {
   it('replays the mixed walk-in batch with per-item outcomes', async () => {
     installMockTransport({ scenarioId: 'WALKIN-MIXED-BATCH' })
     const envelope = await circulation.createWalkInLoans({
-      channel: 'SELF_SERVICE',
+      channel: 'DESK',
       items: [
         { titleId: '2001', copyId: '3001' },
         { titleId: '2002', copyId: '3002' },
@@ -55,7 +55,7 @@ describe('circulation module facade', () => {
     await circulation.createCopy({ titleId: '2001', copyNo: 'C-003' })
     await circulation.listCopies({ titleId: '2001', status: 'AVAILABLE' })
     await circulation.changeCopyState({ copyId: '3001', action: 'MAINTAIN', version: 2 })
-    await circulation.cancelReservation({ txId: '4002' })
+    await circulation.cancelReservation({ txId: '4002', reason: '读者自助取消预约' })
     await circulation.claimPickup({ txId: '4002', copyId: '3001' })
     await circulation.applyManualAction({ txId: '4002', action: 'REJECT', reason: '条件不符' })
     await circulation.renewLoan({ txId: '4001' })
@@ -73,6 +73,8 @@ describe('circulation module facade', () => {
     ])
     expect(calls[2].options.params).toEqual({ copyId: '3001' })
     expect(calls[2].options.body).toEqual({ action: 'MAINTAIN', version: 2 })
+    expect(calls[3].options.params).toEqual({ txId: '4002' })
+    expect(calls[3].options.body).toEqual({ reason: '读者自助取消预约' })
     expect(calls[5].options.body).toEqual({ action: 'REJECT', reason: '条件不符' })
     expect(calls[7].options.query).toEqual({ from: '2026-09-16', to: '2026-09-20' })
   })

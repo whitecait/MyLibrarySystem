@@ -67,9 +67,10 @@ public class TitlesController {
     public ResponseEntity<Envelope> searchTitles(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) String availability,
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false) Integer limit) {
-        var result = maintenance.search(q, category, PageCursor.of(cursor, limit));
+        var result = maintenance.search(q, category, availability, PageCursor.of(cursor, limit));
         return responses.forResult(result, SuccessCodes.of("searchTitles"), page -> {
             var data = new java.util.LinkedHashMap<String, Object>();
             data.put("items", page.items().stream().map(s -> Map.of(

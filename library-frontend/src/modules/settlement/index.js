@@ -1,4 +1,4 @@
-// SETTLEMENT 模块公开请求接口：罚款、支付单、模拟结果调度、模拟回调、关闭、退款申请与对账。
+// SETTLEMENT 模块公开请求接口：罚款、支付单、模拟结果调度、模拟回调与关闭。
 import { apiRequest } from '@/platform/http'
 
 export function listFines({ readerId, status, cursor, limit } = {}, options = {}) {
@@ -11,6 +11,10 @@ export function createOrder({ fineId }, options = {}) {
 
 export function getOrder({ orderId }, options = {}) {
   return apiRequest('getOrder', { params: { orderId }, ...options })
+}
+
+export function listOccupiedOrders({ cursor, limit } = {}, options = {}) {
+  return apiRequest('listOccupiedOrders', { query: { cursor, limit }, ...options })
 }
 
 export function scheduleSimulatedPayment({ orderId, result, delayMs, duplicateCount } = {}, options = {}) {
@@ -29,14 +33,5 @@ export function closeOrder({ orderId }, options = {}) {
   return apiRequest('closeOrder', { params: { orderId }, ...options })
 }
 
-export function requestRefund({ orderId, amountCents, reason }, options = {}) {
-  return apiRequest('requestRefund', { params: { orderId }, body: { amountCents, reason }, ...options })
-}
-
-export function reconcileBusinessDate({ businessDate }, options = {}) {
-  return apiRequest('reconcileBusinessDate', { body: { businessDate }, ...options })
-}
-
 export { default as FineSettlementView } from './internal/FineSettlementView.vue'
 export { default as PaymentSimulatorView } from './internal/PaymentSimulatorView.vue'
-export { default as ReconciliationView } from './internal/ReconciliationView.vue'

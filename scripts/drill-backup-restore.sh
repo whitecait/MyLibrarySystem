@@ -736,6 +736,19 @@ compose_tgt exec -T database psql -U library -d library -q -c "ANALYZE;" >/dev/n
   || die "ANALYZE on restored target database failed"
 record_step "restore" "ok" "psql -v ON_ERROR_STOP=1 < <temporary restore input>" "restore completed without error; raw input is not retained; log: $(basename "$out_dir")/restore.log"
 
+# Optional data verification runs before application jobs or continuation writes.
+# The checker owns its expected fixture snapshot; an unset hook preserves the
+# original drill. A failure stops the drill before any continuation is claimed.
+if [[ -n "${RESTORE_DATA_CHECK_SCRIPT:-}" ]]; then
+  [[ -r "$RESTORE_DATA_CHECK_SCRIPT" ]] || die "RESTORE_DATA_CHECK_SCRIPT is not readable"
+  record_step "restore-data-check" "running" "bash $RESTORE_DATA_CHECK_SCRIPT" "before target application startup"
+  if ! RESTORE_SOURCE_PROJECT="$source_project" RESTORE_TARGET_PROJECT="$target_project" RESTORE_ENV_FILE="$env_file" \
+    bash "$RESTORE_DATA_CHECK_SCRIPT" > "$out_dir/restore-data-check.log" 2>&1; then
+    die "restored fixture data check failed; see restore-data-check.log"
+  fi
+  record_step "restore-data-check" "ok" "bash $RESTORE_DATA_CHECK_SCRIPT" "fixture counts and row relations verified before continuation"
+fi
+
 # 4) t_data — read back from the RESTORED target database as a raw epoch
 t_data_sql="SELECT extract(epoch FROM COALESCE(max(greatest(updated_at, created_at)), 'epoch'::timestamptz))::bigint FROM (SELECT updated_at, created_at FROM borrow_transaction UNION ALL SELECT updated_at, created_at FROM account UNION ALL SELECT updated_at, created_at FROM payment_order) t;"
 t_data_raw=""

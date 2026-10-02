@@ -1,8 +1,10 @@
 package com.library.circulation.internal.adapter.persistence;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 public interface ClosingStore {
+    Optional<LocalDate> firstUnclosedDateThrough(LocalDate inclusiveDate);
     void beginDraining(LocalDate date);
     String isolateAndRun(LocalDate date);
     Failure markFailure(LocalDate date);

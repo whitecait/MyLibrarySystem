@@ -62,6 +62,26 @@ describe('LibrarianDeskView', () => {
     expect(result.text()).toContain('4001')
   })
 
+  it('shows a non-date pickup routed to manual handling without claiming it completed', async () => {
+    const wrapper = await mountDesk({
+      fixtures: {
+        claimPickup: {
+          code: 'MLS-CIRC-S004',
+          message: 'manual handling',
+          data: { txId: '4002', outcome: 'MANUAL_HANDLING', status: 'MANUAL_HANDLING' },
+        },
+      },
+    })
+
+    await wrapper.find('[data-testid="claim-tx-id"]').setValue('4002')
+    await wrapper.find('[data-testid="claim-copy-id"]').setValue('3001')
+    await wrapper.find('[data-testid="claim-form"]').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="claim-manual"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="claim-success"]').exists()).toBe(false)
+  })
+
   it('applies a manual action with its reason', async () => {
     const wrapper = await mountDesk({ fixtures: sharedFixtures })
 

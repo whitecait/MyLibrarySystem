@@ -19,6 +19,7 @@ public enum StableErrorCode {
     // B1 登记扩展（需基线同步追认）：身份类目标不可见（读者/账户不存在），
     // MD-0003 未登记 404 码而 IT-ID-002 要求 404 不可见性呈现
     MLS_ID_007("MLS-ID-007", 404),
+    MLS_ID_008("MLS-ID-008", 429), // 注册会话请求额度耗尽
 
     // CATALOG
     MLS_CAT_001("MLS-CAT-001", 400), // 查询无效
@@ -51,6 +52,7 @@ public enum StableErrorCode {
     MLS_PAY_006("MLS-PAY-006", 403), // 非本地模拟器
     MLS_PAY_007("MLS-PAY-007", 422), // 退款金额/终态不合法
     MLS_PAY_008("MLS-PAY-008", 409), // 对账日期重复/冲突
+    MLS_PAY_009("MLS-PAY-009", 422), // 结算功能已下线
 
     // REVIEW
     MLS_REV_001("MLS-REV-001", 409), // 目标已变（共同样例 REVIEW-TARGET-CHANGED = 409）
@@ -70,6 +72,9 @@ public enum StableErrorCode {
 
     // IDEMPOTENCY
     MLS_IDEMP_002("MLS-IDEMP-002", 409), // 同键不同摘要
+
+    // HTTP request shape
+    MLS_API_001("MLS-API-001", 400), // 请求参数类型无效
 
     /**
      * 基础设施失败的 HTTP 500 信封码。MD-0003/0004 未为系统失败登记业务稳定码

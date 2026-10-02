@@ -1,14 +1,9 @@
 <template>
   <section class="walk-in-loans-view">
     <h1>现场借阅</h1>
-    <p>逐册提交借书意向；每一册独立判定，混合成败按册保留，副本可借状态不构成提交保证。</p>
+    <p>馆员在服务台逐册办理；每一册独立判定，混合成败按册保留，副本可借状态不构成提交保证。</p>
     <form data-testid="walkin-form" @submit.prevent="submit">
-      <select v-model="channel" data-testid="walkin-channel" aria-label="借阅渠道">
-        <option value="SELF_SERVICE">自助</option>
-        <option value="DESK">到台（馆员代借）</option>
-      </select>
       <el-input
-        v-if="channel === 'DESK'"
         v-model="readerId"
         data-testid="walkin-reader-id"
         placeholder="读者 ID"
@@ -64,23 +59,32 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRoute } from 'vue-router'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { createWalkInLoans } from '../index'
 
-const channel = ref('SELF_SERVICE')
-const readerId = ref('')
-const items = ref([{ titleId: '', copyId: '' }])
+const route = useRoute()
+
+function queryText(key) {
+  const value = route.query[key]
+  return typeof value === 'string' ? value : ''
+}
+
+const readerId = ref(queryText('readerId'))
+const aiDraftId = ref(queryText('aiDraftId'))
+const items = ref([{ titleId: queryText('titleId'), copyId: queryText('copyId') }])
 const batch = ref(null)
 const { state, run } = useApiRequest()
 
 async function submit() {
+  const headers = aiDraftId.value ? { 'Ai-Draft-Id': aiDraftId.value } : undefined
   const envelope = await run(() =>
     createWalkInLoans({
       readerId: readerId.value || undefined,
-      channel: channel.value,
+      channel: 'DESK',
       items: items.value.filter((item) => item.titleId && item.copyId),
-    }),
+    }, { headers }),
   )
   if (envelope) batch.value = envelope.data
 }

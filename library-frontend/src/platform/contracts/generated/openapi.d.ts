@@ -430,6 +430,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orders/occupied": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOccupiedOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orders/{orderId}": {
         parameters: {
             query?: never;
@@ -509,6 +525,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Retired refund operation
+         * @deprecated
+         * @description Refund requests are disabled for the current delivery scope. This endpoint always returns 422 MLS-PAY-009 and creates no review or refund record.
+         */
         post: operations["requestRefund"];
         delete?: never;
         options?: never;
@@ -525,6 +546,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Retired reconciliation operation
+         * @deprecated
+         * @description Reconciliation is disabled for the current delivery scope. This endpoint always returns 422 MLS-PAY-009 and creates no reconciliation record.
+         */
         post: operations["reconcileBusinessDate"];
         delete?: never;
         options?: never;
@@ -916,7 +942,7 @@ export interface components {
             readerId?: components["schemas"]["Id"];
             items: components["schemas"]["WalkInItem"][];
             /** @enum {string} */
-            channel: "SELF_SERVICE" | "DESK";
+            channel: "DESK";
         };
         LoanBatchItem: {
             itemRef: string;
@@ -983,6 +1009,10 @@ export interface components {
             amountCents: number;
             status: components["schemas"]["OrderStatus"];
             expiresAt: components["schemas"]["Timestamp"] | null;
+        };
+        OrderPageData: {
+            items: components["schemas"]["OrderData"][];
+            nextCursor: string | null;
         };
         SimulationRequest: {
             orderId: components["schemas"]["Id"];
@@ -1158,6 +1188,7 @@ export interface components {
         ClosingRunEnvelope: components["schemas"]["ClosingRunDataEnvelope"];
         ReopenedEnvelope: components["schemas"]["ReopenedDataEnvelope"];
         FinePageEnvelope: components["schemas"]["FinePageDataEnvelope"];
+        OrderPageEnvelope: components["schemas"]["OrderPageDataEnvelope"];
         OrderEnvelope: components["schemas"]["OrderDataEnvelope"];
         SimulationEnvelope: components["schemas"]["SimulationDataEnvelope"];
         CallbackEnvelope: components["schemas"]["CallbackDataEnvelope"];
@@ -1281,6 +1312,11 @@ export interface components {
             code: string;
             message: string;
             data: components["schemas"]["FinePageData"];
+        };
+        OrderPageDataEnvelope: {
+            code: string;
+            message: string;
+            data: components["schemas"]["OrderPageData"];
         };
         OrderDataEnvelope: {
             code: string;
@@ -1495,6 +1531,12 @@ export interface components {
             };
             content?: never;
         };
+        OrderPage: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content?: never;
+        };
         Order: {
             headers: {
                 [name: string]: unknown;
@@ -1579,9 +1621,11 @@ export interface components {
             };
             content?: never;
         };
-        /** @description OK */
+        /** @description OK; first request issues an HttpOnly registration session cookie */
         RegistrationResponse: {
             headers: {
+                /** @description mls_registration_session=<opaque>; Path=/; HttpOnly; SameSite=Strict; Secure on HTTPS */
+                "Set-Cookie"?: string;
                 [name: string]: unknown;
             };
             content: {
@@ -1778,6 +1822,15 @@ export interface components {
             };
         };
         /** @description OK */
+        OrderPageResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["OrderPageEnvelope"];
+            };
+        };
+        /** @description OK */
         OrderResponse: {
             headers: {
                 [name: string]: unknown;
@@ -1908,6 +1961,10 @@ export interface components {
     };
     parameters: {
         IdempotencyKey: string;
+        /** @description Server-issued HttpOnly SameSite=Strict browser-session cookie. Secure is set for HTTPS requests. The server issues it when absent and counts every registration request; clearing the browser session resets the session quota. */
+        RegistrationSessionCookie: string;
+        /** @description Book-level availability derived from copy state. */
+        Availability: "AVAILABLE" | "UNAVAILABLE" | "UNKNOWN";
         AccountId: components["schemas"]["Id"];
         ReaderId: components["schemas"]["Id"];
         TitleId: components["schemas"]["Id"];
@@ -2068,11 +2125,15 @@ export interface operations {
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path?: never;
-            cookie?: never;
+            cookie?: {
+                /** @description Server-issued HttpOnly SameSite=Strict browser-session cookie. Secure is set for HTTPS requests. The server issues it when absent and counts every registration request; clearing the browser session resets the session quota. */
+                mls_registration_session?: components["parameters"]["RegistrationSessionCookie"];
+            };
         };
         requestBody: components["requestBodies"]["Registration"];
         responses: {
             200: components["responses"]["Registration"];
+            429: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };
@@ -2180,6 +2241,8 @@ export interface operations {
             query?: {
                 q?: components["parameters"]["Search"];
                 category?: components["parameters"]["Category"];
+                /** @description Book-level availability derived from copy state. */
+                availability?: components["parameters"]["Availability"];
                 cursor?: components["parameters"]["Cursor"];
                 limit?: components["parameters"]["Limit"];
             };
@@ -2523,6 +2586,22 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    listOccupiedOrders: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["OrderPage"];
+            default: components["responses"]["Error"];
+        };
+    };
     getOrder: {
         parameters: {
             query?: never;
@@ -2588,33 +2667,27 @@ export interface operations {
     requestRefund: {
         parameters: {
             query?: never;
-            header: {
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
+            header?: never;
             path: {
                 orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
-        requestBody: components["requestBodies"]["Refund"];
+        requestBody?: never;
         responses: {
-            200: components["responses"]["ReviewReference"];
-            default: components["responses"]["Error"];
+            422: components["responses"]["Error"];
         };
     };
     reconcileBusinessDate: {
         parameters: {
             query?: never;
-            header: {
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: components["requestBodies"]["BusinessDate"];
+        requestBody?: never;
         responses: {
-            200: components["responses"]["Reconciliation"];
-            default: components["responses"]["Error"];
+            422: components["responses"]["Error"];
         };
     };
     listReviews: {

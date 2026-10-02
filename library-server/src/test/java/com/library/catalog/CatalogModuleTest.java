@@ -49,6 +49,8 @@ class CatalogModuleTest {
                 new TitleCriteria(null, null, PageCursor.of(null, 3)), Visibility.PUBLIC);
         assertThat(page.value().items()).isEmpty();
         assertThat(page.value().nextCursor()).isNull();
+        assertThat(codeOf(module.search(new TitleCriteria(null, null, "BROKEN", PageCursor.first()),
+                Visibility.PUBLIC))).isEqualTo("MLS-CAT-001");
     }
 
     // UT-CAT-002 书目维护 CREATE：成功投影、字段守卫、ISBN 冲突

@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class DeterministicPaymentSimulator implements PaymentSimulatorPort {
     private static final Logger log = LoggerFactory.getLogger(DeterministicPaymentSimulator.class);
 
+    // A fresh process namespace prevents sequence reuse from colliding with persisted callbacks.
+    private final String eventNamespace = UUID.randomUUID().toString();
     private final AtomicLong sequence = new AtomicLong();
     private final OrderCommands orders;
     private final AuditAppender audit;
@@ -63,7 +66,7 @@ public final class DeterministicPaymentSimulator implements PaymentSimulatorPort
     }
 
     private void deliver(long simulationId, Command c) {
-        String eventId = "sim-" + simulationId;
+        String eventId = "sim-" + eventNamespace + "-" + simulationId;
         int sends = 1 + c.duplicateCount();
         for (int i = 0; i < sends; i++) {
             try {

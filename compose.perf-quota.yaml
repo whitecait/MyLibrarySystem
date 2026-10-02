@@ -61,6 +61,8 @@ services:
       - RUN_ID
       - RETRIEVAL_SET
       - PROBE_READERS
+      - PERF_PERCENTILE_SCOPE
+      - K6_SUMMARY_TREND_STATS
     deploy:
       resources:
         limits:

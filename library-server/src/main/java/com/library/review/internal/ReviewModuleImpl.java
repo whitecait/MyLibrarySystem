@@ -10,6 +10,7 @@ import com.library.review.contract.ReviewCommand;
 import com.library.review.contract.ReviewRequesting;
 import com.library.review.internal.adapter.persistence.ReviewStore;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 
@@ -23,7 +24,7 @@ import java.util.Set;
 public class ReviewModuleImpl implements ReviewRequesting, com.library.review.contract.ReviewDeciding,
         com.library.review.contract.ReviewQuery {
 
-    private static final Set<String> TARGET_TYPES = Set.of("ACCOUNT_CHANGE", "CIRCULATION_EXCEPTION", "REFUND");
+    private static final Set<String> TARGET_TYPES = Set.of("ACCOUNT_CHANGE");
     private static final Set<String> ACCOUNT_CHANGE_ACTIONS = Set.of("SUSPEND", "RESTORE", "CHANGE_ROLE");
 
     private final ReviewStore reviews;
@@ -35,17 +36,19 @@ public class ReviewModuleImpl implements ReviewRequesting, com.library.review.co
     }
 
     @Override
+    @Transactional
     public ModuleResult<Review> request(ReviewCommand command) {
+        if ("REFUND".equals(command.targetType())) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_009.code(), "退款功能已下线");
+        }
+        if ("CIRCULATION_EXCEPTION".equals(command.targetType())) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_003.code(), "高风险流通例外功能已下线");
+        }
         if (command.targetType() == null || !TARGET_TYPES.contains(command.targetType())) {
             return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_003.code(), "不属高风险动作类型");
         }
         var action = command.action() == null ? "" : command.action();
-        var actionAllowed = switch (command.targetType()) {
-            case "ACCOUNT_CHANGE" -> ACCOUNT_CHANGE_ACTIONS.contains(action);
-            case "CIRCULATION_EXCEPTION" -> true; // B2 人工处置转复核的具体动作随批次登记
-            case "REFUND" -> true;                // 退款动作随 B3 退款发起登记
-            default -> false;
-        };
+        var actionAllowed = ACCOUNT_CHANGE_ACTIONS.contains(action);
         if (!actionAllowed) {
             return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_003.code(), "不属高风险动作");
         }
@@ -54,38 +57,59 @@ public class ReviewModuleImpl implements ReviewRequesting, com.library.review.co
         }
         var id = reviews.insert(new ReviewStore.NewReview(command.applicantId(), command.targetType(),
                 command.targetId(), action, command.payload(), command.reason(), command.targetVersion()));
-        audit.appendWithBusinessFact(AuditEventTypes.REVIEW_REQUESTED, command.applicantId(),
+        audit.appendRequiredWithBusinessFact(AuditEventTypes.REVIEW_REQUESTED, command.applicantId(),
                 new BusinessOutcome(id, "PENDING"));
         return ModuleResult.Accepted.of(new Review(id, "PENDING"));
     }
 
     @Override
+    @Transactional
     public ModuleResult<com.library.review.contract.ReviewDeciding.ReviewDecision> decide(
             com.library.review.contract.ReviewDeciding.DecideReview command,
             com.library.review.contract.ReviewedAction action) {
-        var review=reviews.byId(command.reviewId());
-        if(review.isEmpty() || !"PENDING".equals(review.get().decision()))
-            return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_002.code(),"复核不存在或已终结");
-        var row=review.get();
-        if("REJECTED".equals(command.decision())) {
-            reviews.decide(row.id(),row.version(),"REJECTED",command.decidedBy(),null);
-            audit.appendWithBusinessFact(AuditEventTypes.REVIEW_DECIDED, command.decidedBy(),
-                    new BusinessOutcome(row.id(),"REJECTED"));
-            return ModuleResult.Accepted.of(new com.library.review.contract.ReviewDeciding.ReviewDecision(row.id(),"REJECTED",null));
+        var review = reviews.byIdForUpdate(command.reviewId());
+        if (review.isEmpty() || !"PENDING".equals(review.get().decision())) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_002.code(), "复核不存在或已终结");
         }
-        if(!"APPROVED".equals(command.decision()))
-            return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_002.code(),"决定值无效");
-        if(action.currentVersion()!=row.targetVersion())
-            return ModuleResult.Rejected.conflict(StableErrorCode.MLS_REV_001.code(),action.currentVersion(),"目标已变化，请重新发起");
-        var executed=action.execute(row.payload());
-        if(executed instanceof ModuleResult.Rejected<String>)
-            return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_002.code(),"目标执行失败");
-        var outcome=((ModuleResult.Accepted<String>)executed).value();
-        if(!reviews.decide(row.id(),row.version(),"APPROVED",command.decidedBy(),outcome))
-            return ModuleResult.Rejected.conflict(StableErrorCode.MLS_REV_001.code(),row.version()+1,"复核已变化");
-        audit.appendWithBusinessFact(AuditEventTypes.REVIEW_DECIDED, command.decidedBy(),
-                new BusinessOutcome(row.id(),"APPROVED"));
-        return ModuleResult.Accepted.of(new com.library.review.contract.ReviewDeciding.ReviewDecision(row.id(),"APPROVED",outcome));
+        var row = review.get();
+        if ("REFUND".equals(row.targetType())) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_009.code(), "退款功能已下线");
+        }
+        if ("CIRCULATION_EXCEPTION".equals(row.targetType())) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_003.code(), "高风险流通例外功能已下线");
+        }
+        if ("REJECTED".equals(command.decision())) {
+            if (!reviews.decide(row.id(), row.version(), "REJECTED", command.decidedBy(), null)) {
+                throw new com.library.review.contract.ReviewExecutionAborted(StableErrorCode.MLS_REV_001.code(),
+                        "复核已变化", row.version() + 1);
+            }
+            audit.appendRequiredWithBusinessFact(AuditEventTypes.REVIEW_DECIDED, command.decidedBy(),
+                    new BusinessOutcome(row.id(), "REJECTED"));
+            return ModuleResult.Accepted.of(new com.library.review.contract.ReviewDeciding.ReviewDecision(
+                    row.id(), "REJECTED", null));
+        }
+        if (!"APPROVED".equals(command.decision())) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_REV_002.code(), "决定值无效");
+        }
+        var currentVersion = action.currentVersion();
+        if (currentVersion != row.targetVersion()) {
+            return ModuleResult.Rejected.conflict(StableErrorCode.MLS_REV_001.code(), currentVersion,
+                    "目标已变化，请重新发起");
+        }
+        var executed = action.execute(row.payload());
+        if (executed instanceof ModuleResult.Rejected<String> rejected) {
+            var reason = rejected.reasons().isEmpty() ? "目标执行失败" : rejected.reasons().getFirst();
+            throw new com.library.review.contract.ReviewExecutionAborted(rejected.code(), reason, null);
+        }
+        var outcome = ((ModuleResult.Accepted<String>) executed).value();
+        if (!reviews.decide(row.id(), row.version(), "APPROVED", command.decidedBy(), outcome)) {
+            throw new com.library.review.contract.ReviewExecutionAborted(StableErrorCode.MLS_REV_001.code(),
+                    "复核已变化", row.version() + 1);
+        }
+        audit.appendRequiredWithBusinessFact(AuditEventTypes.REVIEW_DECIDED, command.decidedBy(),
+                new BusinessOutcome(row.id(), "APPROVED"));
+        return ModuleResult.Accepted.of(new com.library.review.contract.ReviewDeciding.ReviewDecision(
+                row.id(), "APPROVED", outcome));
     }
 
     @Override

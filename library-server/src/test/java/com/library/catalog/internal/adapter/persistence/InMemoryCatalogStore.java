@@ -45,11 +45,12 @@ public class InMemoryCatalogStore implements CatalogStore {
     }
 
     @Override
-    public List<TitleRow> searchByQuery(String q, String category, Double afterSimilarity,
-                                        long afterId, int limit) {
+    public List<TitleRow> searchByQuery(String q, String category, String availability,
+                                        Double afterSimilarity, long afterId, int limit) {
         return titles.values().stream()
                 .filter(t -> t.title().contains(q) || (t.authorsJoined() != null && t.authorsJoined().contains(q)))
                 .filter(t -> category == null || category.equals(t.category()))
+                .filter(t -> availability == null || availability.equals(t.availability()))
                 .filter(t -> afterSimilarity == null || t.id() > afterId)
                 .sorted(java.util.Comparator.comparingLong(TitleRow::id))
                 .limit(limit)
@@ -57,10 +58,11 @@ public class InMemoryCatalogStore implements CatalogStore {
     }
 
     @Override
-    public List<TitleRow> list(String category, long afterId, int limit) {
+    public List<TitleRow> list(String category, String availability, long afterId, int limit) {
         return titles.values().stream()
                 .filter(t -> t.id() > afterId)
                 .filter(t -> category == null || category.equals(t.category()))
+                .filter(t -> availability == null || availability.equals(t.availability()))
                 .sorted(java.util.Comparator.comparingLong(TitleRow::id))
                 .limit(limit)
                 .toList();

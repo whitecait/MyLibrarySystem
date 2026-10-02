@@ -1,6 +1,10 @@
 package com.library.settlement;
 
 import com.library.contract.ModuleResult;
+import com.library.contract.model.AccountId;
+import com.library.contract.model.PageCursor;
+import com.library.contract.model.Role;
+import com.library.contract.security.ActorContext;
 import com.library.contract.time.FixedBusinessClock;
 import com.library.settlement.contract.FineCommands;
 import com.library.settlement.contract.OrderCommands;
@@ -56,6 +60,44 @@ class SettlementModuleTest {
         assertRejected(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId,7)),"MLS-PAY-001");
     }
 
+    @Test void utPay012_occupiedOrderQueryIsReaderScopedAndExcludesTerminalOrders() {
+        var fixture = fixture();
+        var reader = new ActorContext(AccountId.of(7), Role.READER, Instant.parse("2026-09-17T01:00:00Z"));
+        var otherReader = new ActorContext(AccountId.of(8), Role.READER, Instant.parse("2026-09-17T01:00:00Z"));
+        var admin = new ActorContext(AccountId.of(9), Role.ADMIN, Instant.parse("2026-09-17T01:00:00Z"));
+
+        var failedOrder = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId, 7)));
+        fixture.module.applyCallback(new OrderCommands.PaymentCallback(
+                "evt-owned-failure", failedOrder.orderId(), "FAILURE", fixture.clock.now()));
+
+        var secondFine = fineFor(fixture.module, 42, 7);
+        var secondOccupied = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(secondFine, 7)));
+        var closedFine = fineFor(fixture.module, 43, 7);
+        var closedOrder = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(closedFine, 7)));
+        fixture.module.closeOrder(new OrderCommands.CloseOrder(closedOrder.orderId(), reader));
+        var paidFine = fineFor(fixture.module, 44, 7);
+        var paidOrder = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(paidFine, 7)));
+        fixture.module.applyCallback(new OrderCommands.PaymentCallback(
+                "evt-owned-paid", paidOrder.orderId(), "SUCCESS", fixture.clock.now()));
+
+        var otherFine = fineFor(fixture.module, 45, 8);
+        var otherOrder = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(otherFine, 8)));
+
+        var firstPage = accepted(fixture.module.occupiedOrders(PageCursor.of(null, 1), reader));
+        assertThat(firstPage.items()).extracting(OrderCommands.Order::orderId)
+                .containsExactly(failedOrder.orderId());
+        assertThat(firstPage.nextCursor()).isNotNull();
+        var secondPage = accepted(fixture.module.occupiedOrders(PageCursor.of(firstPage.nextCursor(), 1), reader));
+        assertThat(secondPage.items()).extracting(OrderCommands.Order::orderId)
+                .containsExactly(secondOccupied.orderId());
+        assertThat(secondPage.nextCursor()).isNull();
+
+        var otherPage = accepted(fixture.module.occupiedOrders(PageCursor.first(), otherReader));
+        assertThat(otherPage.items()).extracting(OrderCommands.Order::orderId)
+                .containsExactly(otherOrder.orderId());
+        assertRejected(fixture.module.occupiedOrders(PageCursor.first(), admin), "MLS-ID-005");
+    }
+
     @Test void utPay005_duplicateCallbackReturnsFirstOutcome() {
         var fixture=fixture(); var order=accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId,7)));
         var command=new OrderCommands.PaymentCallback("evt-d",order.orderId(),"SUCCESS",fixture.clock.now());
@@ -70,25 +112,83 @@ class SettlementModuleTest {
 
     @Test void utPay007_closedOrderReleasesFineForSuccessor() {
         var fixture=fixture(); var first=accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId,7)));
-        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(first.orderId()))).status()).isEqualTo("CLOSED");
+        var owner = new ActorContext(AccountId.of(7), Role.READER, fixture.clock.now());
+        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(first.orderId(), owner))).status()).isEqualTo("CLOSED");
         assertThat(accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId,7))).orderId()).isNotEqualTo(first.orderId());
     }
 
     @Test void utPay008_paidOrderAbsorbsLateClose() {
         var fixture=fixture(); var order=accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId,7)));
         fixture.module.applyCallback(new OrderCommands.PaymentCallback("evt-p",order.orderId(),"SUCCESS",fixture.clock.now()));
-        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(order.orderId()))).status()).isEqualTo("PAID");
+        var owner = new ActorContext(AccountId.of(7), Role.READER, fixture.clock.now());
+        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(order.orderId(), owner))).status()).isEqualTo("PAID");
     }
 
-    @Test void utPay009_refundRejectsUnpaidOrExcessAmount() {
-        var fixture=fixture(); var order=accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId,7)));
-        assertRejected(fixture.module.refund(new RefundCommands.ApprovedRefundCommand(order.orderId(),1201,4)),"MLS-PAY-007");
+    @Test
+    void utPay013_closeAuthorizationPrecedesMutationAndTerminalReplay() {
+        var fixture = fixture();
+        var owner = new ActorContext(AccountId.of(7), Role.READER, fixture.clock.now());
+        var otherReader = new ActorContext(AccountId.of(8), Role.READER, fixture.clock.now());
+        var librarian = new ActorContext(AccountId.of(9), Role.LIBRARIAN, fixture.clock.now());
+        var admin = new ActorContext(AccountId.of(10), Role.ADMIN, fixture.clock.now());
+        var system = new ActorContext(AccountId.of(11), Role.SYSTEM, fixture.clock.now());
+
+        var first = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId, 7)));
+        assertRejected(fixture.module.closeOrder(new OrderCommands.CloseOrder(first.orderId(), otherReader)),
+                "MLS-PAY-005");
+        assertThat(accepted(fixture.module.order(first.orderId(), owner)).status()).isEqualTo("OCCUPIED");
+        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(first.orderId(), owner))).status())
+                .isEqualTo("CLOSED");
+        assertRejected(fixture.module.closeOrder(new OrderCommands.CloseOrder(first.orderId(), otherReader)),
+                "MLS-PAY-005");
+        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(first.orderId(), owner))).status())
+                .isEqualTo("CLOSED");
+
+        var librarianOrder = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId, 7)));
+        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(librarianOrder.orderId(), librarian)))
+                .status()).isEqualTo("CLOSED");
+        var adminOrder = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId, 7)));
+        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(adminOrder.orderId(), admin)))
+                .status()).isEqualTo("CLOSED");
+        var systemOrder = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId, 7)));
+        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(systemOrder.orderId(), system)))
+                .status()).isEqualTo("CLOSED");
+
+        var paidOrder = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId, 7)));
+        fixture.module.applyCallback(new OrderCommands.PaymentCallback(
+                "evt-pay-before-close-check", paidOrder.orderId(), "SUCCESS", fixture.clock.now()));
+        assertRejected(fixture.module.closeOrder(new OrderCommands.CloseOrder(paidOrder.orderId(), otherReader)),
+                "MLS-PAY-005");
+        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(paidOrder.orderId(), owner)))
+                .status()).isEqualTo("PAID");
+
+        var explicitFine = fineFor(fixture.module, 46, 7);
+        var explicitActorOrder = accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(explicitFine, 7)));
+        assertRejected(fixture.module.closeOrder(new OrderCommands.CloseOrder(explicitActorOrder.orderId(), null)),
+                "MLS-ID-001");
+        assertThat(accepted(fixture.module.closeOrder(new OrderCommands.CloseOrder(explicitActorOrder.orderId(), owner)))
+                .status()).isEqualTo("CLOSED");
     }
 
-    @Test void utPay010_approvedRefundRequiresPaidOrder() {
-        var fixture=fixture(); var order=accepted(fixture.module.createOrder(new OrderCommands.CreateOrder(fixture.fineId,7)));
-        fixture.module.applyCallback(new OrderCommands.PaymentCallback("evt-r",order.orderId(),"SUCCESS",fixture.clock.now()));
-        assertThat(accepted(fixture.module.refund(new RefundCommands.ApprovedRefundCommand(order.orderId(),500,4))).status()).isEqualTo("APPROVED");
+    @Test void utPay009_refundCommandIsDisabledWithoutStoreEffects() {
+        var store = new InMemorySettlementStore();
+        var module = new SettlementModuleImpl(store,
+                new FixedBusinessClock(Instant.parse("2026-09-17T01:00:00Z")));
+        var before = store.refundCount();
+
+        assertRejected(module.refund(new RefundCommands.ApprovedRefundCommand(1, 500, 4)), "MLS-PAY-009");
+        assertThat(store.refundCount()).isEqualTo(before);
+    }
+
+    @Test void utPay010_reconciliationCommandIsDisabledWithoutStoreEffects() {
+        var store = new InMemorySettlementStore();
+        var module = new SettlementModuleImpl(store,
+                new FixedBusinessClock(Instant.parse("2026-09-17T01:00:00Z")));
+        var before = store.reconciliationCount();
+
+        assertRejected(module.reconcile(new ReconciliationCommands.ReconciliationCommand(
+                BusinessDate.parse("2026-09-17"))), "MLS-PAY-009");
+        assertThat(store.reconciliationCount()).isEqualTo(before);
     }
 
     @Test void utPay011_fineListUsesPublicStatusVocabulary() {
@@ -97,18 +197,18 @@ class SettlementModuleTest {
         assertThat(page.items()).singleElement().extracting(com.library.settlement.contract.FineQuery.FineView::status).isEqualTo("UNPAID");
     }
 
-    @Test void utPay012_reconciliationIsUniquePerBusinessDate() {
-        var fixture=fixture(); var command=new ReconciliationCommands.ReconciliationCommand(BusinessDate.parse("2026-09-17"));
-        assertThat(fixture.module.reconcile(command)).isInstanceOf(ModuleResult.Accepted.class);
-        assertRejected(fixture.module.reconcile(command),"MLS-PAY-008");
-    }
-
     private Fixture fixture() {
         var store=new InMemorySettlementStore();
         var clock=new FixedBusinessClock(Instant.parse("2026-09-17T01:00:00Z"));
         var module=new SettlementModuleImpl(store,clock);
         var fine=accepted(module.createFine(new FineCommands.FineFromReturn(41,7,MoneyCents.of(1200),"逾期")));
         return new Fixture(module,clock,fine.fineId());
+    }
+
+    private static com.library.settlement.contract.model.FineId fineFor(
+            SettlementModuleImpl module, long sourceTxId, long readerId) {
+        return accepted(module.createFine(new FineCommands.FineFromReturn(
+                sourceTxId, readerId, MoneyCents.of(1200), "逾期"))).fineId();
     }
 
     @SuppressWarnings("unchecked") private static <T> T accepted(ModuleResult<T> result) { return ((ModuleResult.Accepted<T>)result).value(); }

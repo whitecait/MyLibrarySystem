@@ -45,30 +45,41 @@ public class PostgresCatalogStore implements CatalogStore {
     }
 
     @Override
-    public List<TitleRow> searchByQuery(String q, String category, Double afterSimilarity,
-                                        long afterId, int limit) {
+    public List<TitleRow> searchByQuery(String q, String category, String availability,
+                                        Double afterSimilarity, long afterId, int limit) {
         var sql = TITLE_WITH_AVAILABILITY.replace("FROM book_title t",
                         "     , similarity(t.title, ?) AS sim\nFROM book_title t") + """
                 WHERE (t.title % ? OR t.title ILIKE '%' || ? || '%')
                   AND (?::text IS NULL OR t.category = ?::text)
+                  AND (?::text IS NULL OR CASE
+                       WHEN EXISTS (SELECT 1 FROM book_copy c WHERE c.title_id = t.id
+                                      AND c.status = 'SHELF_READY') THEN 'AVAILABLE'
+                       WHEN EXISTS (SELECT 1 FROM book_copy c WHERE c.title_id = t.id) THEN 'UNAVAILABLE'
+                       ELSE 'UNKNOWN' END = ?::text)
                   AND ((?::float8 IS NULL AND t.id > ?::bigint)
                        OR (?::float8 IS NOT NULL
                            AND (similarity(t.title, ?), t.id) < (?::float8, ?::bigint)))
                 ORDER BY sim DESC NULLS LAST, t.id ASC
                 LIMIT ?
                 """;
-        return jdbc.query(sql, ROW, q, q, q, category, category,
+        return jdbc.query(sql, ROW, q, q, q, category, category, availability, availability,
                 afterSimilarity, afterId, afterSimilarity, q, afterSimilarity, afterId, limit);
     }
 
     @Override
-    public List<TitleRow> list(String category, long afterId, int limit) {
+    public List<TitleRow> list(String category, String availability, long afterId, int limit) {
         var sql = TITLE_WITH_AVAILABILITY + """
-                WHERE (?::text IS NULL OR t.category = ?::text) AND t.id > ?
+                WHERE (?::text IS NULL OR t.category = ?::text)
+                  AND (?::text IS NULL OR CASE
+                       WHEN EXISTS (SELECT 1 FROM book_copy c WHERE c.title_id = t.id
+                                      AND c.status = 'SHELF_READY') THEN 'AVAILABLE'
+                       WHEN EXISTS (SELECT 1 FROM book_copy c WHERE c.title_id = t.id) THEN 'UNAVAILABLE'
+                       ELSE 'UNKNOWN' END = ?::text)
+                  AND t.id > ?
                 ORDER BY t.id ASC
                 LIMIT ?
                 """;
-        return jdbc.query(sql, ROW, category, category, afterId, limit);
+        return jdbc.query(sql, ROW, category, category, availability, availability, afterId, limit);
     }
 
     @Override

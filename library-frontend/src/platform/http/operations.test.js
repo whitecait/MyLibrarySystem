@@ -1,17 +1,21 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import process from 'node:process'
 import { describe, expect, it } from 'vitest'
+import { parse } from 'yaml'
 
 import { BASE_PATH, buildPath, buildUrl, getOperation, listOperations, matchOperation } from './operations'
 
 describe('generated operations manifest', () => {
-  it('covers 45 unique operations with 31 idempotent writes', () => {
+  it('covers 46 unique operations with 29 idempotent writes', () => {
     const operations = listOperations()
-    expect(operations).toHaveLength(45)
-    expect(new Set(operations.map((operation) => operation.operationId)).size).toBe(45)
-    expect(operations.filter((operation) => operation.requiresIdempotencyKey)).toHaveLength(31)
+    expect(operations).toHaveLength(46)
+    expect(new Set(operations.map((operation) => operation.operationId)).size).toBe(46)
+    expect(operations.filter((operation) => operation.requiresIdempotencyKey)).toHaveLength(29)
     expect(operations.filter((operation) => operation.method === 'GET' && operation.requiresIdempotencyKey)).toHaveLength(0)
   })
 
-  it('marks exactly the seven public operations from the contract', () => {
+  it('marks exactly the nine anonymous operations from the contract', () => {
     const publicIds = listOperations()
       .filter((operation) => operation.public)
       .map((operation) => operation.operationId)
@@ -22,11 +26,41 @@ describe('generated operations manifest', () => {
         'getReadingContent',
         'getReservationCalendar',
         'getTitle',
+        'reconcileBusinessDate',
         'registerReader',
+        'requestRefund',
         'searchTitles',
         'startAiSession',
       ].sort(),
     )
+  })
+
+  it('keeps retired settlement endpoints marked as unsupported compatibility paths', () => {
+    const contract = parse(readFileSync(
+      resolve(process.cwd(), '../docs/04-module-design/contracts/http/openapi.yaml'),
+      'utf8',
+    ))
+    const retiredOperations = [
+      { operationId: 'requestRefund', route: '/orders/{orderId}/refunds' },
+      { operationId: 'reconcileBusinessDate', route: '/reconciliations' },
+    ]
+
+    for (const { operationId, route } of retiredOperations) {
+      const contractOperation = contract.paths[route].post
+      expect(contractOperation).toMatchObject({
+        deprecated: true,
+        security: [],
+        'x-permission': 'UNSUPPORTED',
+      })
+      expect(contractOperation.parameters ?? []).toEqual([])
+
+      expect(getOperation(operationId)).toMatchObject({
+        deprecated: true,
+        permission: 'UNSUPPORTED',
+        public: true,
+        requiresIdempotencyKey: false,
+      })
+    }
   })
 
   it('carries permission metadata for every operation', () => {

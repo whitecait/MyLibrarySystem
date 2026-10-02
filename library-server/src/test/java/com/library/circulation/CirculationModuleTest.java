@@ -18,6 +18,7 @@ import com.library.circulation.internal.CirculationModuleImpl;
 import com.library.circulation.internal.adapter.persistence.InMemoryCirculationStore;
 import com.library.contract.audit.RecordingAuditAppender;
 import com.library.contract.outbox.RecordingOutboxAppender;
+import com.library.contract.time.FixedBusinessClock;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -33,10 +34,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class CirculationModuleTest {
 
+    private static final LocalDate TODAY = LocalDate.of(2026, 9, 27);
+
     private final InMemoryCirculationStore store = new InMemoryCirculationStore();
     private final RecordingOutboxAppender outbox = new RecordingOutboxAppender();
     private final RecordingAuditAppender audit = new RecordingAuditAppender();
-    private final CirculationModuleImpl module = new CirculationModuleImpl(store, outbox, audit);
+    private final CirculationModuleImpl module = new CirculationModuleImpl(store, outbox, audit,
+            new FixedBusinessClock(Instant.parse("2026-09-27T12:00:00Z")));
 
     private final ActorContext reader = new ActorContext(AccountId.of(1L), Role.READER,
             Instant.parse("2026-09-16T08:00:00Z"));
@@ -47,6 +51,7 @@ class CirculationModuleTest {
     private long shelvedCopy(String copyNo) {
         var copyId = ((ModuleResult.Accepted<CopyCommands.CopySnapshot>) module.createCopy(
                 new CopyCommands.CreateCopy(title, copyNo, librarian))).value().copyId().value();
+        store.setLoanEligibleOnForTest(copyId, TODAY);
         module.maintainCopy(new CopyCommands.MaintainCopy(CopyId.of(copyId), "SHELVE", 0, librarian));
         return copyId;
     }
@@ -78,6 +83,49 @@ class CirculationModuleTest {
         assertThat(stale.currentVersion()).isEqualTo(removed.version());
     }
 
+    @Test
+    void copyStatusFilterAcceptsApiStatesAndRejectsDatabaseOrUnknownValues() {
+        long pending = ((ModuleResult.Accepted<CopyCommands.CopySnapshot>) module.createCopy(
+                new CopyCommands.CreateCopy(title, "FILTER-PENDING", librarian))).value().copyId().value();
+        shelvedCopy("FILTER-RESERVED");
+        long reserved = ((ModuleResult.Accepted<ReservationCommands.Reservation>) module.reserve(
+                command(reader, title, false))).value().txId().value();
+        long available = shelvedCopy("FILTER-AVAILABLE");
+        long borrowedCopy = shelvedCopy("FILTER-BORROWED");
+        module.lend(new LoanCommands.WalkInLoanCommand(3L,
+                List.of(new LoanCommands.WalkInItem(title, CopyId.of(borrowedCopy))), "DESK", librarian));
+        long maintenance = shelvedCopy("FILTER-MAINTENANCE");
+        var maintenanceSnapshot = store.copyById(maintenance).orElseThrow();
+        module.maintainCopy(new CopyCommands.MaintainCopy(CopyId.of(maintenance), "MAINTAIN",
+                maintenanceSnapshot.version(), librarian));
+        long removed = shelvedCopy("FILTER-REMOVED");
+        var removedSnapshot = store.copyById(removed).orElseThrow();
+        module.maintainCopy(new CopyCommands.MaintainCopy(CopyId.of(removed), "REMOVE",
+                removedSnapshot.version(), librarian));
+
+        for (var expected : List.of(
+                new StatusExpectation("PENDING_SHELVING", pending),
+                new StatusExpectation("AVAILABLE", available),
+                new StatusExpectation("RESERVED", store.txById(reserved).orElseThrow().copyId()),
+                new StatusExpectation("BORROWED", borrowedCopy),
+                new StatusExpectation("MAINTENANCE", maintenance),
+                new StatusExpectation("REMOVED", removed))) {
+            var page = (ModuleResult.Accepted<CopyCommands.CopyPage>) module.listCopies(
+                    new CopyCommands.CopyCriteria(title, expected.status(),
+                            com.library.contract.model.PageCursor.first()));
+            assertThat(page.value().items()).extracting(item -> item.copyId().value())
+                    .containsExactly(expected.copyId());
+        }
+
+        for (var invalid : List.of("SHELF_READY", "UNKNOWN")) {
+            var rejected = (ModuleResult.Rejected<CopyCommands.CopyPage>) module.listCopies(
+                    new CopyCommands.CopyCriteria(title, invalid, com.library.contract.model.PageCursor.first()));
+            assertThat(rejected.code()).isEqualTo("MLS-CIRC-001");
+        }
+    }
+
+    private record StatusExpectation(String status, long copyId) {}
+
     // UT-CIRC-003/004 预约：可用绑定 CONFIRMED、重复预约 003、候补两段式（场景 3）
     @Test
     void utCirc003_004_reservationAndWaitlistTwoPhase() {
@@ -90,6 +138,9 @@ class CirculationModuleTest {
         assertThat(store.copyById(copyId).orElseThrow().status()).isEqualTo("RESERVED");
         // 同读者同书目重复预约 → 003（BR-0020）
         assertThat(codeOf(module.reserve(command(reader, title, false)))).isEqualTo("MLS-CIRC-003");
+
+        // 已保留副本外还有 PENDING_SHELVING 馆藏，满足书目可预约守卫。
+        module.createCopy(new CopyCommands.CreateCopy(title, "C-10-PENDING", librarian));
 
         // 另一读者预约无可用副本 → 待确认且无业务事实（txId=null）
         var other = readerOf(3L);
@@ -113,7 +164,7 @@ class CirculationModuleTest {
                 new LoanCommands.WalkInLoanCommand(1L,
                         List.of(new LoanCommands.WalkInItem(title, CopyId.of(availableCopy)),
                                 new LoanCommands.WalkInItem(emptyTitle, null)),
-                        "SELF_SERVICE", reader))).value();
+                        "DESK", librarian))).value();
         assertThat(batch.items().get(0).outcome()).isEqualTo("LENT");
         assertThat(batch.items().get(0).txId()).isNotNull();
         assertThat(batch.items().get(1).outcome()).isEqualTo("REJECTED");
@@ -122,12 +173,29 @@ class CirculationModuleTest {
         assertThat(store.copyById(availableCopy).orElseThrow().status()).isEqualTo("LENT");
     }
 
+    @Test
+    void readerCannotInvokeInternalWalkInCommand() {
+        var copyId = shelvedCopy("C-20-READER-DENIED");
+        var deniedSelfService = module.lend(new LoanCommands.WalkInLoanCommand(1L,
+                List.of(new LoanCommands.WalkInItem(title, CopyId.of(copyId))), "SELF_SERVICE", reader));
+        var deniedDesk = module.lend(new LoanCommands.WalkInLoanCommand(1L,
+                List.of(new LoanCommands.WalkInItem(title, CopyId.of(copyId))), "DESK", reader));
+
+        assertThat(deniedSelfService).isInstanceOf(ModuleResult.Rejected.class);
+        assertThat(((ModuleResult.Rejected<?>) deniedSelfService).code()).isEqualTo("MLS-ID-005");
+        assertThat(deniedDesk).isInstanceOf(ModuleResult.Rejected.class);
+        assertThat(((ModuleResult.Rejected<?>) deniedDesk).code()).isEqualTo("MLS-ID-005");
+        assertThat(store.copyById(copyId).orElseThrow().status()).isEqualTo("SHELF_READY");
+        assertThat(store.hasOpenTransactionForReaderTitle(1L, title.value())).isFalse();
+    }
+
     // UT-CIRC-007/008 取书：CONFIRMED 绑定一致才借出；副本不一致 004（X4 提交重验）
     @Test
     void utCirc007_008_claimRevalidatesBinding() {
         var copyId = shelvedCopy("C-30");
         var reserved = ((ModuleResult.Accepted<ReservationCommands.Reservation>) module.reserve(
-                command(reader, title, false))).value();
+                new ReservationCommands.ReservationCommand(reader.accountId().value(), title,
+                        BusinessDate.of(TODAY), "AM", "DESK", false, reader))).value();
         // 绑定不一致的副本 → 004
         assertThat(codeOf(module.claim(new LoanCommands.ClaimPickup(reserved.txId(),
                 CopyId.of(999999), librarian)))).isEqualTo("MLS-CIRC-004");
@@ -139,11 +207,35 @@ class CirculationModuleTest {
                 CopyId.of(copyId), librarian)))).isEqualTo("MLS-CIRC-004");
     }
 
+    @Test
+    void utCirc007_nonReservationDatePickupRoutesToManualAndKeepsBoundCopy() {
+        var boundCopyId = shelvedCopy("C-31");
+        var reservation = ((ModuleResult.Accepted<ReservationCommands.Reservation>) module.reserve(
+                command(reader, title, false))).value();
+        var spareCopyId = shelvedCopy("C-31-SPARE");
+
+        var routed = ((ModuleResult.Accepted<Transaction>) module.claim(
+                new LoanCommands.ClaimPickup(reservation.txId(), CopyId.of(boundCopyId), librarian))).value();
+        assertThat(routed.status()).isEqualTo("MANUAL_HANDLING");
+        assertThat(store.txById(reservation.txId().value()).orElseThrow().copyId()).isEqualTo(boundCopyId);
+        assertThat(store.copyById(boundCopyId).orElseThrow().status()).isEqualTo("RESERVED");
+        assertThat(store.copyById(spareCopyId).orElseThrow().status()).isEqualTo("SHELF_READY");
+
+        assertThat(codeOf(module.applyManualAction(new LoanCommands.ManualAction(
+                reservation.txId(), "CONFIRM_ENTRY", "预约日外", librarian)))).isEqualTo("MLS-CIRC-005");
+        var released = ((ModuleResult.Accepted<Transaction>) module.applyManualAction(
+                new LoanCommands.ManualAction(reservation.txId(), "RELEASE", "预约日外", librarian))).value();
+        assertThat(released.status()).isEqualTo("LENT");
+        assertThat(store.txById(reservation.txId().value()).orElseThrow().copyId()).isEqualTo(boundCopyId);
+        assertThat(store.copyById(boundCopyId).orElseThrow().status()).isEqualTo("LENT");
+        assertThat(store.copyById(spareCopyId).orElseThrow().status()).isEqualTo("SHELF_READY");
+    }
+
     // UT-CIRC-009/010 人工处置：REJECT 终态；RELEASE 无副本守卫 005
     @Test
     void utCirc009_010_manualHandling() {
         var txId = store.insertTransaction(new com.library.circulation.internal.adapter.persistence.CirculationStore.NewTransaction(
-                1L, 10L, null, "MANUAL_HANDLING", LocalDate.now(), "AM", null));
+                1L, 10L, null, "MANUAL_HANDLING", TODAY, "AM", null));
         var rejected = ((ModuleResult.Accepted<Transaction>) module.applyManualAction(
                 new LoanCommands.ManualAction(TxId.of(txId), "REJECT", "无法到馆", librarian))).value();
         assertThat(rejected.status()).isEqualTo("NOT_BORROWED");
@@ -151,7 +243,7 @@ class CirculationModuleTest {
                 TxId.of(txId), "RELEASE", "重复处置", librarian)))).isEqualTo("MLS-CIRC-005");
 
         var manual2 = store.insertTransaction(new com.library.circulation.internal.adapter.persistence.CirculationStore.NewTransaction(
-                1L, 10L, null, "MANUAL_HANDLING", LocalDate.now(), "AM", null));
+                1L, 10L, null, "MANUAL_HANDLING", TODAY, "AM", null));
         // 无可用副本 → 005 保持人工处置中
         assertThat(codeOf(module.applyManualAction(new LoanCommands.ManualAction(
                 TxId.of(manual2), "RELEASE", "无副本", librarian)))).isEqualTo("MLS-CIRC-005");
@@ -167,14 +259,24 @@ class CirculationModuleTest {
     void utCirc011_012_renewalGuards() {
         var copyId = shelvedCopy("C-50");
         var reserved = ((ModuleResult.Accepted<ReservationCommands.Reservation>) module.reserve(
-                command(reader, title, false))).value();
+                sameDayDeskCommand(reader, title))).value();
         module.claim(new LoanCommands.ClaimPickup(reserved.txId(), CopyId.of(copyId), librarian));
         var renewed = ((ModuleResult.Accepted<LoanCommands.Renewal>) module.renew(
                 new LoanCommands.RenewalCommand(reserved.txId(), null, reader))).value();
         assertThat(renewed.outcome()).isEqualTo("RENEWED");
+        assertThat(renewed.dueDate().value()).isEqualTo(TODAY.plusDays(14));
         var tx = store.txById(reserved.txId().value()).orElseThrow();
         assertThat(tx.renewalCount()).isEqualTo(1);
-        // 次数上限（LIMIT=1）
+        assertThat(((ModuleResult.Accepted<LoanCommands.Renewal>) module.renew(
+                new LoanCommands.RenewalCommand(reserved.txId(), null, reader))).value().dueDate().value())
+                .isEqualTo(TODAY.plusDays(21));
+        assertThat(((ModuleResult.Accepted<LoanCommands.Renewal>) module.renew(
+                new LoanCommands.RenewalCommand(reserved.txId(), null, reader))).value().dueDate().value())
+                .isEqualTo(TODAY.plusDays(28));
+        assertThat(((ModuleResult.Accepted<LoanCommands.Renewal>) module.renew(
+                new LoanCommands.RenewalCommand(reserved.txId(), null, reader))).value().dueDate().value())
+                .isEqualTo(TODAY.plusDays(30));
+        // 累计借期达到 30 天后拒绝。
         assertThat(codeOf(module.renew(new LoanCommands.RenewalCommand(reserved.txId(), null, reader))))
                 .isEqualTo("MLS-CIRC-012");
         // 非本人
@@ -187,12 +289,12 @@ class CirculationModuleTest {
     void utCirc013_014_returnAndDuplicateGuard() {
         var copyId = shelvedCopy("C-60");
         var reserved = ((ModuleResult.Accepted<ReservationCommands.Reservation>) module.reserve(
-                command(reader, title, false))).value();
+                sameDayDeskCommand(reader, title))).value();
         module.claim(new LoanCommands.ClaimPickup(reserved.txId(), CopyId.of(copyId), librarian));
         var returned = ((ModuleResult.Accepted<ReturnCommands.ReturnedCopy>) module.returnCopy(
                 new ReturnCommands.ReturnCommand(CopyId.of(copyId), "INTACT", librarian))).value();
         assertThat(returned.outcome()).isEqualTo("RETURNED");
-        assertThat(store.copyById(copyId).orElseThrow().status()).isEqualTo("SHELF_READY");
+        assertThat(store.copyById(copyId).orElseThrow().status()).isEqualTo("PENDING_SHELVING");
         // 重复归还 → 006
         assertThat(codeOf(module.returnCopy(new ReturnCommands.ReturnCommand(
                 CopyId.of(copyId), "INTACT", librarian)))).isEqualTo("MLS-CIRC-006");
@@ -204,25 +306,25 @@ class CirculationModuleTest {
         var cancelled = ((ModuleResult.Accepted<Transaction>) module.cancel(
                 new ReservationCommands.CancelReservation(res2.txId(), "改期", readerOf(5L)))).value();
         assertThat(cancelled.status()).isEqualTo("NOT_BORROWED");
-        assertThat(store.copyById(copy2).orElseThrow().status()).isEqualTo("SHELF_READY");
+        assertThat(store.copyById(copy2).orElseThrow().status()).isEqualTo("PENDING_SHELVING");
     }
 
     // UT-CIRC-015 可用性与日历投影
     @Test
     void utCirc015_availabilityAndCalendar() {
         assertThat(((ModuleResult.Accepted<AvailabilityQuery.AvailabilitySnapshot>) module.availability(
-                title, BusinessDate.of(LocalDate.now()))).value().availability()).isEqualTo("UNKNOWN");
+                title, BusinessDate.of(TODAY))).value().availability()).isEqualTo("UNKNOWN");
         shelvedCopy("C-70");
         var snapshot = ((ModuleResult.Accepted<AvailabilityQuery.AvailabilitySnapshot>) module.availability(
-                title, BusinessDate.of(LocalDate.now()))).value();
+                title, BusinessDate.of(TODAY))).value();
         assertThat(snapshot.availability()).isEqualTo("AVAILABLE");
         var calendar = ((ModuleResult.Accepted<AvailabilityQuery.ReservationCalendar>) module.calendar(
-                title, BusinessDate.of(LocalDate.now()),
-                BusinessDate.of(LocalDate.now().plusDays(6)))).value();
+                title, BusinessDate.of(TODAY),
+                BusinessDate.of(TODAY.plusDays(6)))).value();
         assertThat(calendar.days()).hasSize(7);
         assertThat(calendar.days().get(0).availability()).isEqualTo("GUARANTEED");
-        assertThat(codeOf(module.calendar(title, BusinessDate.of(LocalDate.now().plusDays(6)),
-                BusinessDate.of(LocalDate.now())))).isEqualTo("MLS-CIRC-001");
+        assertThat(codeOf(module.calendar(title, BusinessDate.of(TODAY.plusDays(6)),
+                BusinessDate.of(TODAY)))).isEqualTo("MLS-CIRC-001");
     }
 
     // DEF-M6-012 维护完成刷新结算：SHELVE 使副本回可借后按队头先到先得分配候补并登记事件（仅分配、不清退）
@@ -232,6 +334,7 @@ class CirculationModuleTest {
         var reserved = ((ModuleResult.Accepted<ReservationCommands.Reservation>) module.reserve(
                 command(reader, title, false))).value();
         assertThat(reserved.outcome()).isEqualTo("CONFIRMED");
+        module.createCopy(new CopyCommands.CreateCopy(title, "C-80-PENDING", librarian));
         var other = readerOf(3L);
         var enqueued = ((ModuleResult.Accepted<ReservationCommands.Reservation>) module.reserve(
                 command(other, title, true))).value();
@@ -256,7 +359,12 @@ class CirculationModuleTest {
     private ReservationCommands.ReservationCommand command(ActorContext actor, TitleId titleId,
                                                            boolean confirmWaitlist) {
         return new ReservationCommands.ReservationCommand(actor.accountId().value(), titleId,
-                BusinessDate.of(LocalDate.now().plusDays(1)), "AM", "ONLINE", confirmWaitlist, actor);
+                BusinessDate.of(TODAY.plusDays(1)), "AM", "ONLINE", confirmWaitlist, actor);
+    }
+
+    private ReservationCommands.ReservationCommand sameDayDeskCommand(ActorContext actor, TitleId titleId) {
+        return new ReservationCommands.ReservationCommand(actor.accountId().value(), titleId,
+                BusinessDate.of(TODAY), "AM", "DESK", false, actor);
     }
 
     private ActorContext readerOf(long id) {

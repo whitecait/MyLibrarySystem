@@ -200,7 +200,7 @@ public class AiModuleImpl implements AiModule {
         final AiTool tool;
         try { tool=tools.require(call.name()); }
         catch (ToolRegistry.ToolRejected rejected) { return rejectTool(sessionId,"未登记工具"); }
-        try { tools.validate(tool,call.arguments()); }
+        try { tools.validate(tool,call.arguments(),actor); }
         catch (ToolRegistry.ToolRejected rejected) { return rejectTool(sessionId,rejected.getMessage()); }
         if (!tools.availableTo(owner,actor).contains(tool)) return rejectTool(sessionId,"工具越权");
         if (!"SESSION_OWNER_OR_ADMIN".equals(tool.requiredCapability())) {

@@ -2,6 +2,10 @@ package com.library.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.library.identity.internal.PasswordHasher;
+import com.library.application.payment.DeterministicPaymentSimulator;
+import com.library.application.payment.PaymentSimulatorPort;
+import com.library.contract.audit.AuditAppender;
+import com.library.settlement.contract.OrderCommands;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +22,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,6 +52,8 @@ class DEFM6008PaymentSimulatorRoleMatrixTest {
 
     @Autowired TestRestTemplate rest;
     @Autowired JdbcTemplate jdbc;
+    @Autowired OrderCommands orders;
+    @Autowired AuditAppender audit;
     private final ObjectMapper json = new ObjectMapper();
 
     @Test
@@ -95,6 +102,147 @@ class DEFM6008PaymentSimulatorRoleMatrixTest {
                 "def008-order", "{}");
         assertThat(created.getStatusCode().value()).isEqualTo(200);
         assertThat(json.readTree(created.getBody()).at("/data/status").asText()).isEqualTo("OCCUPIED");
+    }
+
+    @Test
+    void readerCannotCloseAnotherReadersOccupiedOrder() throws Exception {
+        var ownerName = "def008-owner-" + System.nanoTime();
+        var ownerToken = registerAndLogin(ownerName);
+        long ownerId = jdbc.queryForObject(
+                "SELECT id FROM account WHERE username=?", Long.class, ownerName);
+        var otherReaderToken = registerAndLogin("def008-other-" + System.nanoTime());
+        long fineId = seedDueFine(ownerId, "def008-owned-order");
+        long orderId = seedOccupiedOrder(fineId);
+
+        var otherReaderClose = post("/api/v1/orders/" + orderId + "/close", otherReaderToken,
+                "def008-other-close-" + UUID.randomUUID(), "{}");
+
+        assertThat(otherReaderClose.getStatusCode().value()).isIn(403, 404);
+        assertThat(code(otherReaderClose)).isIn("MLS-ID-005", "MLS-PAY-005");
+        assertThat(orderStatus(orderId)).isEqualTo("OCCUPIED");
+
+        String ownerCloseKey = "def008-owner-close-" + UUID.randomUUID();
+        var ownerClose = post("/api/v1/orders/" + orderId + "/close", ownerToken, ownerCloseKey, "{}");
+        assertThat(ownerClose.getStatusCode().value()).isEqualTo(200);
+        assertThat(orderStatus(orderId)).isEqualTo("CLOSED");
+        var ownerReplay = post("/api/v1/orders/" + orderId + "/close", ownerToken, ownerCloseKey, "{}");
+        assertThat(ownerReplay.getStatusCode().value()).isEqualTo(200);
+        assertThat(json.readTree(ownerReplay.getBody()).at("/data/status").asText()).isEqualTo("CLOSED");
+    }
+
+    @Test
+    void librarianAndAdminCanCloseAnotherReadersOrder() throws Exception {
+        for (var role : List.of("LIBRARIAN", "ADMIN")) {
+            var ownerName = "def008-staff-close-owner-" + role.toLowerCase() + "-" + System.nanoTime();
+            var ownerToken = registerAndLogin(ownerName);
+            long ownerId = jdbc.queryForObject(
+                    "SELECT id FROM account WHERE username=?", Long.class, ownerName);
+            var staffName = "def008-staff-close-" + role.toLowerCase() + "-" + System.nanoTime();
+            var staffToken = seedAndLogin(staffName, role);
+            long orderId = seedOccupiedOrder(seedDueFine(ownerId, "def008-staff-close-fine-" + role));
+
+            var response = post("/api/v1/orders/" + orderId + "/close", staffToken,
+                    "def008-staff-close-key-" + UUID.randomUUID(), "{}");
+
+            assertThat(response.getStatusCode().value()).as("%s close status", role).isEqualTo(200);
+            assertThat(orderStatus(orderId)).as("%s closes cross-reader order", role).isEqualTo("CLOSED");
+        }
+    }
+
+    @Test
+    void downgradedLibrarianCannotReplayPreviouslyAuthorizedCloseResponse() throws Exception {
+        var ownerName = "def008-replay-owner-" + System.nanoTime();
+        var ownerToken = registerAndLogin(ownerName);
+        long ownerId = jdbc.queryForObject(
+                "SELECT id FROM account WHERE username=?", Long.class, ownerName);
+        var librarianName = "def008-replay-librarian-" + System.nanoTime();
+        var librarianToken = seedAndLogin(librarianName, "LIBRARIAN");
+        long librarianId = jdbc.queryForObject(
+                "SELECT id FROM account WHERE username=?", Long.class, librarianName);
+        long orderId = seedOccupiedOrder(seedDueFine(ownerId, "def008-replay-fine"));
+        String key = "def008-replay-close-" + UUID.randomUUID();
+
+        var firstClose = post("/api/v1/orders/" + orderId + "/close", librarianToken, key, "{}");
+        assertThat(firstClose.getStatusCode().value()).isEqualTo(200);
+        assertThat(orderStatus(orderId)).isEqualTo("CLOSED");
+
+        jdbc.update("UPDATE account SET role='READER' WHERE id=?", librarianId);
+        var downgradedToken = login(librarianName);
+        var refreshedActorReplay = post("/api/v1/orders/" + orderId + "/close", downgradedToken, key, "{}");
+        assertThat(refreshedActorReplay.getStatusCode().value()).isIn(403, 404);
+        assertThat(code(refreshedActorReplay)).isIn("MLS-ID-005", "MLS-PAY-005");
+
+        // ActorResolver reloads the database role for an existing session too; this is not a stale-token false signal.
+        var existingTokenReplay = post("/api/v1/orders/" + orderId + "/close", librarianToken, key, "{}");
+        assertThat(existingTokenReplay.getStatusCode().value()).isIn(403, 404);
+        assertThat(code(existingTokenReplay)).isIn("MLS-ID-005", "MLS-PAY-005");
+        assertThat(orderStatus(orderId)).isEqualTo("CLOSED");
+    }
+
+    @Test
+    void occupiedOrderQueryOnlyReturnsTheAuthenticatedReadersOrders() throws Exception {
+        var ownerName = "def008-query-owner-" + System.nanoTime();
+        var ownerToken = registerAndLogin(ownerName);
+        long ownerId = jdbc.queryForObject(
+                "SELECT id FROM account WHERE username=?", Long.class, ownerName);
+        var otherName = "def008-query-other-" + System.nanoTime();
+        var otherToken = registerAndLogin(otherName);
+        long otherId = jdbc.queryForObject(
+                "SELECT id FROM account WHERE username=?", Long.class, otherName);
+        var librarianToken = seedAndLogin("def008-query-librarian-" + System.nanoTime(), "LIBRARIAN");
+        long ownerOrder = seedOccupiedOrder(seedDueFine(ownerId, "def008-query-owner-fine"));
+        long otherOrder = seedOccupiedOrder(seedDueFine(otherId, "def008-query-other-fine"));
+
+        var ownerResponse = get("/api/v1/orders/occupied?limit=20", ownerToken);
+        assertThat(ownerResponse.getStatusCode().value()).isEqualTo(200);
+        var ownerItems = json.readTree(ownerResponse.getBody()).at("/data/items");
+        assertThat(ownerItems.size()).isEqualTo(1);
+        assertThat(ownerItems.get(0).path("orderId").asText()).isEqualTo(Long.toString(ownerOrder));
+        assertThat(ownerItems.findValuesAsText("orderId")).doesNotContain(Long.toString(otherOrder));
+
+        var otherResponse = get("/api/v1/orders/occupied?limit=20", otherToken);
+        assertThat(otherResponse.getStatusCode().value()).isEqualTo(200);
+        assertThat(json.readTree(otherResponse.getBody()).at("/data/items/0/orderId").asText())
+                .isEqualTo(Long.toString(otherOrder));
+
+        var librarianResponse = get("/api/v1/orders/occupied?limit=20", librarianToken);
+        assertThat(librarianResponse.getStatusCode().value()).isEqualTo(403);
+        assertThat(code(librarianResponse)).isEqualTo("MLS-ID-005");
+    }
+
+    @Test
+    void recreatingASimulatorKeepsPersistedCallbackIdentitiesSeparateAndDuplicatesIdempotent() throws Exception {
+        String readerName = "sim-restart-reader-" + System.nanoTime();
+        registerAndLogin(readerName);
+        long readerId = jdbc.queryForObject(
+                "SELECT id FROM account WHERE username=?", Long.class, readerName);
+        String adminName = "sim-restart-admin-" + System.nanoTime();
+        seedAndLogin(adminName, "ADMIN");
+        long actorId = jdbc.queryForObject(
+                "SELECT id FROM account WHERE username=?", Long.class, adminName);
+        long firstFine = seedDueFine(readerId, "sim-restart-first");
+        long secondFine = seedDueFine(readerId, "sim-restart-second");
+        long firstOrder = seedOccupiedOrder(firstFine);
+        long secondOrder = seedOccupiedOrder(secondFine);
+
+        // A new simulator models a process restart; the real PG event store survives.
+        new DeterministicPaymentSimulator(orders, audit).schedule(
+                new PaymentSimulatorPort.Command(firstOrder, "SUCCESS", 0, 2, actorId));
+        assertThat(orderStatus(firstOrder)).isEqualTo("PAID");
+        new DeterministicPaymentSimulator(orders, audit).schedule(
+                new PaymentSimulatorPort.Command(secondOrder, "SUCCESS", 0, 2, actorId));
+        assertThat(orderStatus(secondOrder)).isEqualTo("PAID");
+
+        for (long fine : List.of(firstFine, secondFine)) {
+            assertThat(jdbc.queryForObject("SELECT status FROM fine WHERE id=?", String.class, fine))
+                    .isEqualTo("SETTLED");
+        }
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM payment_callback_event WHERE order_id IN (?,?)",
+                Integer.class, firstOrder, secondOrder)).isEqualTo(2);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(DISTINCT event_id) FROM payment_callback_event WHERE order_id IN (?,?)",
+                Integer.class, firstOrder, secondOrder)).isEqualTo(2);
     }
 
     /** 越权调度不得形成支付事实：订单仍占用、罚款未结清、无回调事件行。 */
@@ -175,5 +323,13 @@ class DEFM6008PaymentSimulatorRoleMatrixTest {
             headers.setBearerAuth(bearer);
         }
         return rest.exchange(path, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+    }
+
+    private ResponseEntity<String> get(String path, String bearer) {
+        var headers = new HttpHeaders();
+        if (bearer != null) {
+            headers.setBearerAuth(bearer);
+        }
+        return rest.exchange(path, HttpMethod.GET, new HttpEntity<>(headers), String.class);
     }
 }

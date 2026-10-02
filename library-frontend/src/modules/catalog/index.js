@@ -1,8 +1,8 @@
 // CATALOG 模块公开请求接口：公开检索、详情、阅读内容与馆员书目维护。
 import { apiRequest } from '@/platform/http'
 
-export function searchTitles({ q, category, cursor, limit } = {}, options = {}) {
-  return apiRequest('searchTitles', { query: { q, category, cursor, limit }, ...options })
+export function searchTitles({ q, category, availability, cursor, limit } = {}, options = {}) {
+  return apiRequest('searchTitles', { query: { q, category, availability, cursor, limit }, ...options })
 }
 
 export function getTitle({ titleId }, options = {}) {

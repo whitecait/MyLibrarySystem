@@ -64,7 +64,9 @@ class ITID002PermissionAndInvisibilityTest {
 
     @Test
     void permissionMatrixAndInvisibilityAndDenialAudit() throws Exception {
-        var readerToken = registerAndLogin("it002-reader-" + System.nanoTime());
+        var readerName = "it002-reader-" + System.nanoTime();
+        var readerToken = registerAndLogin(readerName);
+        var readerId = jdbc.queryForObject("SELECT id FROM account WHERE username=?", Long.class, readerName);
         var librarianName = "it002-librarian-" + System.nanoTime();
         seedLibrarian(librarianName);
         var librarianToken = login(librarianName);
@@ -95,10 +97,10 @@ class ITID002PermissionAndInvisibilityTest {
         assertThat(invisibleReader.getStatusCode().value()).isEqualTo(404);
         assertThat(json.readTree(invisibleReader.getBody()).path("code").asText()).isEqualTo("MLS-ID-007");
 
-        // 账户变更申请：MD-0003 只登记状态冲突，目标有效性由 B3 批准事务重验（MLS-REV-001）
-        var pendingReview = post("/api/v1/accounts/999999/change-requests", librarianToken,
+        // 账户复核只针对现存目标；缺失目标在申请阶段返回 MLS-ID-007。
+        var pendingReview = post("/api/v1/accounts/" + readerId + "/change-requests", librarianToken,
                 "it002-review-" + System.nanoTime(),
-                "{\"action\":\"SUSPEND\",\"payload\":{},\"reason\":\"目标有效性由批准重验\"}");
+                "{\"action\":\"SUSPEND\",\"payload\":{},\"reason\":\"验证已存在账户的复核流程\"}");
         assertThat(pendingReview.getStatusCode().value()).isEqualTo(200);
         assertThat(json.readTree(pendingReview.getBody()).at("/data/status").asText()).isEqualTo("PENDING");
 
@@ -114,6 +116,73 @@ class ITID002PermissionAndInvisibilityTest {
         var ok = get("/api/v1/accounts", adminToken);
         assertThat(ok.getStatusCode().value()).isEqualTo(200);
         assertThat(json.readTree(ok.getBody()).at("/data/items").isArray()).isTrue();
+    }
+
+    @Test
+    void nonEmptyFinesRemainOwnedByTheAuthenticatedReaderDespiteAForeignFilter() throws Exception {
+        var suffix = Long.toString(System.nanoTime());
+        var ownerName = "p3-fine-owner-" + suffix;
+        var otherName = "p3-fine-other-" + suffix;
+        var emptyName = "p3-fine-empty-" + suffix;
+        var ownerToken = registerAndLogin(ownerName);
+        var otherToken = registerAndLogin(otherName);
+        var emptyToken = registerAndLogin(emptyName);
+        var ownerId = jdbc.queryForObject("SELECT id FROM account WHERE username=?", Long.class, ownerName);
+        var otherId = jdbc.queryForObject("SELECT id FROM account WHERE username=?", Long.class, otherName);
+        var ownerFine = seedFine(ownerId, 300L);
+        var otherFine = seedFine(otherId, 700L);
+        var librarianName = "p3-fine-librarian-" + suffix;
+        seedLibrarian(librarianName);
+        var librarianToken = login(librarianName);
+
+        // Positive control: the foreign fine exists and is visible to a librarian.
+        var foreignControl = get("/api/v1/fines?readerId=" + otherId, librarianToken);
+        assertThat(foreignControl.getStatusCode().value()).isEqualTo(200);
+        var foreignItems = json.readTree(foreignControl.getBody()).at("/data/items");
+        assertThat(foreignItems.size()).isEqualTo(1);
+        assertThat(foreignItems.get(0).path("fineId").asLong()).isEqualTo(otherFine);
+        assertThat(foreignItems.get(0).path("amountCents").asLong()).isEqualTo(700L);
+
+        for (var path : java.util.List.of("/api/v1/fines", "/api/v1/fines?readerId=" + otherId,
+                "/api/v1/fines?readerId=")) {
+            var response = get(path, ownerToken);
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            var items = json.readTree(response.getBody()).at("/data/items");
+            assertThat(items.size()).isEqualTo(1);
+            assertThat(items.get(0).path("fineId").asLong()).isEqualTo(ownerFine);
+            assertThat(items.get(0).path("readerId").asLong()).isEqualTo(ownerId);
+        }
+        var otherResponse = get("/api/v1/fines?readerId=" + ownerId, otherToken);
+        assertThat(otherResponse.getStatusCode().value()).isEqualTo(200);
+        var otherItems = json.readTree(otherResponse.getBody()).at("/data/items");
+        assertThat(otherItems.size()).isEqualTo(1);
+        assertThat(otherItems.get(0).path("fineId").asLong()).isEqualTo(otherFine);
+
+        var emptyResponse = get("/api/v1/fines?readerId=" + otherId, emptyToken);
+        assertThat(emptyResponse.getStatusCode().value()).isEqualTo(200);
+        assertThat(json.readTree(emptyResponse.getBody()).at("/data/items").size()).isZero();
+        for (var path : java.util.List.of("/api/v1/fines", "/api/v1/fines?readerId=")) {
+            var response = get(path, librarianToken);
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            var ids = new java.util.ArrayList<Long>();
+            json.readTree(response.getBody()).at("/data/items")
+                    .forEach(item -> ids.add(item.path("fineId").asLong()));
+            assertThat(ids).contains(ownerFine, otherFine);
+        }
+    }
+
+    private long seedFine(long readerId, long amountCents) {
+        var titleId = jdbc.queryForObject(
+                "INSERT INTO book_title(title, price_cents) VALUES ('P3 fine isolation', 1000) RETURNING id",
+                Long.class);
+        var txId = jdbc.queryForObject("""
+                INSERT INTO borrow_transaction(reader_id, title_id, status)
+                VALUES (?, ?, 'RETURNED') RETURNING id
+                """, Long.class, readerId, titleId);
+        return jdbc.queryForObject("""
+                INSERT INTO fine(reader_id, source_tx_id, amount_cents)
+                VALUES (?, ?, ?) RETURNING id
+                """, Long.class, readerId, txId, amountCents);
     }
 
     private void seedAdmin(String username) {

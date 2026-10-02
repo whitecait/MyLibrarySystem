@@ -9,4 +9,7 @@ import com.library.contract.model.PageCursor;
 public interface AccountQuery {
 
     ModuleResult<AccountPage> accounts(AccountCriteria query);
+
+    /** Exact role/status/version snapshot for revalidating a pending account review. */
+    ModuleResult<AccountState> accountState(com.library.contract.model.AccountId accountId);
 }

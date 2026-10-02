@@ -21,7 +21,7 @@ tags:
 
 paths:
   /auth/registrations:
-    post: {tags: [Identity], operationId: registerReader, security: [], x-permission: PUBLIC, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Registration'}, responses: {'200': {$ref: '#/components/responses/Registration'}, default: {$ref: '#/components/responses/Error'}}}
+    post: {tags: [Identity], operationId: registerReader, security: [], x-permission: PUBLIC, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}, {$ref: '#/components/parameters/RegistrationSessionCookie'}], requestBody: {$ref: '#/components/requestBodies/Registration'}, responses: {'200': {$ref: '#/components/responses/Registration'}, '429': {$ref: '#/components/responses/Error'}, default: {$ref: '#/components/responses/Error'}}}
   /auth/sessions:
     post: {tags: [Identity], operationId: createSession, security: [], x-permission: PUBLIC, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Session'}, responses: {'200': {$ref: '#/components/responses/Session'}, default: {$ref: '#/components/responses/Error'}}}
   /auth/sessions/current:
@@ -38,7 +38,7 @@ paths:
     parameters: [{$ref: '#/components/parameters/ReaderId'}]
     patch: {tags: [Identity], operationId: changeReaderStatus, x-permission: LIBRARIAN_OR_ADMIN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/ReaderStatusChange'}, responses: {'200': {$ref: '#/components/responses/Reader'}, default: {$ref: '#/components/responses/Error'}}}
   /titles:
-    get: {tags: [Catalog], operationId: searchTitles, security: [], x-permission: PUBLIC, parameters: [{$ref: '#/components/parameters/Search'}, {$ref: '#/components/parameters/Category'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/TitlePage'}, default: {$ref: '#/components/responses/Error'}}}
+    get: {tags: [Catalog], operationId: searchTitles, security: [], x-permission: PUBLIC, parameters: [{$ref: '#/components/parameters/Search'}, {$ref: '#/components/parameters/Category'}, {$ref: '#/components/parameters/Availability'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/TitlePage'}, default: {$ref: '#/components/responses/Error'}}}
     post: {tags: [Catalog], operationId: createTitle, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/CreateTitle'}, responses: {'200': {$ref: '#/components/responses/Title'}, default: {$ref: '#/components/responses/Error'}}}
   /titles/{titleId}:
     parameters: [{$ref: '#/components/parameters/TitleId'}]
@@ -65,7 +65,7 @@ paths:
     parameters: [{$ref: '#/components/parameters/TxId'}]
     post: {tags: [Circulation], operationId: cancelReservation, x-permission: READER_SELF_OR_LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Reason'}, responses: {'200': {$ref: '#/components/responses/Transaction'}, default: {$ref: '#/components/responses/Error'}}}
   /walk-in-loans:
-    post: {tags: [Circulation], operationId: createWalkInLoans, x-permission: READER_SELF_OR_LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/WalkInLoan'}, responses: {'200': {$ref: '#/components/responses/LoanBatch'}, default: {$ref: '#/components/responses/Error'}}}
+    post: {tags: [Circulation], operationId: createWalkInLoans, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/WalkInLoan'}, responses: {'200': {$ref: '#/components/responses/LoanBatch'}, default: {$ref: '#/components/responses/Error'}}}
   /pickups/{txId}/claim:
     parameters: [{$ref: '#/components/parameters/TxId'}]
     post: {tags: [Circulation], operationId: claimPickup, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/ClaimPickup'}, responses: {'200': {$ref: '#/components/responses/Transaction'}, default: {$ref: '#/components/responses/Error'}}}
@@ -86,6 +86,8 @@ paths:
   /fines/{fineId}/orders:
     parameters: [{$ref: '#/components/parameters/FineId'}]
     post: {tags: [Settlement], operationId: createOrder, x-permission: READER_SELF, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], responses: {'200': {$ref: '#/components/responses/Order'}, default: {$ref: '#/components/responses/Error'}}}
+  /orders/occupied:
+    get: {tags: [Settlement], operationId: listOccupiedOrders, x-permission: READER_SELF, parameters: [{$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/OrderPage'}, default: {$ref: '#/components/responses/Error'}}}
   /orders/{orderId}:
     parameters: [{$ref: '#/components/parameters/OrderId'}]
     get: {tags: [Settlement], operationId: getOrder, x-permission: READER_SELF_OR_LIBRARIAN, responses: {'200': {$ref: '#/components/responses/Order'}, default: {$ref: '#/components/responses/Error'}}}
@@ -95,12 +97,12 @@ paths:
     post: {tags: [Settlement], operationId: applyPaymentCallback, x-permission: SIMULATOR_CREDENTIAL, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/PaymentCallback'}, responses: {'200': {$ref: '#/components/responses/Callback'}, default: {$ref: '#/components/responses/Error'}}}
   /orders/{orderId}/close:
     parameters: [{$ref: '#/components/parameters/OrderId'}]
-    post: {tags: [Settlement], operationId: closeOrder, x-permission: READER_SELF_OR_LIBRARIAN_OR_SYSTEM, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], responses: {'200': {$ref: '#/components/responses/Order'}, default: {$ref: '#/components/responses/Error'}}}
+    post: {tags: [Settlement], operationId: closeOrder, x-permission: READER_SELF_OR_LIBRARIAN_OR_ADMIN_OR_SYSTEM, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], responses: {'200': {$ref: '#/components/responses/Order'}, default: {$ref: '#/components/responses/Error'}}}
   /orders/{orderId}/refunds:
     parameters: [{$ref: '#/components/parameters/OrderId'}]
-    post: {tags: [Settlement], operationId: requestRefund, x-permission: LIBRARIAN_THEN_ADMIN_REVIEW, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Refund'}, responses: {'200': {$ref: '#/components/responses/ReviewReference'}, default: {$ref: '#/components/responses/Error'}}}
+    post: {tags: [Settlement], operationId: requestRefund, summary: Retired refund operation, description: Refund requests are disabled for the current delivery scope. This endpoint always returns 422 MLS-PAY-009 and creates no review or refund record., deprecated: true, security: [], x-permission: UNSUPPORTED, responses: {'422': {$ref: '#/components/responses/Error'}}}
   /reconciliations:
-    post: {tags: [Settlement], operationId: reconcileBusinessDate, x-permission: SYSTEM_OR_ADMIN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/BusinessDate'}, responses: {'200': {$ref: '#/components/responses/Reconciliation'}, default: {$ref: '#/components/responses/Error'}}}
+    post: {tags: [Settlement], operationId: reconcileBusinessDate, summary: Retired reconciliation operation, description: Reconciliation is disabled for the current delivery scope. This endpoint always returns 422 MLS-PAY-009 and creates no reconciliation record., deprecated: true, security: [], x-permission: UNSUPPORTED, responses: {'422': {$ref: '#/components/responses/Error'}}}
   /reviews:
     get: {tags: [Review], operationId: listReviews, x-permission: LIBRARIAN_OR_ADMIN, parameters: [{$ref: '#/components/parameters/ReviewStatus'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/ReviewPage'}, default: {$ref: '#/components/responses/Error'}}}
     post: {tags: [Review], operationId: requestReview, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/IdempotencyKey'}], requestBody: {$ref: '#/components/requestBodies/Review'}, responses: {'200': {$ref: '#/components/responses/ReviewReference'}, default: {$ref: '#/components/responses/Error'}}}
@@ -133,6 +135,8 @@ components:
     aiVisitorCookie: {type: apiKey, in: cookie, name: __Host-mls-ai-visitor, description: Browser-session visitor credential; HttpOnly, Secure, SameSite=Strict and Path=/; never returned in a response body.}
   parameters:
     IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 1, maxLength: 128}}
+    RegistrationSessionCookie: {name: mls_registration_session, in: cookie, required: false, description: Server-issued HttpOnly SameSite=Strict browser-session cookie. Secure is set for HTTPS requests. The server issues it when absent and counts every registration request; clearing the browser session resets the session quota., schema: {type: string, pattern: '^[A-Za-z0-9_-]{43}$'}}
+    Availability: {name: availability, in: query, required: false, description: Book-level availability derived from copy state., schema: {type: string, enum: [AVAILABLE, UNAVAILABLE, UNKNOWN]}}
     AccountId: {name: accountId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
     ReaderId: {name: readerId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
     TitleId: {name: titleId, in: path, required: true, schema: {$ref: '#/components/schemas/Id'}}
@@ -211,6 +215,7 @@ components:
     ClosingRun: {$ref: '#/components/responses/ClosingRunResponse'}
     Reopened: {$ref: '#/components/responses/ReopenedResponse'}
     FinePage: {$ref: '#/components/responses/FinePageResponse'}
+    OrderPage: {$ref: '#/components/responses/OrderPageResponse'}
     Order: {$ref: '#/components/responses/OrderResponse'}
     Simulation: {$ref: '#/components/responses/SimulationResponse'}
     Callback: {$ref: '#/components/responses/CallbackResponse'}
@@ -225,7 +230,7 @@ components:
     AiSession: {$ref: '#/components/responses/AiSessionResponse'}
     AiTurn: {$ref: '#/components/responses/AiTurnResponse'}
     AiEventPage: {$ref: '#/components/responses/AiEventPageResponse'}
-    RegistrationResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/RegistrationEnvelope'}}}}
+    RegistrationResponse: {description: OK; first request issues an HttpOnly registration session cookie, headers: {Set-Cookie: {description: 'mls_registration_session=<opaque>; Path=/; HttpOnly; SameSite=Strict; Secure on HTTPS', schema: {type: string}}}, content: {application/json: {schema: {$ref: '#/components/schemas/RegistrationEnvelope'}}}}
     SessionResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/SessionEnvelope'}}}}
     EndedResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/EndedEnvelope'}}}}
     AccountPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AccountPageEnvelope'}}}}
@@ -247,6 +252,7 @@ components:
     ClosingRunResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ClosingRunEnvelope'}}}}
     ReopenedResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ReopenedEnvelope'}}}}
     FinePageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/FinePageEnvelope'}}}}
+    OrderPageResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/OrderPageEnvelope'}}}}
     OrderResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/OrderEnvelope'}}}}
     SimulationResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/SimulationEnvelope'}}}}
     CallbackResponse: {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/CallbackEnvelope'}}}}
@@ -310,7 +316,7 @@ components:
     ReservationData: {type: object, additionalProperties: false, required: [txId, outcome], properties: {txId: {oneOf: [{$ref: '#/components/schemas/Id'}, {type: 'null'}]}, outcome: {type: string, enum: [CONFIRMED, WAITLIST_PENDING_CONFIRMATION, WAITLIST_ENQUEUED, MANUAL_HANDLING, REJECTED]}, reasons: {type: array, items: {type: string}}}}
     TransactionData: {type: object, additionalProperties: false, required: [txId, outcome], properties: {txId: {$ref: '#/components/schemas/Id'}, outcome: {type: string}, status: {type: string}}}
     WalkInItem: {type: object, additionalProperties: false, required: [titleId], properties: {titleId: {$ref: '#/components/schemas/Id'}, copyId: {$ref: '#/components/schemas/Id'}}}
-    WalkInLoanRequest: {type: object, additionalProperties: false, required: [items, channel], properties: {readerId: {$ref: '#/components/schemas/Id'}, items: {type: array, minItems: 1, maxItems: 100, items: {$ref: '#/components/schemas/WalkInItem'}}, channel: {type: string, enum: [SELF_SERVICE, DESK]}}}
+    WalkInLoanRequest: {type: object, additionalProperties: false, required: [items, channel], properties: {readerId: {$ref: '#/components/schemas/Id'}, items: {type: array, minItems: 1, maxItems: 100, items: {$ref: '#/components/schemas/WalkInItem'}}, channel: {type: string, enum: [DESK]}}}
     LoanBatchItem: {type: object, additionalProperties: false, required: [itemRef, txId, outcome], properties: {itemRef: {type: string}, txId: {oneOf: [{$ref: '#/components/schemas/Id'}, {type: 'null'}]}, outcome: {type: string}, reasons: {type: array, items: {type: string}}}}
     LoanBatchData: {type: object, additionalProperties: false, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/LoanBatchItem'}}}}
     ClaimPickupRequest: {type: object, additionalProperties: false, required: [copyId], properties: {copyId: {$ref: '#/components/schemas/Id'}}}
@@ -325,6 +331,7 @@ components:
     FineData: {type: object, additionalProperties: false, required: [fineId, readerId, amountCents, status, createdAt], properties: {fineId: {$ref: '#/components/schemas/Id'}, readerId: {$ref: '#/components/schemas/Id'}, amountCents: {type: integer, minimum: 0}, status: {$ref: '#/components/schemas/FineStatus'}, createdAt: {$ref: '#/components/schemas/Timestamp'}}}
     FinePageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/FineData'}}, nextCursor: {type: [string, 'null']}}}
     OrderData: {type: object, additionalProperties: false, required: [orderId, fineId, amountCents, status, expiresAt], properties: {orderId: {$ref: '#/components/schemas/Id'}, fineId: {$ref: '#/components/schemas/Id'}, amountCents: {type: integer, minimum: 0}, status: {$ref: '#/components/schemas/OrderStatus'}, expiresAt: {oneOf: [{$ref: '#/components/schemas/Timestamp'}, {type: 'null'}]}}}
+    OrderPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/OrderData'}}, nextCursor: {type: [string, 'null']}}}
     SimulationRequest: {type: object, additionalProperties: false, required: [orderId, result], properties: {orderId: {$ref: '#/components/schemas/Id'}, result: {type: string, enum: [SUCCESS, FAILURE]}, delayMs: {type: integer, minimum: 0}, duplicateCount: {type: integer, minimum: 0, maximum: 20}}}
     SimulationData: {type: object, additionalProperties: false, required: [simulationId, status], properties: {simulationId: {$ref: '#/components/schemas/Id'}, status: {type: string}}}
     PaymentCallbackRequest: {type: object, additionalProperties: false, required: [eventId, orderId, result, occurredAt], properties: {eventId: {type: string}, orderId: {$ref: '#/components/schemas/Id'}, result: {type: string, enum: [SUCCESS, FAILURE]}, occurredAt: {$ref: '#/components/schemas/Timestamp'}}}
@@ -376,6 +383,7 @@ components:
     ClosingRunEnvelope: {$ref: '#/components/schemas/ClosingRunDataEnvelope'}
     ReopenedEnvelope: {$ref: '#/components/schemas/ReopenedDataEnvelope'}
     FinePageEnvelope: {$ref: '#/components/schemas/FinePageDataEnvelope'}
+    OrderPageEnvelope: {$ref: '#/components/schemas/OrderPageDataEnvelope'}
     OrderEnvelope: {$ref: '#/components/schemas/OrderDataEnvelope'}
     SimulationEnvelope: {$ref: '#/components/schemas/SimulationDataEnvelope'}
     CallbackEnvelope: {$ref: '#/components/schemas/CallbackDataEnvelope'}
@@ -413,6 +421,7 @@ components:
     ClosingRunDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ClosingRunData'}}}
     ReopenedDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/ReopenedData'}}}
     FinePageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/FinePageData'}}}
+    OrderPageDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/OrderPageData'}}}
     OrderDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/OrderData'}}}
     SimulationDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/SimulationData'}}}
     CallbackDataEnvelope: {type: object, additionalProperties: false, required: [code, message, data], properties: {code: {type: string}, message: {type: string}, data: {$ref: '#/components/schemas/CallbackData'}}}

@@ -45,7 +45,15 @@
         </el-button>
       </form>
       <el-alert
-        v-if="claimResult"
+        v-if="claimResult?.status === 'MANUAL_HANDLING'"
+        type="warning"
+        :closable="false"
+        data-testid="claim-manual"
+        title="预约日期与当前营业日不一致，已转人工处理"
+        :description="`交易 ${claimResult.txId} 保留已预定副本，待馆员处置。`"
+      />
+      <el-alert
+        v-else-if="claimResult"
         type="success"
         :closable="false"
         data-testid="claim-success"

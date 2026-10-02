@@ -37,28 +37,27 @@ describe('settlement module facade', () => {
       },
     })
     await settlement.listFines({ status: 'UNPAID' })
+    await settlement.listOccupiedOrders({ cursor: '6001', limit: 10 })
     await settlement.getOrder({ orderId: '6002' })
     await settlement.scheduleSimulatedPayment({ orderId: '6002', result: 'FAILURE', duplicateCount: 2 })
     await settlement.closeOrder({ orderId: '6002' })
-    await settlement.requestRefund({ orderId: '6002', amountCents: 150, reason: '多收' })
-    await settlement.reconcileBusinessDate({ businessDate: '2026-09-15' })
 
     expect(calls.map((call) => call.operationId)).toEqual([
       'listFines',
+      'listOccupiedOrders',
       'getOrder',
       'scheduleSimulatedPayment',
       'closeOrder',
-      'requestRefund',
-      'reconcileBusinessDate',
     ])
-    expect(calls[2].options.body).toEqual({ orderId: '6002', result: 'FAILURE', delayMs: undefined, duplicateCount: 2 })
-    expect(calls[4].options.body).toEqual({ amountCents: 150, reason: '多收' })
-    expect(calls[5].options.body).toEqual({ businessDate: '2026-09-15' })
+    expect(calls[1].options.query).toEqual({ cursor: '6001', limit: 10 })
+    expect(calls[3].options.body).toEqual({ orderId: '6002', result: 'FAILURE', delayMs: undefined, duplicateCount: 2 })
   })
 
   it('exposes the module views through the public entry', () => {
     expect(settlement.FineSettlementView).toBeTruthy()
     expect(settlement.PaymentSimulatorView).toBeTruthy()
-    expect(settlement.ReconciliationView).toBeTruthy()
+    expect(settlement).not.toHaveProperty('requestRefund')
+    expect(settlement).not.toHaveProperty('reconcileBusinessDate')
+    expect(settlement).not.toHaveProperty('ReconciliationView')
   })
 })

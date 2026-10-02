@@ -1,6 +1,7 @@
 package com.library.contract.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.library.contract.InfrastructureFailure;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -39,10 +40,19 @@ public class JdbcAuditAppender implements AuditAppender {
     public void appendWithBusinessFact(String eventType, Long actorId, Object detail) {
         try {
             // 成功审计加入当前事务（JdbcTemplate 复用线程绑定的连接）；
-            // 登记失败只记日志，不把审计故障升级为业务失败
+            // 普通成功路径保持历史 best-effort 语义。
             insert(eventType, actorId, jsonOf(detail));
         } catch (Exception e) {
             log.warn("成功路径审计登记失败: {}", eventType, e);
+        }
+    }
+
+    @Override
+    public void appendRequiredWithBusinessFact(String eventType, Long actorId, Object detail) {
+        try {
+            insert(eventType, actorId, jsonOf(detail));
+        } catch (Exception e) {
+            throw new InfrastructureFailure("必需业务审计登记失败: " + eventType, e);
         }
     }
 

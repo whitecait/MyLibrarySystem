@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
  */
 public interface MaintenanceUseCases {
 
-    ModuleResult<TitlePage> search(String q, String category, PageCursor page);
+    ModuleResult<TitlePage> search(String q, String category, String availability, PageCursor page);
 
     ModuleResult<TitleView> title(long titleId);
 
@@ -62,8 +62,8 @@ record MaintenanceUseCasesImpl(TitleQuery titleQuery,
                                AuthorizationCheck authorization) implements MaintenanceUseCases {
 
     @Override
-    public ModuleResult<TitlePage> search(String q, String category, PageCursor page) {
-        return titleQuery.search(new TitleCriteria(q, category, page), Visibility.PUBLIC);
+    public ModuleResult<TitlePage> search(String q, String category, String availability, PageCursor page) {
+        return titleQuery.search(new TitleCriteria(q, category, availability, page), Visibility.PUBLIC);
     }
 
     @Override

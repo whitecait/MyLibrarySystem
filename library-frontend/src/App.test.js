@@ -32,4 +32,18 @@ describe('application shell', () => {
     expect(wrapper.find('[data-testid="session-area"]').text()).toContain('READER')
     logout()
   })
+
+  it('keeps the librarian walk-in entry out of the reader navigation', async () => {
+    login({ accessToken: 'opaque-token', actor: { accountId: '1001', role: 'READER' } })
+    const wrapper = await mountApp()
+    expect(wrapper.find('.app-nav a[href="/walk-in"]').exists()).toBe(false)
+    logout()
+  })
+
+  it('shows the walk-in entry to librarians', async () => {
+    login({ accessToken: 'opaque-token', actor: { accountId: '1002', role: 'LIBRARIAN' } })
+    const wrapper = await mountApp()
+    expect(wrapper.find('.app-nav a[href="/walk-in"]').exists()).toBe(true)
+    logout()
+  })
 })

@@ -9,6 +9,13 @@
         clearable
         @clear="onSearch"
       />
+      <label for="portal-availability">可借状态</label>
+      <select id="portal-availability" v-model="availability" data-testid="portal-availability-filter">
+        <option value="">全部</option>
+        <option value="AVAILABLE">可借</option>
+        <option value="UNAVAILABLE">不可借</option>
+        <option value="UNKNOWN">未知</option>
+      </select>
       <el-button type="primary" native-type="submit" data-testid="portal-search-submit">检索</el-button>
     </form>
 
@@ -53,6 +60,7 @@ import { useApiRequest } from '@/platform/http'
 import { searchTitles } from '../index'
 
 const q = ref('')
+const availability = ref('')
 const titles = ref([])
 const nextCursor = ref(null)
 const { state, run } = useApiRequest()
@@ -67,14 +75,23 @@ function availabilityTagType(availability) {
 }
 
 async function onSearch() {
-  const envelope = await run(() => searchTitles({ q: q.value || undefined, limit: 20 }))
+  const envelope = await run(() => searchTitles({
+    q: q.value || undefined,
+    availability: availability.value || undefined,
+    limit: 20,
+  }))
   if (!envelope) return
   titles.value = envelope.data.items
   nextCursor.value = envelope.data.nextCursor
 }
 
 async function loadMore() {
-  const envelope = await run(() => searchTitles({ q: q.value || undefined, limit: 20, cursor: nextCursor.value }))
+  const envelope = await run(() => searchTitles({
+    q: q.value || undefined,
+    availability: availability.value || undefined,
+    limit: 20,
+    cursor: nextCursor.value,
+  }))
   if (!envelope) return
   titles.value = [...titles.value, ...envelope.data.items]
   nextCursor.value = envelope.data.nextCursor

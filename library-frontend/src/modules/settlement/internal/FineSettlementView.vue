@@ -1,6 +1,9 @@
 <template>
   <section class="fine-settlement-view">
     <h1>罚款与支付</h1>
+    <p class="simulation-warning" role="note" data-testid="payment-simulation-warning">
+      <strong>模拟支付：</strong>本项目不接入真实资金；支付只用于流程验证，不会扣款或转账。
+    </p>
 
     <div class="action-block">
       <h2>罚款列表</h2>
@@ -29,7 +32,7 @@
               <td>{{ fine.status }}</td>
               <td>
                 <el-button
-                  v-if="fine.status === 'UNPAID'"
+                  v-if="fine.status === 'UNPAID' && !hasOccupiedOrder(fine.fineId)"
                   size="small"
                   type="primary"
                   :data-testid="`create-order-${fine.fineId}`"
@@ -47,6 +50,31 @@
       <ErrorAlert v-if="listState.status === 'failure'" :failure="listState.failure" />
     </div>
 
+    <div v-if="occupiedOrders.length" class="action-block" data-testid="occupied-orders-panel">
+      <h2>未释放的支付单</h2>
+      <ul class="occupied-orders">
+        <li v-for="occupied in occupiedOrders" :key="occupied.orderId">
+          <el-button
+            size="small"
+            :data-testid="`select-order-${occupied.orderId}`"
+            :type="order?.orderId === occupied.orderId ? 'primary' : 'default'"
+            @click="selectOccupiedOrder(occupied)"
+          >
+            支付单 {{ occupied.orderId }}（{{ occupied.status }}）
+          </el-button>
+        </li>
+      </ul>
+      <el-button
+        v-if="occupiedOrdersCursor"
+        data-testid="occupied-orders-load-more"
+        :loading="occupiedListState.status === 'loading'"
+        @click="loadOccupiedOrders(occupiedOrdersCursor)"
+      >
+        加载更多支付单
+      </el-button>
+    </div>
+    <ErrorAlert v-if="occupiedListState.status === 'failure'" :failure="occupiedListState.failure" />
+
     <div v-if="order" class="action-block">
       <h2 data-testid="order-panel-title">支付单 {{ order.orderId }}（{{ order.status }}）</h2>
       <p data-testid="order-amount">金额：{{ (order.amountCents / 100).toFixed(2) }} 元</p>
@@ -63,23 +91,7 @@
         >
           关闭支付单
         </el-button>
-        <template v-if="isLibrarian">
-          <el-input v-model="refundAmount" data-testid="refund-amount" placeholder="退款金额（元）" class="amount-input" />
-          <el-input v-model="refundReason" data-testid="refund-reason" placeholder="退款原因（必填）" class="inline-input" />
-          <el-button data-testid="refund-submit" :loading="refundState.status === 'loading'" @click="submitRefund">
-            申请退款
-          </el-button>
-        </template>
       </div>
-      <el-alert
-        v-if="refundResult"
-        type="warning"
-        :closable="false"
-        data-testid="refund-review-pending"
-        :title="`退款申请已提交复核：受理号 ${refundResult.reviewId}（${refundResult.status}）`"
-        description="退款在管理员批准前不生效。"
-      />
-      <ErrorAlert v-if="refundState.status === 'failure'" :failure="refundState.failure" />
     </div>
     <ErrorAlert v-if="orderState.status === 'failure'" :failure="orderState.failure" />
     <ErrorAlert v-if="closeState.status === 'failure'" :failure="closeState.failure" />
@@ -89,10 +101,10 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { getRole } from '@/platform/auth/session'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
-import { getRole } from '@/platform/auth/session'
-import { closeOrder, createOrder, getOrder, listFines, requestRefund } from '../index'
+import { closeOrder, createOrder, getOrder, listFines, listOccupiedOrders } from '../index'
 
 const fines = ref([])
 const nextCursor = ref(null)
@@ -100,17 +112,35 @@ const readerId = ref('')
 const status = ref('')
 const { state: listState, run: runList } = useApiRequest()
 
+const occupiedOrders = ref([])
+const occupiedOrdersCursor = ref(null)
+const { state: occupiedListState, run: runOccupiedList } = useApiRequest()
 const order = ref(null)
 const { state: orderState, run: runOrder } = useApiRequest()
 const { state: queryState, run: runQuery } = useApiRequest()
 const { state: closeState, run: runClose } = useApiRequest()
-const refundAmount = ref('')
-const refundReason = ref('')
-const { state: refundState, run: runRefund } = useApiRequest()
-const refundResult = ref(null)
 
-const isLibrarian = computed(() => getRole() === 'LIBRARIAN')
-const canClose = computed(() => order.value?.status === 'FAILED')
+const canClose = computed(() => order.value?.status === 'OCCUPIED')
+
+function hasOccupiedOrder(fineId) {
+  return occupiedOrders.value.some((candidate) => candidate.fineId === fineId)
+}
+
+function selectOccupiedOrder(value) {
+  order.value = value
+}
+
+function rememberOrder(value) {
+  if (value.status === 'OCCUPIED') {
+    const existingIndex = occupiedOrders.value.findIndex((candidate) => candidate.orderId === value.orderId)
+    if (existingIndex === -1) occupiedOrders.value = [...occupiedOrders.value, value]
+    else occupiedOrders.value = occupiedOrders.value.map((candidate) =>
+      candidate.orderId === value.orderId ? value : candidate,
+    )
+  } else {
+    occupiedOrders.value = occupiedOrders.value.filter((candidate) => candidate.orderId !== value.orderId)
+  }
+}
 
 async function load(cursor) {
   const envelope = await runList(() =>
@@ -122,29 +152,47 @@ async function load(cursor) {
 }
 
 async function createOrderFor(fine) {
-  refundResult.value = null
   const envelope = await runOrder(() => createOrder({ fineId: fine.fineId }))
-  if (envelope) order.value = envelope.data
+  if (envelope) {
+    order.value = envelope.data
+    rememberOrder(envelope.data)
+  } else if (getRole() === 'READER') {
+    await loadOccupiedOrders()
+  }
+}
+
+async function loadOccupiedOrders(cursor) {
+  if (getRole() !== 'READER') return
+  const envelope = await runOccupiedList(() => listOccupiedOrders({ cursor, limit: 20 }))
+  if (!envelope) return
+  occupiedOrders.value = cursor ? [...occupiedOrders.value, ...envelope.data.items] : envelope.data.items
+  occupiedOrdersCursor.value = envelope.data.nextCursor
+  if (!cursor && occupiedOrders.value.length) order.value = occupiedOrders.value[0]
 }
 
 async function refreshOrder() {
   const envelope = await runQuery(() => getOrder({ orderId: order.value.orderId }))
-  if (envelope) order.value = envelope.data
+  if (envelope) {
+    order.value = envelope.data
+    rememberOrder(envelope.data)
+    if (envelope.data.status === 'PAID') {
+      fines.value = fines.value.map((fine) =>
+        fine.fineId === envelope.data.fineId ? { ...fine, status: 'PAID' } : fine,
+      )
+    }
+  }
 }
 
 async function close() {
   const envelope = await runClose(() => closeOrder({ orderId: order.value.orderId }))
-  if (envelope) order.value = envelope.data
-}
-
-async function submitRefund() {
-  const envelope = await runRefund(() =>
-    requestRefund({ orderId: order.value.orderId, amountCents: Math.round(Number(refundAmount.value) * 100), reason: refundReason.value }),
-  )
-  if (envelope) refundResult.value = envelope.data
+  if (envelope) {
+    order.value = envelope.data
+    rememberOrder(envelope.data)
+  }
 }
 
 load()
+if (getRole() === 'READER') loadOccupiedOrders()
 </script>
 
 <style scoped>
@@ -164,12 +212,30 @@ load()
   gap: 0.75rem;
 }
 
+.simulation-warning {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e6a23c;
+  border-radius: 0.5rem;
+  background: #fdf6ec;
+  color: #7a4b00;
+}
+
 .action-block form,
 .row {
   display: flex;
   gap: 0.75rem;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.occupied-orders {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .inline-input {

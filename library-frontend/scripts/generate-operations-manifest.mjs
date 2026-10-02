@@ -58,6 +58,7 @@ for (const [route, pathItem] of Object.entries(doc.paths ?? {})) {
       method: method.toUpperCase(),
       path: route,
       tag: operation.tags?.[0] ?? 'Uncategorized',
+      deprecated: operation.deprecated === true,
       permission: operation['x-permission'] ?? pathItem['x-permission'] ?? null,
       public: allowsAnonymous(security),
       requiresIdempotencyKey: hasIdempotencyKey(operation),

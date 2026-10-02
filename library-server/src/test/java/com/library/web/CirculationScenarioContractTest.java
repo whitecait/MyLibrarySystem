@@ -6,6 +6,7 @@ import com.library.contract.ContractScenarios;
 import com.library.contract.InstanceValidator;
 import com.library.contract.OpenApiDocument;
 import com.library.identity.internal.PasswordHasher;
+import com.library.contract.time.BusinessClock;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -47,6 +48,7 @@ class CirculationScenarioContractTest {
 
     @Autowired TestRestTemplate rest;
     @Autowired JdbcTemplate jdbc;
+    @Autowired BusinessClock businessClock;
 
     private final OpenApiDocument contract = new OpenApiDocument();
     private final ContractScenarios scenarios = new ContractScenarios();
@@ -91,14 +93,44 @@ class CirculationScenarioContractTest {
         return titleId;
     }
 
+    @Test
+    void copyStatusFilterPreservesLegalValuesAndRejectsUnknownValues() throws Exception {
+        var librarianId = seedLibrarian();
+        var librarianToken = loginLibrarian(librarianId);
+        var titleId = seedTitleWithCopies("Copy filter " + UUID.randomUUID(), 1);
+
+        var available = get("/api/v1/copies?titleId=" + titleId + "&status=AVAILABLE", librarianToken);
+        assertThat(available.getStatusCode().value()).isEqualTo(200);
+        var availableItems = json.readTree(available.getBody()).at("/data/items");
+        assertThat(availableItems).hasSize(1);
+        assertThat(availableItems.get(0).path("status").asText()).isEqualTo("AVAILABLE");
+
+        var invalid = get("/api/v1/copies?titleId=" + titleId + "&status=NOT_A_COPY_STATE", librarianToken);
+        assertThat(invalid.getStatusCode().value()).isEqualTo(400);
+        assertThat(json.readTree(invalid.getBody()).path("code").asText()).isEqualTo("MLS-CIRC-001");
+    }
+
     // 场景 3：无可用副本 → WAITLIST_PENDING_CONFIRMATION（txId=null）；确认 → 入队
     @Test
     void reservationWaitlistScenarioExecutesLive() throws Exception {
         var readerToken = registerAndLogin("waitlist-reader");
-        var emptyTitle = seedTitleWithCopies("无副本预约书", 0);
+        var emptyTitle = seedTitleWithCopies("无可借副本预约书", 1);
         var scenario = scenarios.byId("RESERVATION-WAITLIST-CONFIRMATION");
         // 候补路径只对非当日预约成立：当日无副本走 MANUAL_HANDLING（CirculationModuleImpl 分界）
-        var futureDate = java.time.LocalDate.now().plusDays(2).toString();
+        var futureDate = businessClock.today().plusDays(2).toString();
+        var heldCopyId = jdbc.queryForObject(
+                "SELECT id FROM book_copy WHERE title_id = ? LIMIT 1", Long.class, emptyTitle);
+        var otherReaderId = jdbc.queryForObject("""
+                INSERT INTO account (username, password_hash, display_name, role)
+                VALUES (?, 'x', '候补占用者', 'READER') RETURNING id
+                """, Long.class, "waitlist-holder-" + UUID.randomUUID().toString().substring(0, 8));
+        jdbc.update("""
+                INSERT INTO borrow_transaction(reader_id, title_id, copy_id, status, reservation_date, due_date)
+                VALUES (?, ?, ?, 'LENT', ?, ?)
+                """, otherReaderId, emptyTitle, heldCopyId,
+                java.sql.Date.valueOf(businessClock.today().minusDays(1)),
+                java.sql.Date.valueOf(businessClock.today().plusDays(6)));
+        jdbc.update("UPDATE book_copy SET status = 'LENT' WHERE id = ?", heldCopyId);
 
         var body = """
                 {"titleId":"%d","reservationDate":"%s","pickupSlot":"AM",
@@ -111,9 +143,12 @@ class CirculationScenarioContractTest {
         assertThat(result.path("code").asText()).isEqualTo("MLS-CIRC-S001");
         assertThat(result.at("/data/outcome").asText()).isEqualTo("WAITLIST_PENDING_CONFIRMATION");
         assertThat(result.at("/data/txId").isNull()).isTrue();
-        // 无业务事实：该书目无任何事务
+        // 保留已有借阅事务；待确认本身不新增预约业务事实。
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM borrow_transaction WHERE title_id = ?",
+                Integer.class, emptyTitle)).isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM borrow_transaction WHERE title_id = ? AND status = 'WAITLIST'",
                 Integer.class, emptyTitle)).isZero();
 
         var confirm = post("/api/v1/reservations", readerToken, key(),
@@ -132,18 +167,19 @@ class CirculationScenarioContractTest {
     // 场景 4：现场逐册借阅——一册可借、一册无副本，混合结果逐册保留
     @Test
     void walkInMixedBatchScenarioExecutesLive() throws Exception {
-        var readerToken = registerAndLogin("walkin-reader");
+        registerAndLogin("walkin-reader");
         long readerId = jdbc.queryForObject(
                 "SELECT id FROM account WHERE username LIKE 'walkin-reader-%'", Long.class);
         var availableTitle = seedTitleWithCopies("可借书", 1);
         var emptyTitle = seedTitleWithCopies("不可借书", 0);
-        seedLibrarian();
+        var librarianId = seedLibrarian();
+        var librarianToken = loginLibrarian(librarianId);
 
         var body = """
-                {"items":[{"titleId":"%d"},{"titleId":"%d"}],"channel":"SELF_SERVICE"}
-                """.formatted(availableTitle, emptyTitle);
-        var response = post("/api/v1/walk-in-loans", readerToken, key(), body);
-        assertThat(response.getStatusCode().value()).isEqualTo(200);
+                {"readerId":"%d","items":[{"titleId":"%d"},{"titleId":"%d"}],"channel":"DESK"}
+                """.formatted(readerId, availableTitle, emptyTitle);
+        var response = post("/api/v1/walk-in-loans", librarianToken, key(), body);
+        assertThat(response.getStatusCode().value()).as("借出响应: %s", response.getBody()).isEqualTo(200);
         var result = json.readTree(response.getBody());
         assertThat(result.path("code").asText()).isEqualTo("MLS-CIRC-S002");
         var items = result.at("/data/items");
@@ -152,6 +188,29 @@ class CirculationScenarioContractTest {
         assertThat(items.get(0).path("txId").isNull()).isFalse();
         assertThat(items.get(1).path("outcome").asText()).isEqualTo("REJECTED");
         assertThat(items.get(1).path("reasons").get(0).asText()).isEqualTo("COPY_NOT_AVAILABLE");
+    }
+
+    @Test
+    void readerCannotUseWalkInEndpointAndRejectedAttemptsWriteNoCirculationFacts() throws Exception {
+        var readerToken = registerAndLogin("walkin-blocked-reader");
+        var titleId = seedTitleWithCopies("读者自助借阅关闭" + UUID.randomUUID(), 1);
+        var copyId = jdbc.queryForObject(
+                "SELECT id FROM book_copy WHERE title_id = ? LIMIT 1", Long.class, titleId);
+        var readerId = jdbc.queryForObject(
+                "SELECT id FROM account WHERE username LIKE 'walkin-blocked-reader-%'", Long.class);
+
+        for (var channel : java.util.List.of("SELF_SERVICE", "DESK")) {
+            var response = post("/api/v1/walk-in-loans", readerToken, key(), """
+                    {"readerId":"%d","items":[{"titleId":"%d","copyId":"%d"}],"channel":"%s"}
+                    """.formatted(readerId, titleId, copyId, channel));
+            assertThat(response.getStatusCode().value()).isEqualTo(403);
+            assertThat(json.readTree(response.getBody()).path("code").asText()).isEqualTo("MLS-ID-005");
+        }
+
+        assertThat(jdbc.queryForObject(
+                "SELECT status FROM book_copy WHERE id = ?", String.class, copyId)).isEqualTo("SHELF_READY");
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM borrow_transaction WHERE title_id = ?", Integer.class, titleId)).isZero();
     }
 
     // 场景 5：借出后逾期归还 → 罚款形成（流通+罚款+Outbox 同事务）；重复归还 409
@@ -172,9 +231,9 @@ class CirculationScenarioContractTest {
                         + "\",\"copyId\":\"" + copyId + "\"}],\"channel\":\"DESK\"}");
         assertThat(loan.getStatusCode().value())
                 .as("借出响应: %s", loan.getBody()).isEqualTo(200);
-        // 种子逾期：due_date 调到 5 天前
-        jdbc.update("UPDATE borrow_transaction SET due_date = current_date - 5 "
-                + "WHERE copy_id = ? AND status = 'LENT'", copyId);
+        // 种子逾期：due_date 按业务时钟调到 5 天前。
+        jdbc.update("UPDATE borrow_transaction SET due_date = ? WHERE copy_id = ? AND status = 'LENT'",
+                java.sql.Date.valueOf(businessClock.today().minusDays(5)), copyId);
 
         var response = post("/api/v1/returns", librarianToken, key(),
                 "{\"copyId\":\"%d\",\"condition\":\"INTACT\"}".formatted(copyId));
@@ -182,11 +241,11 @@ class CirculationScenarioContractTest {
         var result = json.readTree(response.getBody());
         assertThat(result.path("code").asText()).isEqualTo("MLS-CIRC-S003");
         assertThat(result.at("/data/outcome").asText()).isEqualTo("RETURNED");
-        assertThat(result.at("/data/fineId").isNull()).isFalse(); // 逾期 5 天 × 100 分
+        assertThat(result.at("/data/fineId").isNull()).isFalse();
         // 罚款事实（BR-0019：同归还至多一笔）
         assertThat(jdbc.queryForObject(
                 "SELECT amount_cents FROM fine WHERE source_tx_id = "
-                        + result.at("/data/txId").asLong(), Long.class)).isEqualTo(500L);
+                        + result.at("/data/txId").asLong(), Long.class)).isEqualTo(4950L);
         // 重复归还 → 409 MLS-CIRC-006
         var duplicate = post("/api/v1/returns", librarianToken, key(),
                 "{\"copyId\":\"%d\",\"condition\":\"INTACT\"}".formatted(copyId));

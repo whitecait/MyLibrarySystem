@@ -21,7 +21,7 @@
           <div v-for="action in turn.data.actions" :key="action.draftId" class="action-card" :data-testid="`ai-action-${action.level}`">
             <span class="action-label">{{ action.label }}（{{ action.level }}）</span>
             <button
-              v-if="action.level === 'L2' && canApplyPrefill"
+              v-if="action.level === 'L2' && canOpenPrefill(action)"
               type="button"
               :data-testid="`ai-action-open-${action.draftId}`"
               @click="openPrefill(action)"
@@ -86,6 +86,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { FailureKind } from '@/platform/http'
 import { useApiRequest } from '@/platform/http'
@@ -94,6 +95,7 @@ import SafeMarkdown from './SafeMarkdown'
 
 const props = defineProps({ canApplyPrefill: { type: Boolean, default: false } })
 const emit = defineEmits(['prefill'])
+const router = useRouter()
 
 const sessionId = ref(null)
 const role = ref(null)
@@ -135,7 +137,25 @@ async function send() {
   if (eventsVisible.value) await refreshEvents()
 }
 
+function canOpenPrefill(action) {
+  if (action.actionType === 'WALK_IN_LOAN') return role.value === 'LIBRARIAN'
+  return props.canApplyPrefill
+}
+
 function openPrefill(action) {
+  if (action.actionType === 'WALK_IN_LOAN') {
+    if (role.value !== 'LIBRARIAN') return
+    void router.push({
+      name: 'walk-in',
+      query: {
+        readerId: String(action.prefill?.readerId ?? ''),
+        titleId: String(action.prefill?.titleId ?? ''),
+        copyId: String(action.prefill?.copyId ?? ''),
+        aiDraftId: String(action.draftId),
+      },
+    })
+    return
+  }
   if (props.canApplyPrefill) emit('prefill', action)
 }
 

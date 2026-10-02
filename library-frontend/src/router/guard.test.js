@@ -44,6 +44,18 @@ describe('router guards', () => {
     expect(router.currentRoute.value.name).toBe('guarded')
   })
 
+  it('denies readers the librarian walk-in route and allows librarians', async () => {
+    login({ accessToken: 't', actor: { accountId: '1001', role: 'READER' } })
+    const readerRouter = buildRouter()
+    await readerRouter.push('/walk-in')
+    expect(readerRouter.currentRoute.value.name).toBe('forbidden')
+
+    login({ accessToken: 't', actor: { accountId: '1002', role: 'LIBRARIAN' } })
+    const librarianRouter = buildRouter()
+    await librarianRouter.push('/walk-in')
+    expect(librarianRouter.currentRoute.value.name).toBe('walk-in')
+  })
+
   it('keeps public routes public', async () => {
     const router = buildRouter()
     await router.push('/')
@@ -55,5 +67,11 @@ describe('router guards', () => {
     await router.push('/assistant')
     expect(router.currentRoute.value.name).toBe('ai-assistant')
     expect(peekContinuation()).toBeNull()
+  })
+
+  it('routes the retired reconciliation URL to the not-found page', async () => {
+    const router = buildRouter()
+    await router.push('/admin/reconciliation')
+    expect(router.currentRoute.value.name).toBe('not-found')
   })
 })

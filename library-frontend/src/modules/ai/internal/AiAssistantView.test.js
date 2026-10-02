@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { login, logout } from '@/platform/auth/session'
 import { setTransport } from '@/platform/http'
 import sharedFixtures from '@/platform/http/mock/fixtures'
-import { installMockTransport, mountView } from '../../../tests/helpers'
+import { createTestRouter, installMockTransport, mountView } from '../../../tests/helpers'
+import { WalkInLoansView } from '@/modules/circulation'
 import AiAssistantView from './AiAssistantView.vue'
 
 beforeEach(() => login({ accessToken: 't', actor: { accountId: '1001', role: 'READER' } }))
@@ -13,8 +14,8 @@ afterEach(() => {
   setTransport(null)
 })
 
-async function mountAssistant(props = {}) {
-  const wrapper = await mountView(AiAssistantView, { props })
+async function mountAssistant(props = {}, router) {
+  const wrapper = await mountView(AiAssistantView, { props, ...(router ? { router } : {}) })
   await flushPromises()
   return wrapper
 }
@@ -128,6 +129,118 @@ describe('AiAssistantView', () => {
     expect(wrapper.find('[data-testid="ai-action-L2"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="ai-action-open-7201"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="ai-action-l2-here"]').text()).toContain('请在对应业务页面')
+  })
+
+  it('opens a librarian walk-in L2 draft with all fields prefilled and no submission', async () => {
+    await login({ accessToken: 'librarian-token', actor: { accountId: '2001', role: 'LIBRARIAN' } })
+    const aiFixtures = {
+      startAiSession: {
+        code: 'MLS-AI-S001',
+        message: 'started',
+        data: { sessionId: '7017', role: 'LIBRARIAN', quota: { remaining: 10 } },
+      },
+      sendAiMessage: {
+        code: 'MLS-AI-S001',
+        message: 'draft ready',
+        data: {
+          messageId: '7117',
+          answer: '请核对现场借阅草稿后提交。',
+          citations: [],
+          actions: [{
+            actionType: 'WALK_IN_LOAN',
+            level: 'L2',
+            prefill: { readerId: '2', titleId: '700001', copyId: '800002' },
+            draftId: '7217',
+            label: '打开现场借阅表单',
+          }],
+          quota: { remaining: 9 },
+        },
+      },
+    }
+    const calls = []
+    setTransport({
+      mode: 'mock',
+      async request(operationId, options = {}) {
+        calls.push({ operationId, options })
+        if (operationId === 'createWalkInLoans') {
+          return { code: 'MLS-CIRC-S001', message: 'submitted', data: { items: [] } }
+        }
+        return aiFixtures[operationId]
+      },
+    })
+    const router = createTestRouter([
+      { path: '/assistant', name: 'ai-assistant', component: AiAssistantView },
+      { path: '/walk-in', name: 'walk-in', component: WalkInLoansView },
+    ])
+    await router.push('/assistant')
+    await router.isReady()
+    const assistant = await mountAssistant({}, router)
+    await sendMessage(assistant, '为读者2预填书目700001、副本800002的现场借阅')
+
+    const openDraft = assistant.find('[data-testid="ai-action-open-7217"]')
+    expect(openDraft.exists()).toBe(true)
+    await openDraft.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('walk-in')
+    expect(router.currentRoute.value.query).toMatchObject({
+      readerId: '2',
+      titleId: '700001',
+      copyId: '800002',
+      aiDraftId: '7217',
+    })
+    const walkIn = await mountView(WalkInLoansView, { router })
+    await flushPromises()
+    expect(walkIn.find('[data-testid="walkin-reader-id"]').element.value).toBe('2')
+    expect(walkIn.find('[data-testid="walkin-title-0"]').element.value).toBe('700001')
+    expect(walkIn.find('[data-testid="walkin-copy-0"]').element.value).toBe('800002')
+    expect(walkIn.find('[data-testid="walkin-results"]').exists()).toBe(false)
+    expect(calls.filter((call) => call.operationId === 'createWalkInLoans')).toHaveLength(0)
+    await walkIn.find('[data-testid="walkin-form"]').trigger('submit')
+    await flushPromises()
+
+    const loanCalls = calls.filter((call) => call.operationId === 'createWalkInLoans')
+    expect(loanCalls).toHaveLength(1)
+    expect(loanCalls[0].options.body).toEqual({
+      readerId: '2',
+      channel: 'DESK',
+      items: [{ titleId: '700001', copyId: '800002' }],
+    })
+    expect(loanCalls[0].options.headers).toEqual({ 'Ai-Draft-Id': '7217' })
+  })
+
+  it('does not expose a librarian-only walk-in draft action to readers', async () => {
+    installMockTransport({
+      fixtures: {
+        startAiSession: {
+          code: 'MLS-AI-S001',
+          message: 'started',
+          data: { sessionId: '7001', role: 'READER', quota: { remaining: 10 } },
+        },
+        sendAiMessage: {
+          code: 'MLS-AI-S001',
+          message: 'draft ready',
+          data: {
+            messageId: '7101',
+            answer: '请核对草稿。',
+            citations: [],
+            actions: [{
+              actionType: 'WALK_IN_LOAN',
+              level: 'L2',
+              prefill: { readerId: '2', titleId: '700001', copyId: '800002' },
+              draftId: '7201',
+              label: '打开现场借阅表单',
+            }],
+            quota: { remaining: 9 },
+          },
+        },
+      },
+    })
+    const wrapper = await mountAssistant()
+    await sendMessage(wrapper, '为读者2预填现场借阅')
+
+    expect(wrapper.find('[data-testid="ai-action-open-7201"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-action-l2-here"]').exists()).toBe(true)
   })
 
   it('shows the exhausted state and disables input after the 429 sample', async () => {

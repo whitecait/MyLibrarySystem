@@ -26,13 +26,13 @@ class V9MigrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM closing_control",Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM closing_admission",Integer.class)).isZero();
         jdbc.update("DELETE FROM closing_admission");jdbc.update("DELETE FROM closing_control");
-        var latest=Flyway.configure().dataSource(source).locations("classpath:db/migration").load();
-        assertThat(latest.migrate().migrationsExecuted).isOne();
+        var v9=Flyway.configure().dataSource(source).locations("classpath:db/migration").target("9").load();
+        assertThat(v9.migrate().migrationsExecuted).isOne();
         assertThat(jdbc.queryForMap("SELECT status,version FROM closing_control WHERE scope='GLOBAL'"))
                 .containsEntry("status","OPEN").containsEntry("version",0L);
         assertThat(jdbc.queryForObject("SELECT draining FROM closing_admission WHERE scope='GLOBAL'",Boolean.class)).isFalse();
-        assertThat(latest.migrate().migrationsExecuted).isZero();
-        assertThat(latest.validateWithResult().validationSuccessful).isTrue();
+        assertThat(v9.migrate().migrationsExecuted).isZero();
+        assertThat(v9.validateWithResult().validationSuccessful).isTrue();
     }
 
     @Test void v9PreservesExistingIsolatedGateAndAdmissionIntent() throws Exception {

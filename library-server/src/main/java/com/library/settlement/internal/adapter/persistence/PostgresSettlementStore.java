@@ -84,7 +84,21 @@ public class PostgresSettlementStore implements SettlementStore {
         return jdbc.query(sql.toString(), FINE, args.toArray());
     }
 
+    @Override
+    public List<OrderRow> listOccupiedOrders(long readerId, long afterId, int limit) {
+        return jdbc.query("""
+                SELECT o.*, f.amount_cents
+                FROM payment_order o
+                JOIN fine f ON f.id = o.fine_id
+                WHERE f.reader_id = ? AND o.status = 'OCCUPIED' AND o.id > ?
+                ORDER BY o.id
+                LIMIT ?
+                """, ORDER, readerId, afterId, limit);
+    }
+
     @Override public Optional<OrderRow> orderById(long id) { return jdbc.query("SELECT o.*, f.amount_cents FROM payment_order o JOIN fine f ON f.id=o.fine_id WHERE o.id=?", ORDER, id).stream().findFirst(); }
+    @Override public Optional<OrderRow> lockOrderById(long id) { return jdbc.query("SELECT o.*, f.amount_cents FROM payment_order o JOIN fine f ON f.id=o.fine_id WHERE o.id=? FOR UPDATE OF o", ORDER, id).stream().findFirst(); }
+    @Override public void lockCallbackEvent(String eventId) { jdbc.query("SELECT pg_advisory_xact_lock(hashtextextended(?,0))",ps->ps.setString(1,"mls.payment.callback:"+eventId),rs->{rs.next();return null;}); }
     @Override public Optional<OrderRow> unreleasedOrder(long fineId) { return jdbc.query("SELECT o.*, f.amount_cents FROM payment_order o JOIN fine f ON f.id=o.fine_id WHERE o.fine_id=? AND o.status='OCCUPIED'", ORDER, fineId).stream().findFirst(); }
     @Override public long insertOrder(long fineId,long amount,Instant expiresAt) { return jdbc.queryForObject("INSERT INTO payment_order(fine_id,expires_at) VALUES (?,?) RETURNING id",Long.class,fineId,java.sql.Timestamp.from(expiresAt)); }
     @Override public boolean transitionOrder(long id,String expected,String next,Instant at) { var column="PAID".equals(next)?"paid_at":"closed_at"; return jdbc.update("UPDATE payment_order SET status=?, "+column+"=?, version=version+1 WHERE id=? AND status=?",next,java.sql.Timestamp.from(at),id,expected)==1; }

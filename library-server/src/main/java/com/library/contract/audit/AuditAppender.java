@@ -24,4 +24,13 @@ public interface AuditAppender {
      * 仅供已形成业务事实的成功用例调用。
      */
     void appendWithBusinessFact(String eventType, Long actorId, Object detail);
+
+    /**
+     * Required variant for facts whose business effect must not commit without audit.
+     * The default preserves adapters that already fail their write path; production JDBC
+     * overrides this to surface serialization and persistence errors to the transaction.
+     */
+    default void appendRequiredWithBusinessFact(String eventType, Long actorId, Object detail) {
+        appendWithBusinessFact(eventType, actorId, detail);
+    }
 }

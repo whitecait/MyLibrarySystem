@@ -4,7 +4,7 @@
 // writes are reader reservation create+cancel pairs through the circulation
 // class. Covers all five MLS-NFR-PER-0001 classes: an audit-query stream
 // (authenticated LIBRARIAN) and a low-rate end-to-end payment chain
-// (self borrow -> damaged librarian return -> fine -> order -> simulated
+// (librarian DESK borrow -> damaged librarian return -> fine -> order -> simulated
 // payment) on top of the read/circulation mix. Same-query conflicts (e.g.
 // all-copies-reserved, lost races) are controlled business rejections,
 // declared per call site as expected 4xx with the contract's concrete HTTP
@@ -48,9 +48,13 @@ let tokens = []
 
 export function setup() {
   const tokensLocal = []
+  const readerIds = []
   for (let i = 1; i <= READERS; i++) {
-    const token = login(readerName(i), probePasswordLocal)
-    if (token) tokensLocal.push(token)
+    const session = req('POST', api('/auth/sessions'), 'normal_read', { username: readerName(i), password: probePasswordLocal }).json()?.data
+    if (session?.accessToken && session?.actor?.accountId) {
+      tokensLocal.push(session.accessToken)
+      readerIds.push(session.actor.accountId)
+    }
   }
   if (tokensLocal.length === 0) throw new Error('no probe account could log in — warmup did not run against this instance?')
   const librarianToken = login(librarianName, librarianPassword)
@@ -61,7 +65,7 @@ export function setup() {
   // while all ordinary circulation traffic stays on the librarian probe.
   const adminToken = login(adminName, adminPassword)
   if (!adminToken) throw new Error('perf-probe-admin could not log in — run the updated e2e/data/load-dataset.sh (ADMIN injection) against this instance')
-  return { tokens: tokensLocal, librarianToken, adminToken }
+  return { tokens: tokensLocal, readerIds, librarianToken, adminToken }
 }
 
 let queryCursor = 0
@@ -125,16 +129,18 @@ export function audit(data) {
 
 let payCursor = 0
 export function paymentChain(data) {
-  // End-to-end payment class at low rate (2/min): a reader borrows a
-  // shelf-ready copy self-service, the librarian returns it DAMAGED (fine),
+  // End-to-end payment class at low rate (2/min): a librarian lends a
+  // shelf-ready copy through the librarian DESK path, then returns it DAMAGED (fine),
   // the reader opens an order on the fine and a SUCCESS simulated payment is
   // scheduled. Target selection follows the 80/20 hot/tail weighting with
   // same-pool retries (as writes). Lost races (copy taken between list and
   // borrow) are expected. Copy listing is a LIBRARIAN capability, so the
-  // staff token performs the lookup and the return; business writes stay with
-  // the reader, and the simulated-payment scheduling call is authenticated
+  // staff token performs lookup, DESK borrow for the selected reader and return;
+  // the reader opens the fine order, and simulated payment is authenticated
   // with the separate ADMIN probe session (DEF-M6-008).
-  const token = data.tokens[payCursor % data.tokens.length]
+  const readerIndex = payCursor % data.tokens.length
+  const token = data.tokens[readerIndex]
+  const readerId = data.readerIds[readerIndex]
   payCursor++
   const pool = pickPool()
   const candidates = []
@@ -157,8 +163,8 @@ export function paymentChain(data) {
   // copy-state conflict 409 / MLS-CIRC-003, reader-eligibility 422 /
   // MLS-CIRC-011. Any other 4xx lands in unexpected_4xx.
   const loan = req('POST', api('/walk-in-loans'), 'circulation',
-    { items: [{ titleId: String(titleId), copyId: String(copy.copyId) }], channel: 'SELF_SERVICE' },
-    [{ status: 409, reason: 'MLS-CIRC-003' }, { status: 422, reason: 'MLS-CIRC-011' }], auth(token))
+    { readerId: String(readerId), items: [{ titleId: String(titleId), copyId: String(copy.copyId) }], channel: 'DESK' },
+    [{ status: 409, reason: 'MLS-CIRC-003' }, { status: 422, reason: 'MLS-CIRC-011' }], auth(data.librarianToken))
   const lent = (loan.json()?.data?.items ?? []).some((i) => i.outcome === 'LENT')
   if (!lent) return
   // double-return / not-on-loan races: 409 / MLS-CIRC-006

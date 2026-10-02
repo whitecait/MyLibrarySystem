@@ -51,6 +51,7 @@ public final class SuccessCodes {
             Map.entry("closeOrder", "MLS-PAY-S006"),
             Map.entry("requestRefund", "MLS-PAY-S007"),
             Map.entry("reconcileBusinessDate", "MLS-PAY-S008"),
+            Map.entry("listOccupiedOrders", "MLS-PAY-S009"),
             Map.entry("listReviews", "MLS-REV-S001"),
             Map.entry("requestReview", "MLS-REV-S002"),
             Map.entry("decideReview", "MLS-REV-S003"),

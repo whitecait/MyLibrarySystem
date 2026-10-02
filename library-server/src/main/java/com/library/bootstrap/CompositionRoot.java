@@ -72,9 +72,21 @@ public class CompositionRoot {
             }
 
             @Override
+            public com.library.contract.ModuleResult<com.library.identity.contract.AccountState> accountState(
+                    com.library.contract.model.AccountId accountId) {
+                return aq.accountState(accountId);
+            }
+
+            @Override
             public com.library.contract.ModuleResult<com.library.identity.contract.AccountChange> changeAccount(
                     com.library.identity.contract.ChangeAccount command) {
                 return ac.changeAccount(command);
+            }
+
+            @Override
+            public com.library.contract.ModuleResult<com.library.identity.contract.AccountChange> applyReviewedChange(
+                    com.library.identity.contract.AccountCommands.ReviewedAccountChange command) {
+                return ac.applyReviewedChange(command);
             }
 
             @Override
@@ -286,6 +298,7 @@ public class CompositionRoot {
             @Override public com.library.contract.ModuleResult<com.library.settlement.contract.OrderCommands.Callback> applyCallback(com.library.settlement.contract.OrderCommands.PaymentCallback c) { return oc.applyCallback(c); }
             @Override public com.library.contract.ModuleResult<com.library.settlement.contract.OrderCommands.Order> closeOrder(com.library.settlement.contract.OrderCommands.CloseOrder c) { return oc.closeOrder(c); }
             @Override public com.library.contract.ModuleResult<com.library.settlement.contract.OrderCommands.Order> order(long id, com.library.contract.security.ActorContext a) { return oq.order(id,a); }
+            @Override public com.library.contract.ModuleResult<com.library.settlement.contract.OrderQuery.OrderPage> occupiedOrders(com.library.contract.model.PageCursor p, com.library.contract.security.ActorContext a) { return oq.occupiedOrders(p,a); }
             @Override public com.library.contract.ModuleResult<com.library.settlement.contract.RefundCommands.Refund> refund(com.library.settlement.contract.RefundCommands.ApprovedRefundCommand c) { return rf.refund(c); }
             @Override public com.library.contract.ModuleResult<com.library.settlement.contract.ReconciliationCommands.Reconciliation> reconcile(com.library.settlement.contract.ReconciliationCommands.ReconciliationCommand c) { return rc.reconcile(c); }
         }

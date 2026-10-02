@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.slf4j.LoggerFactory;
@@ -43,6 +44,16 @@ public class ApiExceptionHandler {
         var code = fieldErrorCodeOrDefault();
         return ResponseEntity.badRequest()
                 .body(Envelope.of(code, "请求体不可读", java.util.Map.of("reasons", java.util.List.of("malformed body"))));
+    }
+
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, NumberFormatException.class})
+    public ResponseEntity<Envelope> invalidParameter(Exception e) {
+        var code = StableErrorCode.MLS_API_001.code();
+        var parameter = e instanceof MethodArgumentTypeMismatchException mismatch
+                ? mismatch.getName() : null;
+        var reason = parameter == null ? "parameter format invalid" : parameter + " format invalid";
+        return ResponseEntity.badRequest()
+                .body(Envelope.of(code, "请求参数格式无效", java.util.Map.of("reasons", java.util.List.of(reason))));
     }
 
     @ExceptionHandler(Throwable.class)

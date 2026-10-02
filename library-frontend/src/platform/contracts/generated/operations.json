@@ -1,13 +1,14 @@
 {
   "basePath": "/api/v1",
   "openapiVersion": "3.1.0",
-  "sourceSha256": "143e83a652499b4dbbaa4ccfc370500cd1834c6bf8696de3d4e46ff3b6e3a0c0",
+  "sourceSha256": "ef974ae8a2f2d99691b432e25714218af4d609eea23e71f4ccba4c02f44d90cc",
   "operations": [
     {
       "operationId": "listAiEvents",
       "method": "GET",
       "path": "/ai/sessions/{sessionId}/events",
       "tag": "AI",
+      "deprecated": false,
       "permission": "AI_SESSION_OWNER_OR_ADMIN",
       "public": false,
       "requiresIdempotencyKey": false
@@ -17,6 +18,7 @@
       "method": "POST",
       "path": "/ai/sessions/{sessionId}/messages",
       "tag": "AI",
+      "deprecated": false,
       "permission": "AI_SESSION_OWNER",
       "public": false,
       "requiresIdempotencyKey": true
@@ -26,6 +28,7 @@
       "method": "POST",
       "path": "/ai/sessions",
       "tag": "AI",
+      "deprecated": false,
       "permission": "PUBLIC_OR_AUTHENTICATED",
       "public": true,
       "requiresIdempotencyKey": true
@@ -35,6 +38,7 @@
       "method": "POST",
       "path": "/titles",
       "tag": "Catalog",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -44,6 +48,7 @@
       "method": "GET",
       "path": "/titles/{titleId}/content",
       "tag": "Catalog",
+      "deprecated": false,
       "permission": "PUBLIC",
       "public": true,
       "requiresIdempotencyKey": false
@@ -53,6 +58,7 @@
       "method": "GET",
       "path": "/titles/{titleId}",
       "tag": "Catalog",
+      "deprecated": false,
       "permission": "PUBLIC",
       "public": true,
       "requiresIdempotencyKey": false
@@ -62,6 +68,7 @@
       "method": "DELETE",
       "path": "/titles/{titleId}",
       "tag": "Catalog",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -71,6 +78,7 @@
       "method": "GET",
       "path": "/titles",
       "tag": "Catalog",
+      "deprecated": false,
       "permission": "PUBLIC",
       "public": true,
       "requiresIdempotencyKey": false
@@ -80,6 +88,7 @@
       "method": "PATCH",
       "path": "/titles/{titleId}",
       "tag": "Catalog",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -89,6 +98,7 @@
       "method": "POST",
       "path": "/transactions/{txId}/manual-actions",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -98,6 +108,7 @@
       "method": "POST",
       "path": "/reservations/{txId}/cancel",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "READER_SELF_OR_LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -107,6 +118,7 @@
       "method": "PATCH",
       "path": "/copies/{copyId}",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -116,6 +128,7 @@
       "method": "POST",
       "path": "/pickups/{txId}/claim",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -125,6 +138,7 @@
       "method": "POST",
       "path": "/titles/{titleId}/copies",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -134,7 +148,8 @@
       "method": "POST",
       "path": "/walk-in-loans",
       "tag": "Circulation",
-      "permission": "READER_SELF_OR_LIBRARIAN",
+      "deprecated": false,
+      "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
     },
@@ -143,6 +158,7 @@
       "method": "GET",
       "path": "/titles/{titleId}/reservation-calendar",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "PUBLIC",
       "public": true,
       "requiresIdempotencyKey": false
@@ -152,6 +168,7 @@
       "method": "GET",
       "path": "/copies",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": false
@@ -161,6 +178,7 @@
       "method": "POST",
       "path": "/loans/{txId}/renewals",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "READER_SELF",
       "public": false,
       "requiresIdempotencyKey": true
@@ -170,6 +188,7 @@
       "method": "POST",
       "path": "/closing/reopen",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "ADMIN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -179,6 +198,7 @@
       "method": "POST",
       "path": "/reservations",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "READER_SELF_OR_LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -188,6 +208,7 @@
       "method": "POST",
       "path": "/returns",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -197,6 +218,7 @@
       "method": "POST",
       "path": "/closing/runs",
       "tag": "Circulation",
+      "deprecated": false,
       "permission": "SYSTEM",
       "public": false,
       "requiresIdempotencyKey": true
@@ -206,6 +228,7 @@
       "method": "GET",
       "path": "/audit-events",
       "tag": "Delivery",
+      "deprecated": false,
       "permission": "LIBRARIAN_OR_ADMIN",
       "public": false,
       "requiresIdempotencyKey": false
@@ -215,6 +238,7 @@
       "method": "GET",
       "path": "/notifications",
       "tag": "Delivery",
+      "deprecated": false,
       "permission": "AUTHENTICATED_SELF",
       "public": false,
       "requiresIdempotencyKey": false
@@ -224,6 +248,7 @@
       "method": "POST",
       "path": "/notifications/{notificationId}/read",
       "tag": "Delivery",
+      "deprecated": false,
       "permission": "AUTHENTICATED_SELF",
       "public": false,
       "requiresIdempotencyKey": true
@@ -233,6 +258,7 @@
       "method": "PATCH",
       "path": "/readers/{readerId}/status",
       "tag": "Identity",
+      "deprecated": false,
       "permission": "LIBRARIAN_OR_ADMIN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -242,6 +268,7 @@
       "method": "POST",
       "path": "/auth/sessions",
       "tag": "Identity",
+      "deprecated": false,
       "permission": "PUBLIC",
       "public": true,
       "requiresIdempotencyKey": true
@@ -251,6 +278,7 @@
       "method": "DELETE",
       "path": "/auth/sessions/current",
       "tag": "Identity",
+      "deprecated": false,
       "permission": "AUTHENTICATED",
       "public": false,
       "requiresIdempotencyKey": true
@@ -260,6 +288,7 @@
       "method": "GET",
       "path": "/accounts",
       "tag": "Identity",
+      "deprecated": false,
       "permission": "ADMIN",
       "public": false,
       "requiresIdempotencyKey": false
@@ -269,6 +298,7 @@
       "method": "POST",
       "path": "/auth/registrations",
       "tag": "Identity",
+      "deprecated": false,
       "permission": "PUBLIC",
       "public": true,
       "requiresIdempotencyKey": true
@@ -278,6 +308,7 @@
       "method": "POST",
       "path": "/accounts/{accountId}/change-requests",
       "tag": "Identity",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -287,6 +318,7 @@
       "method": "POST",
       "path": "/accounts/{accountId}/password-reset",
       "tag": "Identity",
+      "deprecated": false,
       "permission": "LIBRARIAN_OR_ADMIN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -296,6 +328,7 @@
       "method": "GET",
       "path": "/dashboard/arrivals",
       "tag": "Query",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": false
@@ -305,6 +338,7 @@
       "method": "GET",
       "path": "/me/business",
       "tag": "Query",
+      "deprecated": false,
       "permission": "READER",
       "public": false,
       "requiresIdempotencyKey": false
@@ -314,6 +348,7 @@
       "method": "POST",
       "path": "/reviews/{reviewId}/decision",
       "tag": "Review",
+      "deprecated": false,
       "permission": "ADMIN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -323,6 +358,7 @@
       "method": "GET",
       "path": "/reviews",
       "tag": "Review",
+      "deprecated": false,
       "permission": "LIBRARIAN_OR_ADMIN",
       "public": false,
       "requiresIdempotencyKey": false
@@ -332,6 +368,7 @@
       "method": "POST",
       "path": "/reviews",
       "tag": "Review",
+      "deprecated": false,
       "permission": "LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": true
@@ -341,6 +378,7 @@
       "method": "POST",
       "path": "/payment-callbacks",
       "tag": "Settlement",
+      "deprecated": false,
       "permission": "SIMULATOR_CREDENTIAL",
       "public": false,
       "requiresIdempotencyKey": true
@@ -350,7 +388,8 @@
       "method": "POST",
       "path": "/orders/{orderId}/close",
       "tag": "Settlement",
-      "permission": "READER_SELF_OR_LIBRARIAN_OR_SYSTEM",
+      "deprecated": false,
+      "permission": "READER_SELF_OR_LIBRARIAN_OR_ADMIN_OR_SYSTEM",
       "public": false,
       "requiresIdempotencyKey": true
     },
@@ -359,6 +398,7 @@
       "method": "POST",
       "path": "/fines/{fineId}/orders",
       "tag": "Settlement",
+      "deprecated": false,
       "permission": "READER_SELF",
       "public": false,
       "requiresIdempotencyKey": true
@@ -368,6 +408,7 @@
       "method": "GET",
       "path": "/orders/{orderId}",
       "tag": "Settlement",
+      "deprecated": false,
       "permission": "READER_SELF_OR_LIBRARIAN",
       "public": false,
       "requiresIdempotencyKey": false
@@ -377,7 +418,18 @@
       "method": "GET",
       "path": "/fines",
       "tag": "Settlement",
+      "deprecated": false,
       "permission": "READER_SELF_OR_LIBRARIAN",
+      "public": false,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "operationId": "listOccupiedOrders",
+      "method": "GET",
+      "path": "/orders/occupied",
+      "tag": "Settlement",
+      "deprecated": false,
+      "permission": "READER_SELF",
       "public": false,
       "requiresIdempotencyKey": false
     },
@@ -386,24 +438,27 @@
       "method": "POST",
       "path": "/reconciliations",
       "tag": "Settlement",
-      "permission": "SYSTEM_OR_ADMIN",
-      "public": false,
-      "requiresIdempotencyKey": true
+      "deprecated": true,
+      "permission": "UNSUPPORTED",
+      "public": true,
+      "requiresIdempotencyKey": false
     },
     {
       "operationId": "requestRefund",
       "method": "POST",
       "path": "/orders/{orderId}/refunds",
       "tag": "Settlement",
-      "permission": "LIBRARIAN_THEN_ADMIN_REVIEW",
-      "public": false,
-      "requiresIdempotencyKey": true
+      "deprecated": true,
+      "permission": "UNSUPPORTED",
+      "public": true,
+      "requiresIdempotencyKey": false
     },
     {
       "operationId": "scheduleSimulatedPayment",
       "method": "POST",
       "path": "/payment-simulator/results",
       "tag": "Settlement",
+      "deprecated": false,
       "permission": "CONTROLLED_TEST_OPERATOR",
       "public": false,
       "requiresIdempotencyKey": true

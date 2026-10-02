@@ -20,6 +20,27 @@ describe('catalog module facade', () => {
     })
   })
 
+  it('passes the availability filter to the public title search', async () => {
+    const calls = []
+    setTransport({
+      mode: 'http',
+      async request(operationId, options = {}) {
+        calls.push({ operationId, options })
+        return { code: 'MLS-CAT-S001', message: 'ok', data: { items: [], nextCursor: null } }
+      },
+    })
+
+    await catalog.searchTitles({ q: 'database', availability: 'AVAILABLE', limit: 20 })
+    expect(calls[0].operationId).toBe('searchTitles')
+    expect(calls[0].options.query).toEqual({
+      q: 'database',
+      category: undefined,
+      availability: 'AVAILABLE',
+      cursor: undefined,
+      limit: 20,
+    })
+  })
+
   it('maps maintenance calls to their contract operations', async () => {
     const calls = []
     setTransport({

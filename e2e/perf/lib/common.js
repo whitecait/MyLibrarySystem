@@ -40,9 +40,14 @@ export const CLASSES = {
 }
 
 export function thresholds(classes) {
+  const percentileScope = __ENV.PERF_PERCENTILE_SCOPE || 'full'
+  if (!['full', 'p95'].includes(percentileScope)) throw new Error('PERF_PERCENTILE_SCOPE must be full or p95')
   const t = { unexpected_failures: ['count==0'] }
   for (const c of classes) {
-    t[`http_req_duration{class:${c}}`] = [`p(95)<${CLASSES[c].p95}`, `p(99)<${CLASSES[c].p99}`]
+    t[`http_req_duration{class:${c}}`] = [`p(95)<${CLASSES[c].p95}`]
+    // P0 approved removal of P99 assertions. Default full preserves the legacy
+    // protocol; explicit p95 changes only the approved percentile gate.
+    if (percentileScope === 'full') t[`http_req_duration{class:${c}}`].push(`p(99)<${CLASSES[c].p99}`)
     // Observability-only sub-metric thresholds (always true, never cross):
     // k6 only materialises tag sub-metrics that a threshold references, so
     // these put the per-class request count and failure rate into the
@@ -103,7 +108,7 @@ export function classify(res, className, expected = null) {
   return cls
 }
 
-export function req(method, url, className, body = null, expected = null, headers = {}) {
+export function req(method, url, className, body = null, expected = null, headers = {}, jar = null) {
   // Every mutating endpoint declares Idempotency-Key as a required header
   // (including login); a missing key is a 400 before any business logic runs.
   // JSON bodies need the content type spelled out — k6 does not set it for
@@ -112,7 +117,7 @@ export function req(method, url, className, body = null, expected = null, header
   if (method !== 'GET' && !h['Idempotency-Key']) h['Idempotency-Key'] = idemKey()
   if (body !== null && !h['Content-Type']) h['Content-Type'] = 'application/json'
   const expectedSet = normalizeExpected(expected)
-  const params = { tags: { class: className, expected: expectedSet.length > 0 ? 'true' : 'false' }, headers: h }
+  const params = { tags: { class: className, expected: expectedSet.length > 0 ? 'true' : 'false' }, headers: h, ...(jar ? { jar } : {}) }
   const res = body === null ? http.request(method, url, null, params) : http.request(method, url, JSON.stringify(body), params)
   classify(res, className, expectedSet)
   return res

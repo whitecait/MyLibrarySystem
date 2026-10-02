@@ -2,6 +2,8 @@ package com.library.identity.contract;
 
 import com.library.contract.ModuleResult;
 
+import java.util.Map;
+
 /**
  * IDENTITY 账户维护能力（MLS-DOC-MD-0004 §2）。
  * 高风险动作（SUSPEND/RESTORE/CHANGE_ROLE）只由复核批准事务执行（B3）；
@@ -11,6 +13,13 @@ public interface AccountCommands {
 
     ModuleResult<AccountChange> changeAccount(ChangeAccount command);
 
+    /** Atomic, version-checked state change used only after an ACCOUNT_CHANGE approval. */
+    ModuleResult<AccountChange> applyReviewedChange(ReviewedAccountChange command);
+
     /** 密码重置（LIBRARIAN/ADMIN 直办；返回临时密码，forceChange 恒 true）。 */
     ModuleResult<TemporaryPassword> resetPassword(ResetPassword command);
+
+    record ReviewedAccountChange(com.library.contract.model.AccountId target, String action,
+                                 Map<String, Object> payload, long expectedVersion) {
+    }
 }

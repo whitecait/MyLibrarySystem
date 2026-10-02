@@ -15,7 +15,9 @@ import java.util.Optional;
 public class InMemoryCirculationStore implements CirculationStore {
 
     private final Map<Long, CopyRow> copies = new HashMap<>();
+    private final Map<Long, LocalDate> loanEligibleDates = new HashMap<>();
     private final Map<Long, TxRow> txs = new HashMap<>();
+    private final Map<Long, LocalDate> loanStartedDates = new HashMap<>();
     private long copySequence;
     private long txSequence;
 
@@ -26,9 +28,10 @@ public class InMemoryCirculationStore implements CirculationStore {
     }
 
     @Override
-    public long insertCopy(long titleId, String copyNo) {
+    public long insertCopy(long titleId, String copyNo, LocalDate loanEligibleOn) {
         var id = ++copySequence;
         copies.put(id, new CopyRow(id, titleId, copyNo, "PENDING_SHELVING", 0));
+        loanEligibleDates.put(id, loanEligibleOn);
         return id;
     }
 
@@ -56,6 +59,16 @@ public class InMemoryCirculationStore implements CirculationStore {
     }
 
     @Override
+    public List<CopyRow> loanableCopies(long titleId, LocalDate businessDate, int limit) {
+        return copies.values().stream()
+                .filter(c -> c.titleId() == titleId && "SHELF_READY".equals(c.status()))
+                .filter(c -> loanEligibleDates.get(c.id()) != null
+                        && !loanEligibleDates.get(c.id()).isAfter(businessDate))
+                .sorted(java.util.Comparator.comparingLong(CopyRow::id))
+                .limit(limit).toList();
+    }
+
+    @Override
     public Long transitionCopy(long copyId, String expectedStatus, String nextStatus, long version) {
         var copy = copies.get(copyId);
         if (copy == null || !copy.status().equals(expectedStatus) || copy.version() != version) {
@@ -67,9 +80,65 @@ public class InMemoryCirculationStore implements CirculationStore {
     }
 
     @Override
+    public Long transitionCopyAndSetLoanEligibleOn(long copyId, String expectedStatus, String nextStatus,
+                                                   long version, LocalDate loanEligibleOn) {
+        var updated = transitionCopy(copyId, expectedStatus, nextStatus, version);
+        if (updated != null) {
+            loanEligibleDates.put(copyId, loanEligibleOn);
+        }
+        return updated;
+    }
+
+    @Override
+    public Long transitionCopyToLent(long copyId, String expectedStatus, long version, LocalDate businessDate) {
+        var loanEligibleOn = loanEligibleDates.get(copyId);
+        if (loanEligibleOn == null || loanEligibleOn.isAfter(businessDate)) {
+            return null;
+        }
+        return transitionCopy(copyId, expectedStatus, "LENT", version);
+    }
+
+    /** Unit fixtures may mark a copy as historically eligible without advancing the shared clock. */
+    public void setLoanEligibleOnForTest(long copyId, LocalDate loanEligibleOn) {
+        if (!copies.containsKey(copyId)) {
+            throw new IllegalArgumentException("unknown copy id: " + copyId);
+        }
+        loanEligibleDates.put(copyId, loanEligibleOn);
+    }
+
+    @Override
     public boolean hasOpenTransactionForReaderTitle(long readerId, long titleId) {
         return txs.values().stream().anyMatch(t -> t.readerId() == readerId && t.titleId() == titleId
                 && List.of("AWAIT", "CONFIRMED", "MANUAL_HANDLING", "WAITLIST", "LENT").contains(t.status()));
+    }
+
+    @Override
+    public void lockReaderActivity(long readerId) {
+        // Single-threaded unit adapter; PostgreSQL integration tests cover advisory locking.
+    }
+
+    @Override
+    public void lockTitleReservations(long titleId) {
+        // Single-threaded unit adapter; PostgreSQL integration tests cover advisory locking.
+    }
+
+    @Override
+    public int countActiveLoansForReader(long readerId) {
+        return (int) txs.values().stream()
+                .filter(t -> t.readerId() == readerId && "LENT".equals(t.status())).count();
+    }
+
+    @Override
+    public int countActiveReservationsForReader(long readerId) {
+        return (int) txs.values().stream().filter(t -> t.readerId() == readerId
+                && List.of("AWAIT", "CONFIRMED", "MANUAL_HANDLING", "WAITLIST")
+                .contains(t.status())).count();
+    }
+
+    @Override
+    public boolean hasOverdueLentForReader(long readerId, LocalDate onDate) {
+        return txs.values().stream().anyMatch(t -> t.readerId() == readerId && "LENT".equals(t.status())
+                && t.dueDate() != null && t.dueDate().isBefore(onDate));
     }
 
     @Override
@@ -78,6 +147,9 @@ public class InMemoryCirculationStore implements CirculationStore {
         txs.put(id, new TxRow(id, candidate.readerId(), candidate.titleId(), candidate.copyId(),
                 candidate.status(), candidate.reservationDate(), candidate.pickupSlot(),
                 candidate.dueDate(), 0, 0, Instant.now()));
+        if ("LENT".equals(candidate.status())) {
+            loanStartedDates.put(id, candidate.reservationDate());
+        }
         return id;
     }
 
@@ -99,6 +171,16 @@ public class InMemoryCirculationStore implements CirculationStore {
                 .filter(t -> t.titleId() == titleId && "WAITLIST".equals(t.status()))
                 .sorted(java.util.Comparator.comparingLong(TxRow::id))
                 .limit(limit).toList();
+    }
+
+    @Override
+    public Optional<LocalDate> earliestValidReservationDateForTitle(long titleId) {
+        return txs.values().stream()
+                .filter(t -> t.titleId() == titleId)
+                .filter(t -> List.of("CONFIRMED", "WAITLIST").contains(t.status()))
+                .map(TxRow::reservationDate)
+                .filter(java.util.Objects::nonNull)
+                .min(LocalDate::compareTo);
     }
 
     @Override
@@ -146,6 +228,16 @@ public class InMemoryCirculationStore implements CirculationStore {
     }
 
     @Override
+    public LocalDate loanStartedDate(long txId) {
+        return loanStartedDates.get(txId);
+    }
+
+    @Override
+    public void setLoanStartedDate(long txId, LocalDate startDate) {
+        loanStartedDates.put(txId, startDate);
+    }
+
+    @Override
     public int countAvailableCopies(long titleId) {
         return (int) copies.values().stream()
                 .filter(c -> c.titleId() == titleId && "SHELF_READY".equals(c.status())).count();
@@ -154,6 +246,12 @@ public class InMemoryCirculationStore implements CirculationStore {
     @Override
     public int countCopies(long titleId) {
         return (int) copies.values().stream().filter(c -> c.titleId() == titleId).count();
+    }
+
+    @Override
+    public int countBookableCopies(long titleId) {
+        return (int) copies.values().stream().filter(c -> c.titleId() == titleId
+                && List.of("SHELF_READY", "LENT", "PENDING_SHELVING").contains(c.status())).count();
     }
 
     @Override

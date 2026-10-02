@@ -45,7 +45,7 @@ class AiModuleTest {
         assertThat(model.requests().get(0).tools()).extracting(AiTool::name).containsExactlyInAnyOrder(
                 "search_titles","get_title","get_reading_content","get_reservation_calendar",
                 "list_fines","get_order","get_my_business","list_notifications",
-                "prefill_reservation","prefill_walk_in_loan","prefill_renewal",
+                "prefill_reservation","prefill_renewal",
                 "open_reservation_cancellation","open_order_creation","open_order_close","open_notification_read");
         assertThat(model.requests().get(1).tools()).extracting(AiTool::name).containsExactlyInAnyOrder(
                 "search_titles","get_title","get_reading_content","get_reservation_calendar",
@@ -55,13 +55,13 @@ class AiModuleTest {
                 "open_account_change","open_password_reset","open_reader_status_change",
                 "open_title_creation","open_title_update","open_title_removal",
                 "open_copy_creation","open_copy_state_change","open_reservation_cancellation",
-                "open_pickup_claim","open_manual_action","open_order_close","open_refund_request",
+                "open_pickup_claim","open_manual_action","open_order_close",
                 "open_review_request","open_notification_read");
         assertThat(model.requests().get(2).tools()).extracting(AiTool::name).containsExactlyInAnyOrder(
                 "search_titles","get_title","get_reading_content","get_reservation_calendar",
                 "list_accounts","list_reviews","list_notifications","list_audit_events",
                 "open_password_reset","open_reader_status_change","open_closing_reopen",
-                "open_reconciliation","open_review_decision","open_notification_read");
+                "open_review_decision","open_notification_read");
         assertThat(model.requests()).allSatisfy(request -> {
             assertThat(request.tools()).extracting(AiTool::name)
                     .doesNotContain("list_ai_events","start_ai_session","send_ai_message");

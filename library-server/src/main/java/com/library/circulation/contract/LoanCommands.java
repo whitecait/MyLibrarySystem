@@ -16,6 +16,9 @@ import java.util.List;
  */
 public interface LoanCommands {
 
+    /** RA-0011 per-reader limit shared by the circulation module and application guard. */
+    int MAX_ACTIVE_LOANS = 5;
+
     /** 现场逐册借阅：每册独立判定与提交，混合结果保留。 */
     ModuleResult<LoanBatch> lend(WalkInLoanCommand command);
 
@@ -25,7 +28,7 @@ public interface LoanCommands {
     /** 人工处置：RELEASE 绑副本借出 / CONFIRM_ENTRY 确认到馆 / REJECT 终态。 */
     ModuleResult<Transaction> applyManualAction(ManualAction command);
 
-    /** 续借：无候补等待、次数上限、无欠费；拒绝 MLS-CIRC-012(422)。 */
+    /** 续借：期限不超过 30 天或书目最早有效预约日前一日；欠费/逾期拒绝 MLS-CIRC-012(422)。 */
     ModuleResult<Renewal> renew(RenewalCommand command);
 
     record WalkInItem(TitleId titleId, CopyId copyId) {

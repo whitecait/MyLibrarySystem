@@ -13,6 +13,9 @@ public interface ReviewStore {
     long insert(NewReview candidate);
 
     Optional<StoredReview> byId(long reviewId);
+
+    /** Reads and locks a decision candidate inside the caller's transaction. */
+    Optional<StoredReview> byIdForUpdate(long reviewId);
     List<StoredReview> list(String decision, long afterId, int limit);
     boolean decide(long reviewId, long version, String decision, long decidedBy, String targetOutcome);
 

@@ -91,6 +91,36 @@ describe('PortalView', () => {
     expect(wrapper.text()).toContain('B')
   })
 
+  it('filters by availability and preserves the filter when loading another page', async () => {
+    const calls = []
+    setTransport({
+      mode: 'mock',
+      async request(operationId, options = {}) {
+        calls.push({ operationId, options })
+        const items = calls.length === 1
+          ? [{ titleId: '2001', title: 'Available title', availability: 'AVAILABLE' }]
+          : [{ titleId: '2002', title: 'Another available title', availability: 'AVAILABLE' }]
+        return {
+          code: 'MLS-CAT-S001',
+          message: 'ok',
+          data: { items, nextCursor: calls.length === 1 ? 'c2' : null },
+        }
+      },
+    })
+    const wrapper = await mountPortal()
+
+    expect(wrapper.find('[data-testid="portal-availability-filter"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="portal-availability-filter"]').setValue('AVAILABLE')
+    await wrapper.find('[data-testid="portal-search-form"]').trigger('submit')
+    await flushPromises()
+    expect(calls[0].options.query.availability).toBe('AVAILABLE')
+
+    await wrapper.find('[data-testid="portal-load-more"]').trigger('click')
+    await flushPromises()
+    expect(calls[1].options.query).toMatchObject({ availability: 'AVAILABLE', cursor: 'c2' })
+    expect(wrapper.findAll('[data-testid="portal-results"] tbody tr')).toHaveLength(2)
+  })
+
   it('keeps the shared fixture registry contract-shaped', () => {
     expect(sharedFixtures.listAccounts.data.items).toHaveLength(2)
   })

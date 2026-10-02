@@ -15,7 +15,7 @@ import {
 } from '../modules/circulation/index.js'
 import { ArrivalDashboardView, MyBusinessView } from '../modules/query/index.js'
 import { AiAssistantView } from '../modules/ai/index.js'
-import { FineSettlementView, PaymentSimulatorView, ReconciliationView } from '../modules/settlement/index.js'
+import { FineSettlementView, PaymentSimulatorView } from '../modules/settlement/index.js'
 import { ReviewListView } from '../modules/review/index.js'
 import { AuditQueryView, NotificationCenterView } from '../modules/delivery/index.js'
 import ForbiddenPage from '../views/ForbiddenPage.vue'
@@ -30,7 +30,7 @@ export const routes = [
   { path: '/titles/:titleId', name: 'title-detail', component: TitleDetailView, props: true, meta: { module: 'catalog', requiresAuth: false, roles: [], title: '书目详情' } },
   { path: '/titles/:titleId/read', name: 'title-reading', component: ReadingView, props: true, meta: { module: 'catalog', requiresAuth: false, roles: [], title: '阅读' } },
   { path: '/titles/:titleId/calendar', name: 'title-calendar', component: ReservationCalendarView, props: true, meta: { module: 'circulation', requiresAuth: false, roles: [], title: '预约日历' } },
-  { path: '/walk-in', name: 'walk-in', component: WalkInLoansView, meta: { module: 'circulation', requiresAuth: true, roles: ['READER', 'LIBRARIAN'], title: '现场借阅' } },
+  { path: '/walk-in', name: 'walk-in', component: WalkInLoansView, meta: { module: 'circulation', requiresAuth: true, roles: ['LIBRARIAN'], title: '现场借阅' } },
   { path: '/me/business', name: 'my-business', component: MyBusinessView, meta: { module: 'query', requiresAuth: true, roles: ['READER'], title: '我的业务' } },
   { path: '/assistant', name: 'ai-assistant', component: AiAssistantView, meta: { module: 'ai', requiresAuth: false, roles: [], title: 'AI 助手' } },
   { path: '/admin/accounts', name: 'account-admin', component: AccountAdminView, meta: { module: 'identity', requiresAuth: true, roles: ['ADMIN'], title: '账户管理' } },
@@ -41,7 +41,6 @@ export const routes = [
   { path: '/admin/dashboard', name: 'arrival-dashboard', component: ArrivalDashboardView, meta: { module: 'query', requiresAuth: true, roles: ['LIBRARIAN'], title: '到馆看板' } },
   { path: '/fines', name: 'fine-settlement', component: FineSettlementView, meta: { module: 'settlement', requiresAuth: true, roles: ['READER', 'LIBRARIAN'], title: '罚款与支付' } },
   { path: '/admin/simulator', name: 'payment-simulator', component: PaymentSimulatorView, meta: { module: 'settlement', requiresAuth: true, roles: ['ADMIN'], title: '模拟支付调度' } },
-  { path: '/admin/reconciliation', name: 'reconciliation', component: ReconciliationView, meta: { module: 'settlement', requiresAuth: true, roles: ['ADMIN'], title: '营业日对账' } },
   { path: '/admin/reviews', name: 'review-list', component: ReviewListView, meta: { module: 'review', requiresAuth: true, roles: ['ADMIN'], title: '高风险复核' } },
   { path: '/admin/closing', name: 'closing-admin', component: ClosingAdminView, meta: { module: 'circulation', requiresAuth: true, roles: ['ADMIN'], title: '闭馆与恢复' } },
   { path: '/notifications', name: 'notification-center', component: NotificationCenterView, meta: { module: 'delivery', requiresAuth: true, roles: [], title: '通知中心' } },

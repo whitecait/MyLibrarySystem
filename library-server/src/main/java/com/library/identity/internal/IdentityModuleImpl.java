@@ -16,6 +16,7 @@ import com.library.identity.contract.AccountCriteria;
 import com.library.identity.contract.AccountPage;
 import com.library.identity.contract.AccountQuery;
 import com.library.identity.contract.AccountRegistration;
+import com.library.identity.contract.AccountState;
 import com.library.identity.contract.AccountSummary;
 import com.library.identity.contract.ActorResolver;
 import com.library.identity.contract.AuthorizationCheck;
@@ -56,6 +57,7 @@ public class IdentityModuleImpl implements IdentityRegistration, ActorResolver, 
     private static final Duration SESSION_TTL = Duration.ofHours(24);
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final Set<String> READER_API_STATUS = Set.of("ACTIVE", "SUSPENDED");
+    private static final Set<String> ACCOUNT_ROLES = Set.of("READER", "LIBRARIAN", "ADMIN");
 
     private final AccountStore accounts;
     private final SessionStore sessions;
@@ -174,6 +176,8 @@ public class IdentityModuleImpl implements IdentityRegistration, ActorResolver, 
             case "READER_SELF_OR_LIBRARIAN" -> role == Role.LIBRARIAN || isSelf(actor, subject);
             case "READER_SELF_OR_LIBRARIAN_OR_SYSTEM" ->
                     role == Role.LIBRARIAN || role == Role.SYSTEM || isSelf(actor, subject);
+            case "READER_SELF_OR_LIBRARIAN_OR_ADMIN_OR_SYSTEM" ->
+                    role == Role.LIBRARIAN || role == Role.ADMIN || role == Role.SYSTEM || isSelf(actor, subject);
             default -> false; // SIMULATOR_CREDENTIAL/SESSION_OWNER 随批次登记
         };
         if (!allowed) {
@@ -220,6 +224,16 @@ public class IdentityModuleImpl implements IdentityRegistration, ActorResolver, 
     }
 
     @Override
+    public ModuleResult<AccountState> accountState(AccountId accountId) {
+        var account = accounts.byId(accountId.value()).orElse(null);
+        if (account == null) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_007.code(), "目标账户不存在或不可见");
+        }
+        return ModuleResult.Accepted.of(new AccountState(AccountId.of(account.id()), account.role(),
+                account.status(), account.version()));
+    }
+
+    @Override
     public ModuleResult<AccountChange> changeAccount(ChangeAccount command) {
         var target = accounts.byId(command.target().value()).orElse(null);
         if (target == null) {
@@ -249,6 +263,56 @@ public class IdentityModuleImpl implements IdentityRegistration, ActorResolver, 
                 return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_006.code(), "未知账户维护动作");
             }
         }
+    }
+
+    @Override
+    public ModuleResult<AccountChange> applyReviewedChange(AccountCommands.ReviewedAccountChange command) {
+        var target = accounts.byId(command.target().value()).orElse(null);
+        if (target == null) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_007.code(), "目标账户不存在或不可见");
+        }
+        if (target.version() != command.expectedVersion()) {
+            return ModuleResult.Rejected.conflict(StableErrorCode.MLS_REV_001.code(), target.version(),
+                    "目标已变化，请重新发起");
+        }
+
+        var payload = command.payload() == null ? java.util.Map.<String, Object>of() : command.payload();
+        var action = command.action() == null ? "" : command.action();
+        var nextStatus = target.status();
+        var nextRole = target.role();
+        switch (action) {
+            case "SUSPEND" -> {
+                if (!"ACTIVE".equals(target.status())) {
+                    return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_006.code(), "仅活动账户可停用");
+                }
+                nextStatus = "SUSPENDED";
+            }
+            case "RESTORE" -> {
+                if (!"SUSPENDED".equals(target.status())) {
+                    return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_006.code(), "仅已停用账户可恢复");
+                }
+                nextStatus = "ACTIVE";
+            }
+            case "CHANGE_ROLE" -> {
+                var requestedRole = upper(text(payload.get("role")));
+                if (!ACCOUNT_ROLES.contains(requestedRole)) {
+                    return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_006.code(), "目标角色无效");
+                }
+                nextRole = requestedRole;
+            }
+            default -> {
+                return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_006.code(), "复核动作无效");
+            }
+        }
+
+        var nextVersion = accounts.updateReviewedState(target.id(), command.expectedVersion(), nextStatus, nextRole);
+        if (nextVersion == null) {
+            var current = accounts.byId(target.id()).map(AccountStore.StoredAccount::version).orElse(target.version());
+            return ModuleResult.Rejected.conflict(StableErrorCode.MLS_REV_001.code(), current,
+                    "目标已变化，请重新发起");
+        }
+        return ModuleResult.Accepted.of(new AccountChange(AccountId.of(target.id()), nextStatus, nextRole,
+                nextVersion));
     }
 
     @Override

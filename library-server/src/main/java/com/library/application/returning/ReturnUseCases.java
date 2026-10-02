@@ -10,17 +10,19 @@ import com.library.contract.security.ActorContext;
 import com.library.contract.security.AuthorizationDecision;
 import com.library.contract.security.Capability;
 import com.library.contract.security.SubjectRef;
+import com.library.contract.time.BusinessClock;
+import com.library.contract.transaction.UnitOfWork;
 import com.library.catalog.contract.TitleQuery;
 import com.library.catalog.contract.TitleView;
 import com.library.catalog.contract.model.TitleId;
 import com.library.circulation.contract.ReturnCommands;
 import com.library.circulation.contract.ReturnCommands.ReturnedCopy;
+import com.library.circulation.contract.ReaderCirculationQuery;
 import com.library.identity.contract.AuthorizationCheck;
 import com.library.settlement.contract.FineCommands;
 import com.library.settlement.contract.model.MoneyCents;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.Locale;
 
 /**
@@ -28,8 +30,7 @@ import java.util.Locale;
  * 在同一事务内整体提交或回滚（IT-CIRC-003；归还＝借阅结束＋副本迁移＋罚款＋事件）。
  * 成功路径审计（DEF-M6-011）与事件登记同点写入；detail 携带 relatedId（罚款用 fineId、
  * 归还用 txId）与 outcome。
- * 罚款规则（待确认业务参数，批次报告登记）：LOST/DAMAGED 按书价全额；
- * INTACT 逾期按 100 分/日、封顶书价（BR-0017）。
+ * 罚款规则（RA-0011）：LOST/DAMAGED 按书价全额；INTACT 按书价 10%×逾期天数，向上取整到分并封顶 300%。
  * TitleQuery 注入为 §3 表按需补全（罚款封顶基数需书目价格）。
  */
 public interface ReturnUseCases {
@@ -48,17 +49,25 @@ record ReturnUseCasesImpl(AuthorizationCheck authorization,
                           FineCommands fines,
                           TitleQuery titleQuery,
                           OutboxAppender outbox,
-                          AuditAppender audit) implements ReturnUseCases {
-
-    private static final long OVERDUE_FINE_PER_DAY = 100;
+                          AuditAppender audit,
+                          BusinessClock clock,
+                          ReaderCirculationQuery circulationQuery,
+                          UnitOfWork unitOfWork) implements ReturnUseCases {
 
     @Override
     public ModuleResult<ReturnResult> returnCopy(ActorContext actor,
                                                  ReturnCommands.ReturnCommand command) {
+        return unitOfWork.inTransaction(() -> returnCopyInTransaction(actor, command));
+    }
+
+    private ModuleResult<ReturnResult> returnCopyInTransaction(ActorContext actor,
+                                                               ReturnCommands.ReturnCommand command) {
         var rejected = authorizeOrReject(actor);
         if (rejected != null) {
             return ModuleResult.Rejected.propagate(rejected);
         }
+        circulationQuery.readerForOpenCopy(command.copyId().value())
+                .ifPresent(circulationQuery::lockReader);
         var result = returns.returnCopy(command);
         if (result instanceof ModuleResult.Accepted<ReturnedCopy> accepted) {
             var returned = accepted.value();
@@ -92,8 +101,8 @@ record ReturnUseCasesImpl(AuthorizationCheck authorization,
     }
 
     /**
-     * 罚款金额：LOST/DAMAGED = 书价全额；INTACT = 逾期天数×100 封顶书价；
-     * 无逾期且品相完好不计罚。
+     * 罚款金额：LOST/DAMAGED = 书价全额；INTACT = 书价的 10%×逾期天数，向上取整到分并封顶 300%；
+     * 无逾期且品相完好不计罚（RA-0011）。
      */
     private long fineAmountOf(ReturnCommands.ReturnCommand command, ReturnedCopy returned) {
         var condition = conditionOf(command);
@@ -108,14 +117,20 @@ record ReturnUseCasesImpl(AuthorizationCheck authorization,
                 if (due == null) {
                     yield 0;
                 }
-                var overdueDays = Math.max(0, java.time.temporal.ChronoUnit.DAYS.between(due, LocalDate.now()));
-                yield Math.min(overdueDays * OVERDUE_FINE_PER_DAY, priceCents);
+                var overdueDays = Math.max(0, java.time.temporal.ChronoUnit.DAYS.between(due, clock.today()));
+                var roundedCents = java.math.BigInteger.valueOf(priceCents)
+                        .multiply(java.math.BigInteger.valueOf(overdueDays))
+                        .add(java.math.BigInteger.valueOf(9))
+                        .divide(java.math.BigInteger.TEN);
+                var capCents = java.math.BigInteger.valueOf(priceCents)
+                        .multiply(java.math.BigInteger.valueOf(3));
+                yield roundedCents.min(capCents).longValueExact();
             }
             default -> 0;
         };
     }
 
-    /** 罚款封顶基数（BR-0017）；书目不可见时返回 -1 表示不计罚。 */
+    /** 罚款基数（书目价格）；书目不可见时返回 -1 表示不计罚。 */
     private long titlePriceOf(TitleId titleId) {
         if (titleQuery.title(titleId, com.library.contract.security.Visibility.PUBLIC)
                 instanceof ModuleResult.Accepted<TitleView> accepted) {

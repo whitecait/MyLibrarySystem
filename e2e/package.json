@@ -11,7 +11,12 @@
     "browsers:verify": "node browsers/verify-matrix.mjs",
     "endpoint:selftest": "node ai-endpoint/verify-endpoint.test.mjs",
     "dataset:generate": "node data/generate-dataset.mjs",
-    "fixtures:render": "node data/functional/render-fixtures.mjs"
+    "fixtures:render": "node data/functional/render-fixtures.mjs",
+    "p3:script-test": "node --test scenarios/p3-support.test.mjs",
+    "p3:regression:list": "npm run p3:script-test && playwright test --config=playwright.p3.config.js --list --reporter=list",
+    "p3:fines": "node scripts/p3-runner.mjs --suite=fines",
+    "p3:ai-draft": "node scripts/p3-runner.mjs --suite=ai",
+    "p3:regression": "node scripts/p3-runner.mjs --suite=all"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",

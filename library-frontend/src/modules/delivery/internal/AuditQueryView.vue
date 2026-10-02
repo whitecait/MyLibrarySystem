@@ -15,21 +15,23 @@
       description="无匹配审计事件"
     />
     <template v-else-if="state.status === 'success'">
-      <table class="audit-table" data-testid="audit-table">
-        <thead>
-          <tr><th>事件</th><th>类型</th><th>操作者</th><th>关联对象</th><th>结果</th><th>时间</th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="event in events" :key="event.eventId">
-            <td>{{ event.eventId }}</td>
-            <td>{{ event.eventType }}</td>
-            <td>{{ event.actorId }}</td>
-            <td>{{ event.relatedId ?? '—' }}</td>
-            <td>{{ event.outcome ?? '—' }}</td>
-            <td>{{ event.occurredAt }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="audit-table-scroll" data-testid="audit-table-scroll" role="region" tabindex="0" aria-label="审计记录（可横向滚动）">
+        <table class="audit-table" data-testid="audit-table">
+          <thead>
+            <tr><th>事件</th><th>类型</th><th>操作者</th><th>关联对象</th><th>结果</th><th>时间</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="event in events" :key="event.eventId">
+              <td>{{ event.eventId }}</td>
+              <td>{{ event.eventType }}</td>
+              <td>{{ event.actorId }}</td>
+              <td>{{ event.relatedId ?? '—' }}</td>
+              <td>{{ event.outcome ?? '—' }}</td>
+              <td>{{ event.occurredAt }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <el-button v-if="nextCursor" data-testid="audit-load-more" @click="load(nextCursor)">加载更多</el-button>
     </template>
     <ErrorAlert v-if="state.status === 'failure'" :failure="state.failure" />
@@ -86,9 +88,19 @@ load()
   min-width: 12rem;
 }
 
-.audit-table {
+.audit-table-scroll {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.audit-table {
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
+  white-space: nowrap;
 }
 
 .audit-table th,

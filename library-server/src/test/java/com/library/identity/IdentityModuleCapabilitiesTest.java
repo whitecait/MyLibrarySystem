@@ -128,6 +128,32 @@ class IdentityModuleCapabilitiesTest {
         assertThat(decision(module.authorize(admin, Capability.SESSION_OWNER, SubjectRef.system()))).isFalse();
     }
 
+    @Test
+    void orderCloseCapabilityAllowsOwnerLibrarianAdminAndSystemOnly() {
+        var capability = new Capability("READER_SELF_OR_LIBRARIAN_OR_ADMIN_OR_SYSTEM");
+        var owner = new ActorContext(com.library.contract.model.AccountId.of(41),
+                com.library.contract.model.Role.READER, Instant.now());
+        var anotherReader = new ActorContext(com.library.contract.model.AccountId.of(42),
+                com.library.contract.model.Role.READER, Instant.now());
+        var librarian = new ActorContext(com.library.contract.model.AccountId.of(43),
+                com.library.contract.model.Role.LIBRARIAN, Instant.now());
+        var admin = new ActorContext(com.library.contract.model.AccountId.of(44),
+                com.library.contract.model.Role.ADMIN, Instant.now());
+        var system = new ActorContext(com.library.contract.model.AccountId.of(45),
+                com.library.contract.model.Role.SYSTEM, Instant.now());
+
+        assertThat(decision(module.authorize(owner, capability, SubjectRef.account("41")))).isTrue();
+        assertThat(decision(module.authorize(anotherReader, capability, SubjectRef.account("41")))).isFalse();
+        assertThat(decision(module.authorize(librarian, capability, SubjectRef.account("41")))).isTrue();
+        assertThat(decision(module.authorize(admin, capability, SubjectRef.account("41")))).isTrue();
+        assertThat(decision(module.authorize(system, capability, SubjectRef.account("41")))).isTrue();
+        assertThat(codeOf(module.authorize(null, capability, SubjectRef.account("41"))))
+                .isEqualTo("MLS-ID-001");
+        assertThat(decision(module.authorize(admin,
+                new Capability("READER_SELF_OR_LIBRARIAN_OR_SYSTEM"), SubjectRef.account("41"))))
+                .isFalse();
+    }
+
     // UT-ID-005 读者状态办理：馆员直办 ACTIVE/SUSPENDED、非读者与非法状态冲突
     @Test
     void utId005_readerStatusHandling() {

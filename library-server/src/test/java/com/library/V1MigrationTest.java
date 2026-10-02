@@ -13,6 +13,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.sql.DataSource;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,7 +30,8 @@ class V1MigrationTest {
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
-            "postgres@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3");
+            "postgres@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3")
+            .withLabel("com.mylibrary.p1-stage", "p1-core-20260927-v10-migration");
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
@@ -153,6 +155,44 @@ class V1MigrationTest {
         old.update("INSERT INTO fine (reader_id,source_tx_id,amount_cents) VALUES (1,2,75)");
         assertThat(old.queryForObject("SELECT count(*) FROM fine WHERE status='DUE'", Integer.class)).isEqualTo(2);
         assertThat(upgraded.migrate().migrationsExecuted).isZero();
+    }
+
+    @Test
+    void v10UpgradeAddsConservativeLoanStartLowerBoundAndPreservesLiveLoans() {
+        jdbc.execute("CREATE DATABASE v10_upgrade");
+        var source = new org.springframework.jdbc.datasource.DriverManagerDataSource(
+                POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/v10_upgrade"),
+                POSTGRES.getUsername(), POSTGRES.getPassword());
+        Flyway.configure().dataSource(source).locations("classpath:db/migration").target("9").load().migrate();
+        var old = new JdbcTemplate(source);
+        old.update("INSERT INTO account (username,password_hash,display_name,role) VALUES ('v10-reader','x','v10-reader','READER')");
+        old.update("INSERT INTO book_title (title,price_cents) VALUES ('v10-renewed',1000),('v10-no-due-date',1000)");
+        old.update("INSERT INTO book_copy (title_id,copy_no,status) VALUES (1,'v10-copy-1','LENT'),(2,'v10-copy-2','LENT')");
+        var actualOldStart = LocalDate.of(2026, 8, 1);
+        var shortenedRenewalDue = actualOldStart.plusDays(36); // 30-day initial term plus a 6-day old renewal
+        var dueWithoutDate = LocalDate.of(2026, 9, 20);
+        old.update("""
+                INSERT INTO borrow_transaction(reader_id,title_id,copy_id,status,reservation_date,due_date,renewal_count)
+                VALUES (1,1,1,'LENT',?,?,1),(1,2,2,'LENT',?,NULL,0)
+                """, java.sql.Date.valueOf(actualOldStart), java.sql.Date.valueOf(shortenedRenewalDue),
+                java.sql.Date.valueOf(dueWithoutDate));
+
+        var upgraded = Flyway.configure().dataSource(source).locations("classpath:db/migration").load();
+        // V10 adds the conservative lower bound, V11 tracks contiguous closing progress,
+        // V12 adds registration-session rate-limit storage, and V13 adds copy loan eligibility.
+        assertThat(upgraded.migrate().migrationsExecuted).isEqualTo(4);
+        upgraded.validate();
+
+        var inferredLowerBound = shortenedRenewalDue.minusDays(30 + 14);
+        assertThat(inferredLowerBound).isEqualTo(actualOldStart.minusDays(8));
+        assertThat(old.queryForObject("SELECT loan_started_date FROM borrow_transaction WHERE title_id=1",
+                java.sql.Date.class).toLocalDate()).isEqualTo(inferredLowerBound);
+        assertThat(old.queryForMap("SELECT status,due_date,renewal_count FROM borrow_transaction WHERE title_id=1"))
+                .containsEntry("status", "LENT")
+                .containsEntry("due_date", java.sql.Date.valueOf(shortenedRenewalDue))
+                .containsEntry("renewal_count", 1);
+        assertThat(old.queryForObject("SELECT loan_started_date FROM borrow_transaction WHERE title_id=2",
+                java.sql.Date.class).toLocalDate()).isEqualTo(dueWithoutDate);
     }
 
     @Test

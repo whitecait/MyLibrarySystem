@@ -13,6 +13,7 @@ import com.library.contract.model.AccountId;
 import com.library.contract.model.PageCursor;
 import com.library.contract.model.Role;
 import com.library.contract.security.ActorContext;
+import com.library.contract.time.BusinessClock;
 import com.library.delivery.contract.NotificationQuery;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +58,7 @@ class ITDefM6012NotificationChainTest {
     @Autowired NotificationQuery notifications;
     @Autowired OutboxDispatcher dispatcher;
     @Autowired JdbcTemplate jdbc;
+    @Autowired BusinessClock businessClock;
 
     // 维护完成刷新结算：SHELVE 使副本回可借 → 分配候补队头 → 通知可见
     @Test
@@ -66,7 +68,7 @@ class ITDefM6012NotificationChainTest {
         var copyId = seedCopy(title, "DEF012-NC-A1", "PENDING_SHELVING");
         var readerActor = actor(reader, Role.READER);
 
-        var reserved = reserve(readerActor, reader, title, LocalDate.now().plusDays(1), true);
+        var reserved = reserve(readerActor, reader, title, businessClock.today().plusDays(1), true);
         assertThat(reserved.outcome()).isEqualTo("WAITLIST_ENQUEUED");
         assertThat(notesOf(reader)).isEmpty();
 
@@ -150,7 +152,7 @@ class ITDefM6012NotificationChainTest {
         var title = seedTitle("m6012d-");
         var copyId = seedCopy(title, "DEF012-NC-D1", "PENDING_SHELVING");
         var readerActor = actor(reader, Role.READER);
-        var reserved = reserve(readerActor, reader, title, LocalDate.now().plusDays(1), true);
+        var reserved = reserve(readerActor, reader, title, businessClock.today().plusDays(1), true);
         copies.maintainCopy(new CopyCommands.MaintainCopy(CopyId.of(copyId), "SHELVE", 0,
                 actor(seedAccount("def012-nc-lib2-" + System.nanoTime(), "LIBRARIAN"), Role.LIBRARIAN)));
         assertThat(dispatcher.dispatchPending()).isPositive();

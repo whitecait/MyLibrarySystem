@@ -9,6 +9,7 @@ import com.library.settlement.contract.model.FineId;
 import com.library.settlement.contract.model.MoneyCents;
 import com.library.settlement.internal.adapter.persistence.SettlementStore;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -83,7 +84,9 @@ public class SettlementModuleImpl implements DebtQuery, FineCommands, FineQuery,
     }
 
     @Override
+    @Transactional
     public ModuleResult<Callback> applyCallback(PaymentCallback command) {
+        store.lockCallbackEvent(command.eventId());
         var prior = store.callback(command.eventId());
         if (prior.isPresent()) {
             var value = prior.get();
@@ -92,15 +95,21 @@ public class SettlementModuleImpl implements DebtQuery, FineCommands, FineQuery,
             }
             return ModuleResult.Accepted.of(new Callback(value.eventId(), value.orderId(), value.outcome()));
         }
-        var order = store.orderById(command.orderId());
+        var order = store.lockOrderById(command.orderId());
         if (order.isEmpty()) {
             return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_005.code(), "订单不可见");
         }
         String outcome;
         if ("SUCCESS".equals(command.result()) && "OCCUPIED".equals(order.get().status())) {
-            store.transitionOrder(command.orderId(), "OCCUPIED", "PAID", clock.now());
-            store.settleFine(order.get().fineId(), clock.now());
-            outcome = "PAID";
+            if (store.transitionOrder(command.orderId(), "OCCUPIED", "PAID", clock.now())) {
+                store.settleFine(order.get().fineId(), clock.now());
+                outcome = "PAID";
+            } else {
+                var current = store.orderById(command.orderId()).orElseThrow();
+                if ("PAID".equals(current.status())) outcome = "PAID";
+                else if ("CLOSED".equals(current.status())) outcome = "CONFLICT_RECORDED";
+                else return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_004.code(), "支付回调状态已变化");
+            }
         } else if ("SUCCESS".equals(command.result()) && "PAID".equals(order.get().status())) {
             outcome = "PAID";
         } else if ("SUCCESS".equals(command.result()) && "CLOSED".equals(order.get().status())) {
@@ -115,9 +124,28 @@ public class SettlementModuleImpl implements DebtQuery, FineCommands, FineQuery,
     }
 
     @Override
+    @Transactional
     public ModuleResult<Order> closeOrder(CloseOrder command) {
-        var order = store.orderById(command.orderId());
+        var order = store.lockOrderById(command.orderId());
         if (order.isEmpty()) return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_005.code(), "订单不可见");
+        var actor = command.actor();
+        if (actor == null) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_001.code(), "请先登录");
+        }
+        if (actor.role() == null) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_005.code(), "无权关闭支付单");
+        }
+        var fine = store.fineById(order.get().fineId());
+        if (fine.isEmpty()) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_005.code(), "订单不可见");
+        }
+        boolean canClose = switch (actor.role()) {
+            case READER -> actor.accountId() != null && fine.get().readerId() == actor.accountId().value();
+            case LIBRARIAN, ADMIN, SYSTEM -> true;
+        };
+        if (!canClose) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_005.code(), "订单不可见");
+        }
         if ("OCCUPIED".equals(order.get().status())) {
             if (!store.transitionOrder(command.orderId(), "OCCUPIED", "CLOSED", clock.now())) {
                 return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_004.code(), "关闭提交失败");
@@ -137,25 +165,32 @@ public class SettlementModuleImpl implements DebtQuery, FineCommands, FineQuery,
     }
 
     @Override
-    public ModuleResult<Refund> refund(ApprovedRefundCommand command) {
-        var order = store.orderById(command.orderId());
-        if (order.isEmpty() || !"PAID".equals(order.get().status())
-                || command.amountCents() <= 0 || command.amountCents() > order.get().amountCents()) {
-            return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_007.code(), "退款金额或订单终态不合法");
+    public ModuleResult<OrderQuery.OrderPage> occupiedOrders(
+            com.library.contract.model.PageCursor page, ActorContext actor) {
+        if (actor == null) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_001.code(), "请先登录");
         }
-        var id = store.insertRefund(command.orderId(), command.amountCents(), command.reviewId());
-        return ModuleResult.Accepted.of(new Refund(id, command.orderId(), command.amountCents(), "APPROVED"));
+        if (actor.role() != com.library.contract.model.Role.READER) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_ID_005.code(), "仅读者可查询自己的占用订单");
+        }
+        var cursor = page == null ? com.library.contract.model.PageCursor.first() : page;
+        var afterId = cursor.cursor() == null ? 0L : Long.parseLong(cursor.cursor());
+        var rows = store.listOccupiedOrders(actor.accountId().value(), afterId, cursor.limit() + 1);
+        var hasMore = rows.size() > cursor.limit();
+        var visible = rows.stream().limit(cursor.limit()).map(this::toOrder).toList();
+        var nextCursor = hasMore && !visible.isEmpty()
+                ? Long.toString(visible.get(visible.size() - 1).orderId()) : null;
+        return ModuleResult.Accepted.of(new OrderQuery.OrderPage(visible, nextCursor));
+    }
+
+    @Override
+    public ModuleResult<Refund> refund(ApprovedRefundCommand command) {
+        return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_009.code(), "退款功能已下线");
     }
 
     @Override
     public ModuleResult<Reconciliation> reconcile(ReconciliationCommand command) {
-        var date = command.businessDate().value();
-        if (store.reconciliation(date).isPresent()) {
-            return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_008.code(), "营业日已对账");
-        }
-        var counts = Map.of("orders", 0, "callbacks", 0, "exceptions", 0);
-        var id = store.insertReconciliation(date, counts, List.of());
-        return ModuleResult.Accepted.of(new Reconciliation(id, counts, List.of()));
+        return ModuleResult.Rejected.of(StableErrorCode.MLS_PAY_009.code(), "对账功能已下线");
     }
 
     private Fine toFine(SettlementStore.FineRow row) {

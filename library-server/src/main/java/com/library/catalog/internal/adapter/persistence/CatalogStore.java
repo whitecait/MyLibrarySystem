@@ -15,10 +15,11 @@ public interface CatalogStore {
     boolean isbnExistsExcept(long titleId, String isbn);
 
     /** pg_trgm 相似度检索：q 非空时按 similarity DESC、id ASC 键集分页。 */
-    List<TitleRow> searchByQuery(String q, String category, Double afterSimilarity, long afterId, int limit);
+    List<TitleRow> searchByQuery(String q, String category, String availability,
+                                 Double afterSimilarity, long afterId, int limit);
 
-    /** 无检索词：category 过滤 + id 键集分页。 */
-    List<TitleRow> list(String category, long afterId, int limit);
+    /** 无检索词：category/availability 过滤 + id 键集分页。 */
+    List<TitleRow> list(String category, String availability, long afterId, int limit);
 
     long insert(NewTitle candidate);
 

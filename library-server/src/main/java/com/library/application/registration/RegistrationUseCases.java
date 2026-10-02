@@ -13,19 +13,17 @@ import com.library.identity.contract.AccountCriteria;
 import com.library.identity.contract.AccountPage;
 import com.library.identity.contract.AccountQuery;
 import com.library.identity.contract.AccountRegistration;
+import com.library.identity.contract.AccountState;
 import com.library.identity.contract.AuthorizationCheck;
 import com.library.identity.contract.ChangeAccount;
 import com.library.identity.contract.IssuedSession;
 import com.library.identity.contract.IdentityRegistration;
-import com.library.identity.contract.ReaderQuery;
-import com.library.identity.contract.ReaderSnapshot;
 import com.library.identity.contract.RegisterReader;
 import com.library.identity.contract.ResetPassword;
 import com.library.identity.contract.SessionCommands;
 import com.library.identity.contract.SessionEnded;
 import com.library.identity.contract.SessionToken;
 import com.library.identity.contract.TemporaryPassword;
-import com.library.identity.contract.model.ReaderId;
 import com.library.review.contract.Review;
 import com.library.review.contract.ReviewCommand;
 import com.library.review.contract.ReviewRequesting;
@@ -63,7 +61,6 @@ record RegistrationUseCasesImpl(IdentityRegistration identity,
                                 AuthorizationCheck authorization,
                                 AccountQuery accountQuery,
                                 AccountCommands accountCommands,
-                                ReaderQuery readerQuery,
                                 ReviewRequesting reviews) implements RegistrationUseCases {
 
     @Override
@@ -99,8 +96,13 @@ record RegistrationUseCasesImpl(IdentityRegistration identity,
         if (rejected != null) {
             return ModuleResult.Rejected.propagate(rejected);
         }
+        var target = accountQuery.accountState(AccountId.of(accountId));
+        if (target instanceof ModuleResult.Rejected<AccountState> missing) {
+            return ModuleResult.Rejected.propagate(missing);
+        }
+        var targetVersion = ((ModuleResult.Accepted<AccountState>) target).value().version();
         return reviews.request(new ReviewCommand(actor.accountId().value(), "ACCOUNT_CHANGE",
-                accountId, action, payload, reason, targetVersionOf(accountId)));
+                accountId, action, payload, reason, targetVersion));
     }
 
     @Override
@@ -135,12 +137,4 @@ record RegistrationUseCasesImpl(IdentityRegistration identity,
         return null;
     }
 
-    /** 目标账户当前版本快照（发起时固定，批准时重验）。非读者目标回退 0，由复核守卫兜底。 */
-    private long targetVersionOf(long accountId) {
-        if (readerQuery.reader(ReaderId.of(accountId))
-                instanceof ModuleResult.Accepted<ReaderSnapshot> accepted) {
-            return accepted.value().version();
-        }
-        return 0L;
-    }
 }

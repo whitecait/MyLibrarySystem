@@ -1,5 +1,6 @@
 // 前端静态契约门禁（CONTRACT-001 / CONTRACT-002）。
-// CONTRACT-001：OpenAPI 3.1 可解析、内部 $ref 完整、45 个唯一 operationId、幂等键只出现在非 GET 操作。
+// CONTRACT-001：OpenAPI 3.1 可解析、内部 $ref 完整、45 个唯一 operationId；所有启用写操作需要幂等键，
+// 仅退款与对账两个废弃且恒拒绝的兼容端点例外。
 // CONTRACT-002：生成物可单命令重建且与已提交版本哈希一致；/api/ URL 字面量只允许出现在 platform/http 与 generated。
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -14,7 +15,8 @@ const scriptDir = dirname(fileURLToPath(import.meta.url))
 const frontendRoot = resolve(scriptDir, '..')
 const contractPath = resolve(frontendRoot, '../docs/04-module-design/contracts/http/openapi.yaml')
 const generatedDir = join(frontendRoot, 'src/platform/contracts/generated')
-const EXPECTED_OPERATION_COUNT = 45
+const EXPECTED_OPERATION_COUNT = 46
+const RETIRED_UNSUPPORTED_WRITES = new Set(['requestRefund', 'reconcileBusinessDate'])
 
 const failures = []
 function fail(message) {
@@ -92,6 +94,21 @@ if (existsSync(manifestPath)) {
     if (operation.method === 'GET' && operation.requiresIdempotencyKey) {
       fail(`CONTRACT-001: GET operation "${operation.operationId}" must not require Idempotency-Key`)
     }
+    if (RETIRED_UNSUPPORTED_WRITES.has(operation.operationId)) {
+      const pathItem = doc.paths?.[operation.path]
+      const definition = pathItem?.[operation.method.toLowerCase()]
+      const responseCodes = Object.keys(definition?.responses ?? {}).sort()
+      if (operation.deprecated !== true || definition?.deprecated !== true) {
+        fail(`CONTRACT-001: retired operation "${operation.operationId}" must be deprecated`)
+      }
+      if (operation.permission !== 'UNSUPPORTED' || operation.public !== true) {
+        fail(`CONTRACT-001: retired operation "${operation.operationId}" must be public and marked UNSUPPORTED`)
+      }
+      if (operation.requiresIdempotencyKey || responseCodes.length !== 1 || responseCodes[0] !== '422') {
+        fail(`CONTRACT-001: retired operation "${operation.operationId}" must require no idempotency key and return only 422`)
+      }
+      continue
+    }
     if (operation.method !== 'GET' && !operation.requiresIdempotencyKey) {
       fail(`CONTRACT-001: write operation "${operation.operationId}" must require Idempotency-Key`)
     }
@@ -166,5 +183,5 @@ if (failures.length > 0) {
   process.exit(1)
 }
 console.log(
-  'CONTRACT-001/002: OK (openapi 3.1 parseable, refs resolved, 45 unique operations, generated artifacts fresh, no stray API URLs)',
+  `CONTRACT-001/002: OK (openapi 3.1 parseable, refs resolved, ${EXPECTED_OPERATION_COUNT} unique operations, generated artifacts fresh, no stray API URLs)`,
 )

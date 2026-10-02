@@ -51,3 +51,8 @@ library:
     dispatch-enabled: ${OUTBOX_DISPATCH_ENABLED:true}
     dispatch-interval-ms: ${OUTBOX_DISPATCH_INTERVAL_MS:2000}
     dispatch-initial-delay-ms: ${OUTBOX_DISPATCH_INITIAL_DELAY_MS:3000}
+  closing:
+    # Core daily close can be enabled explicitly by a deployment; ordinary local runs stay manual.
+    daily-enabled: ${LIBRARY_CLOSING_DAILY_ENABLED:false}
+    daily-cron: ${LIBRARY_CLOSING_DAILY_CRON:0 0 0 * * *}
+    time-zone: ${LIBRARY_CLOSING_TIME_ZONE:Asia/Shanghai}

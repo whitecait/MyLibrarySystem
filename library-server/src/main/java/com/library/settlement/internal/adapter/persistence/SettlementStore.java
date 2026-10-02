@@ -20,7 +20,10 @@ public interface SettlementStore {
 
     Optional<FineRow> fineById(long fineId);
     List<FineRow> listFines(Long readerId, String status, long afterId, int limit);
+    List<OrderRow> listOccupiedOrders(long readerId, long afterId, int limit);
     Optional<OrderRow> orderById(long orderId);
+    Optional<OrderRow> lockOrderById(long orderId);
+    void lockCallbackEvent(String eventId);
     Optional<OrderRow> unreleasedOrder(long fineId);
     long insertOrder(long fineId, long amountCents, Instant expiresAt);
     boolean transitionOrder(long orderId, String expected, String next, Instant at);

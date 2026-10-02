@@ -11,8 +11,11 @@ import com.library.contract.security.ActorContext;
 import com.library.contract.security.AuthorizationDecision;
 import com.library.contract.security.Capability;
 import com.library.contract.security.SubjectRef;
+import com.library.contract.time.BusinessClock;
+import com.library.contract.transaction.UnitOfWork;
 import com.library.circulation.contract.LoanCommands;
 import com.library.circulation.contract.ReservationCommands;
+import com.library.circulation.contract.ReaderCirculationQuery;
 import com.library.circulation.contract.Transaction;
 import com.library.identity.contract.AuthorizationCheck;
 import com.library.identity.contract.ReaderQuery;
@@ -48,6 +51,9 @@ public interface LoanUseCases {
 record LoanUseCasesImpl(AuthorizationCheck authorization,
                         ReaderQuery readerQuery,
                         DebtQuery debtQuery,
+                        ReaderCirculationQuery circulationQuery,
+                        BusinessClock clock,
+                        UnitOfWork unitOfWork,
                         ReservationCommands reservations,
                         LoanCommands loans,
                         OutboxAppender outbox,
@@ -58,7 +64,13 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
     @Override
     public ModuleResult<ReservationCommands.Reservation> reserve(
             ActorContext actor, ReservationCommands.ReservationCommand command) {
+        return unitOfWork.inTransaction(() -> reserveInTransaction(actor, command));
+    }
+
+    private ModuleResult<ReservationCommands.Reservation> reserveInTransaction(
+            ActorContext actor, ReservationCommands.ReservationCommand command) {
         var readerId = resolveReaderId(actor, command.readerId());
+        circulationQuery.lockReader(readerId);
         var rejected = readerEligibilityRejected(readerId);
         if (rejected != null) {
             return ModuleResult.Rejected.propagate(rejected);
@@ -66,6 +78,11 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
         var authorized = authorizeReaderOrLibrarian(actor, readerId);
         if (authorized != null) {
             return ModuleResult.Rejected.propagate(authorized);
+        }
+        circulationQuery.lockTitleReservations(command.titleId().value());
+        if (circulationQuery.activity(readerId, clock.today()).activeReservationCount()
+                >= ReservationCommands.MAX_ACTIVE_RESERVATIONS) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_011.code(), "读者已达到五项活动预约上限");
         }
         var result = reservations.reserve(new ReservationCommands.ReservationCommand(
                 readerId, command.titleId(), command.reservationDate(), command.pickupSlot(),
@@ -77,6 +94,11 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
     @Override
     public ModuleResult<Transaction> cancel(ActorContext actor,
                                             ReservationCommands.CancelReservation command) {
+        return unitOfWork.inTransaction(() -> cancelInTransaction(actor, command));
+    }
+
+    private ModuleResult<Transaction> cancelInTransaction(ActorContext actor,
+                                                          ReservationCommands.CancelReservation command) {
         var authorized = authorizeReaderOrLibrarian(actor, actor.accountId().value());
         if (authorized != null) {
             return ModuleResult.Rejected.propagate(authorized);
@@ -89,14 +111,33 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
     @Override
     public ModuleResult<LoanCommands.LoanBatch> lend(ActorContext actor,
                                                      LoanCommands.WalkInLoanCommand command) {
+        return unitOfWork.inTransaction(() -> lendInTransaction(actor, command));
+    }
+
+    private ModuleResult<LoanCommands.LoanBatch> lendInTransaction(
+            ActorContext actor, LoanCommands.WalkInLoanCommand command) {
+        var authorized = authorizeOrReject(actor, Capability.LIBRARIAN, SubjectRef.system());
+        if (authorized != null) {
+            return ModuleResult.Rejected.propagate(authorized);
+        }
+        if (!"DESK".equalsIgnoreCase(command.channel())) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_001.code(),
+                    "现场借出仅支持馆员到台办理");
+        }
         var readerId = resolveReaderId(actor, command.readerId());
+        circulationQuery.lockReader(readerId);
         var rejected = readerEligibilityRejected(readerId);
         if (rejected != null) {
             return ModuleResult.Rejected.propagate(rejected);
         }
-        var authorized = authorizeReaderOrLibrarian(actor, readerId);
-        if (authorized != null) {
-            return ModuleResult.Rejected.propagate(authorized);
+        var activity = circulationQuery.activity(readerId, clock.today());
+        if (activity.hasOverdueLoan()) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_011.code(), "存在逾期未还副本，暂不能借阅");
+        }
+        var debt = debtQuery.debtFor(ReaderId.of(readerId));
+        if (!(debt instanceof ModuleResult.Accepted<DebtQuery.DebtSnapshot> acceptedDebt)
+                || acceptedDebt.value().hasDebt()) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_011.code(), "存在未缴罚款或无法核验欠费，暂不能借阅");
         }
         var result = loans.lend(new LoanCommands.WalkInLoanCommand(
                 readerId, command.items(), command.channel(), actor));
@@ -107,18 +148,55 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
 
     @Override
     public ModuleResult<Transaction> claim(ActorContext actor, LoanCommands.ClaimPickup command) {
+        return unitOfWork.inTransaction(() -> claimInTransaction(actor, command));
+    }
+
+    private ModuleResult<Transaction> claimInTransaction(ActorContext actor, LoanCommands.ClaimPickup command) {
+        var readerId = circulationQuery.readerForTransaction(command.txId().value()).orElse(0);
+        if (readerId <= 0) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_004.code(), "预约读者不可见");
+        }
+        circulationQuery.lockReader(readerId);
+        var eligibility = readerEligibilityRejected(readerId);
+        if (eligibility != null) {
+            return ModuleResult.Rejected.propagate(eligibility);
+        }
+        if (readerCannotTakeAdditionalLoan(readerId)) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_011.code(), "当前存在逾期未还或未缴罚款，暂不能取书");
+        }
         var rejected = authorizeOrReject(actor, Capability.LIBRARIAN, SubjectRef.system());
         if (rejected != null) {
             return ModuleResult.Rejected.propagate(rejected);
         }
         var result = loans.claim(command);
-        appendTxEvent(result, AuditEventTypes.PICKUP_CLAIMED, null, actor);
+        var routedToManual = result instanceof ModuleResult.Accepted<?> accepted
+                && accepted.value() instanceof Transaction transaction
+                && "MANUAL_HANDLING".equals(transaction.status());
+        var eventType = routedToManual ? AuditEventTypes.RESERVATION_DECIDED : AuditEventTypes.PICKUP_CLAIMED;
+        appendTxEvent(result, eventType, routedToManual ? readerId : null, actor);
         return result;
     }
 
     @Override
     public ModuleResult<Transaction> applyManualAction(ActorContext actor,
                                                        LoanCommands.ManualAction command) {
+        return unitOfWork.inTransaction(() -> applyManualActionInTransaction(actor, command));
+    }
+
+    private ModuleResult<Transaction> applyManualActionInTransaction(ActorContext actor,
+                                                                     LoanCommands.ManualAction command) {
+        var action = command.action() == null ? "" : command.action().toUpperCase(java.util.Locale.ROOT);
+        if ("RELEASE".equals(action)) {
+            var readerId = circulationQuery.readerForTransaction(command.txId().value()).orElse(0);
+            if (readerId <= 0) {
+                return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_005.code(), "处置读者不可见");
+            }
+            circulationQuery.lockReader(readerId);
+            var eligibility = readerEligibilityRejected(readerId);
+            if (eligibility != null || readerCannotTakeAdditionalLoan(readerId)) {
+                return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_011.code(), "当前存在逾期未还、未缴罚款或账户不可用");
+            }
+        }
         var rejected = authorizeOrReject(actor, Capability.LIBRARIAN, SubjectRef.system());
         if (rejected != null) {
             return ModuleResult.Rejected.propagate(rejected);
@@ -131,15 +209,24 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
     @Override
     public ModuleResult<LoanCommands.Renewal> renew(ActorContext actor,
                                                     LoanCommands.RenewalCommand command) {
+        return unitOfWork.inTransaction(() -> renewInTransaction(actor, command));
+    }
+
+    private ModuleResult<LoanCommands.Renewal> renewInTransaction(
+            ActorContext actor, LoanCommands.RenewalCommand command) {
+        var txReaderId = circulationQuery.readerForTransaction(command.txId().value()).orElse(0);
+        circulationQuery.lockReader(actor.accountId().value());
         var rejected = authorizeOrReject(actor, Capability.READER_SELF,
                 SubjectRef.account(actor.accountId().asString()));
         if (rejected != null) {
             return ModuleResult.Rejected.propagate(rejected);
         }
-        var debt = debtQuery.debtFor(ReaderId.of(actor.accountId().value()));
-        if (debt instanceof ModuleResult.Accepted<DebtQuery.DebtSnapshot> accepted
-                && accepted.value().hasDebt()) {
-            return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_012.code(), "存在未缴罚款，暂不能续借");
+        if (txReaderId == actor.accountId().value()) {
+            circulationQuery.titleForTransaction(command.txId().value())
+                    .ifPresent(circulationQuery::lockTitleReservations);
+        }
+        if (readerHasDebtOrOverdueLoan(actor.accountId().value())) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_012.code(), "存在逾期未还副本，暂不能续借");
         }
         var result = loans.renew(command);
         appendTxEvent(result, AuditEventTypes.LOAN_RENEWED, null, actor);
@@ -163,6 +250,23 @@ record LoanUseCasesImpl(AuthorizationCheck authorization,
             return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_011.code(), "读者账户未处于 ACTIVE 状态");
         }
         return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_011.code(), "读者不存在或不可见");
+    }
+
+    private boolean readerCannotTakeAdditionalLoan(long readerId) {
+        var activity = circulationQuery.activity(readerId, clock.today());
+        return activity.activeLoanCount() >= LoanCommands.MAX_ACTIVE_LOANS
+                || activity.hasOverdueLoan() || hasUnpaidOrUnverifiableDebt(readerId);
+    }
+
+    private boolean readerHasDebtOrOverdueLoan(long readerId) {
+        return circulationQuery.activity(readerId, clock.today()).hasOverdueLoan()
+                || hasUnpaidOrUnverifiableDebt(readerId);
+    }
+
+    private boolean hasUnpaidOrUnverifiableDebt(long readerId) {
+        var debt = debtQuery.debtFor(ReaderId.of(readerId));
+        return !(debt instanceof ModuleResult.Accepted<DebtQuery.DebtSnapshot> accepted)
+                || accepted.value().hasDebt();
     }
 
     private ModuleResult.Rejected<AuthorizationDecision> authorizeReaderOrLibrarian(ActorContext actor,

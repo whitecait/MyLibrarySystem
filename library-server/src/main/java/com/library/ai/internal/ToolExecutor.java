@@ -59,7 +59,7 @@ final class ToolExecutor {
     }
     private String text(Map<String,Object>a,String k){var v=a.get(k);return v==null?null:String.valueOf(v);}
     private Integer integer(Map<String,Object>a,String k){var v=a.get(k);return v instanceof Number n?n.intValue():null;}
-    private long number(Map<String,Object>a,String k){var v=a.get(k);if(v instanceof Number n)return n.longValue();if(v!=null)return Long.parseLong(v.toString());throw new ToolRegistry.ToolRejected(k+" 必填");}
+    private long number(Map<String,Object>a,String k){var v=a.get(k);if(v instanceof Number n)return n.longValue();if(v!=null){try{return Long.parseLong(v.toString());}catch(NumberFormatException invalid){throw new ToolRegistry.ToolRejected(k+" 必须为数字");}}throw new ToolRegistry.ToolRejected(k+" 必填");}
     private Long optionalLong(Map<String,Object>a,String k){return a.containsKey(k)?number(a,k):null;}
     private TitleId optionalTitle(Map<String,Object>a){return a.containsKey("titleId")?TitleId.of(number(a,"titleId")):null;}
     private BusinessDate date(Map<String,Object>a,String k){return BusinessDate.of(a.containsKey(k)?LocalDate.parse(a.get(k).toString()):LocalDate.now(com.library.contract.time.BusinessClock.ZONE));}

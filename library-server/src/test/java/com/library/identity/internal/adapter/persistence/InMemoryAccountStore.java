@@ -63,6 +63,18 @@ public class InMemoryAccountStore implements AccountStore {
     }
 
     @Override
+    public Long updateReviewedState(long accountId, long expectedVersion, String nextStatus, String nextRole) {
+        var current = byId(accountId).orElse(null);
+        if (current == null || current.version() != expectedVersion) {
+            return null;
+        }
+        var updated = new StoredAccount(current.id(), current.username(), current.passwordHash(),
+                current.displayName(), nextRole, nextStatus, current.version() + 1);
+        byUsername.put(updated.username(), updated);
+        return updated.version();
+    }
+
+    @Override
     public long updatePasswordHash(long accountId, String passwordHash) {
         var current = byId(accountId).orElseThrow();
         var updated = new StoredAccount(current.id(), current.username(), passwordHash,

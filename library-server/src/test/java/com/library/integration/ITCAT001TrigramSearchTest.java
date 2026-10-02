@@ -77,8 +77,45 @@ class ITCAT001TrigramSearchTest {
         assertThat(elapsedMillis).as("检索耗时 %d ms（SLI 10000ms）", elapsedMillis).isLessThan(10_000);
     }
 
-    private void seedTitle(String title) {
+    @Test
+    void publicSearchFiltersBooksByDerivedAvailability() throws Exception {
+        var prefix = "availability-filter-" + UUID.randomUUID().toString().substring(0, 8);
+        var availableTitle = seedTitleAndCopy(prefix + "-available", "SHELF_READY");
+        var unavailableTitle = seedTitleAndCopy(prefix + "-unavailable", "MAINTENANCE");
+        var unknownTitle = seedTitle(prefix + "-unknown");
+
+        var available = rest.getForEntity("/api/v1/titles?q=" + prefix
+                + "&availability=AVAILABLE&limit=20", String.class);
+        assertThat(available.getStatusCode().value()).isEqualTo(200);
+        assertThat(json.readTree(available.getBody()).at("/data/items").findValuesAsText("title"))
+                .containsExactly(availableTitle).doesNotContain(unavailableTitle, unknownTitle);
+
+        var unavailable = rest.getForEntity("/api/v1/titles?availability=UNAVAILABLE&limit=20", String.class);
+        assertThat(unavailable.getStatusCode().value()).isEqualTo(200);
+        assertThat(json.readTree(unavailable.getBody()).at("/data/items").findValuesAsText("title"))
+                .contains(unavailableTitle).doesNotContain(availableTitle, unknownTitle);
+
+        var unknown = rest.getForEntity("/api/v1/titles?availability=UNKNOWN&limit=20", String.class);
+        assertThat(unknown.getStatusCode().value()).isEqualTo(200);
+        assertThat(json.readTree(unknown.getBody()).at("/data/items").findValuesAsText("title"))
+                .contains(unknownTitle).doesNotContain(availableTitle, unavailableTitle);
+
+        var invalid = rest.getForEntity("/api/v1/titles?availability=NOT_A_STATE", String.class);
+        assertThat(invalid.getStatusCode().value()).isEqualTo(400);
+        assertThat(json.readTree(invalid.getBody()).path("code").asText()).isEqualTo("MLS-CAT-001");
+    }
+
+    private String seedTitle(String title) {
         jdbc.update("INSERT INTO book_title (title, price_cents) VALUES (?, 5000)", title);
+        return title;
+    }
+
+    private String seedTitleAndCopy(String title, String state) {
+        long id = jdbc.queryForObject("INSERT INTO book_title (title, price_cents) VALUES (?, 5000) RETURNING id",
+                Long.class, title);
+        jdbc.update("INSERT INTO book_copy (title_id, copy_no, status) VALUES (?, ?, ?)",
+                id, "av-" + UUID.randomUUID().toString().substring(0, 12), state);
+        return title;
     }
 
     private void seedAdmin() {

@@ -24,6 +24,9 @@ public interface AccountStore {
     /** 馆员直办的读者状态变更（ACTIVE/SUSPENDED）；返回新版本；目标必须存在且为 READER。 */
     long updateReaderStatus(long accountId, String nextStatus);
 
+    /** Version-guarded role/status update for an approved account review; null means stale/missing. */
+    Long updateReviewedState(long accountId, long expectedVersion, String nextStatus, String nextRole);
+
     /** 密码重置写入；返回新版本。 */
     long updatePasswordHash(long accountId, String passwordHash);
 

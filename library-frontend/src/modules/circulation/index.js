@@ -24,8 +24,8 @@ export function reserveTitle({ titleId, reservationDate, pickupSlot, channel, on
   })
 }
 
-export function cancelReservation({ txId }, options = {}) {
-  return apiRequest('cancelReservation', { params: { txId }, ...options })
+export function cancelReservation({ txId, reason }, options = {}) {
+  return apiRequest('cancelReservation', { params: { txId }, body: { reason }, ...options })
 }
 
 export function createWalkInLoans({ readerId, items, channel }, options = {}) {

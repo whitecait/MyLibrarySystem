@@ -8,6 +8,7 @@ import com.library.ai.contract.ModelEndpoint;
 import com.library.contract.ContractScenarios;
 import com.library.contract.InstanceValidator;
 import com.library.contract.OpenApiDocument;
+import com.library.contract.time.BusinessClock;
 import com.library.web.AiVisitorCookieAdapter;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.LocalDate;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -62,7 +64,8 @@ class Contract003LiveScenarioTest {
             "postgres@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3";
 
     @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGRES_IMAGE);
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGRES_IMAGE)
+            .withLabel("com.mylibrary.p1-stage", "p1-core-20260926");
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
@@ -143,26 +146,31 @@ class Contract003LiveScenarioTest {
     private void reservationNeedsWaitlistConfirmation(String id) throws Exception {
         var reader = account("reservation", "READER");
         long title = title("waitlist title");
+        copy(title, "LENT");
         var scenario = scenarios.byId(id);
         var body = ((ObjectNode) scenario.at("/request/body").deepCopy())
-                .put("titleId", Long.toString(title)).put("confirmWaitlist", false);
+                .put("titleId", Long.toString(title))
+                .put("reservationDate", LocalDate.now(BusinessClock.ZONE).plusDays(1).toString())
+                .put("confirmWaitlist", false);
         execute(id, authenticatedPost("/api/v1/reservations", scenario, reader.token(), body),
                 "/api/v1/reservations", body, Set.of("Idempotency-Key", "Authorization"), Set.of("bearerAuth"));
     }
 
     private void walkInBatchPreservesMixedOutcomes(String id) throws Exception {
         var reader = account("walkin", "READER");
+        var librarian = account("walkin-librarian", "LIBRARIAN");
         long availableTitle = title("available title");
         long availableCopy = copy(availableTitle, "SHELF_READY");
         long unavailableTitle = title("unavailable title");
         long unavailableCopy = copy(unavailableTitle, "MAINTENANCE");
         var scenario = scenarios.byId(id);
         var body = (ObjectNode) scenario.at("/request/body").deepCopy();
+        body.put("readerId", Long.toString(reader.id()));
         ((ObjectNode) body.at("/items/0")).put("titleId", Long.toString(availableTitle))
                 .put("copyId", Long.toString(availableCopy));
         ((ObjectNode) body.at("/items/1")).put("titleId", Long.toString(unavailableTitle))
                 .put("copyId", Long.toString(unavailableCopy));
-        execute(id, authenticatedPost("/api/v1/walk-in-loans", scenario, reader.token(), body),
+        execute(id, authenticatedPost("/api/v1/walk-in-loans", scenario, librarian.token(), body),
                 "/api/v1/walk-in-loans", body, Set.of("Idempotency-Key", "Authorization"), Set.of("bearerAuth"));
     }
 
@@ -197,17 +205,16 @@ class Contract003LiveScenarioTest {
     }
 
     private void changedReviewTargetConflicts(String id) throws Exception {
-        var reader = account("review-owner", "READER");
-        long fine = fineWithOccupiedOrder(reader.id(), "review");
-        long order = jdbc.queryForObject("SELECT id FROM payment_order WHERE fine_id=?", Long.class, fine);
+        var target = account("review-owner", "READER");
         var applicant = account("review-applicant", "LIBRARIAN");
         var admin = account("review-admin", "ADMIN");
         long review = jdbc.queryForObject("""
                 INSERT INTO review_request(applicant_id,target_type,target_id,reason,action_type,
                                            action_payload,target_version)
-                VALUES (?,'REFUND',?,'contract fixture','REFUND','{"amountCents":100}'::jsonb,1)
+                VALUES (?,'ACCOUNT_CHANGE',?,'contract fixture','SUSPEND','{}'::jsonb,0)
                 RETURNING id
-                """, Long.class, applicant.id(), order);
+                """, Long.class, applicant.id(), target.id());
+        jdbc.update("UPDATE account SET status='SUSPENDED', version=version+1 WHERE id=?", target.id());
         var scenario = scenarios.byId(id);
         var path = "/api/v1/reviews/" + review + "/decision";
         var body = scenario.at("/request/body");
@@ -215,8 +222,10 @@ class Contract003LiveScenarioTest {
                 Set.of("Idempotency-Key", "Authorization"), Set.of("bearerAuth"));
         assertThat(jdbc.queryForObject("SELECT decision FROM review_request WHERE id=?", String.class, review))
                 .isEqualTo("PENDING");
-        assertThat(jdbc.queryForObject("SELECT version FROM payment_order WHERE id=?", Long.class, order))
-                .isZero();
+        assertThat(jdbc.queryForObject("SELECT version FROM account WHERE id=?", Long.class, target.id()))
+                .isEqualTo(1L);
+        assertThat(jdbc.queryForObject("SELECT status FROM account WHERE id=?", String.class, target.id()))
+                .isEqualTo("SUSPENDED");
     }
 
     private void startVisitorSession(String id) throws Exception {

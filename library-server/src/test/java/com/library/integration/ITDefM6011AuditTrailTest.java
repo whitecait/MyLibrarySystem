@@ -15,6 +15,7 @@ import com.library.contract.ModuleResult;
 import com.library.contract.model.AccountId;
 import com.library.contract.model.Role;
 import com.library.contract.security.ActorContext;
+import com.library.contract.time.BusinessClock;
 import com.library.identity.internal.PasswordHasher;
 import com.library.review.contract.ReviewCommand;
 import com.library.review.contract.ReviewDeciding;
@@ -67,6 +68,7 @@ class ITDefM6011AuditTrailTest {
     @Autowired PaymentSimulatorPort simulator;
     @Autowired JdbcTemplate jdbc;
     @Autowired TestRestTemplate rest;
+    @Autowired BusinessClock businessClock;
 
     private final ObjectMapper json = new ObjectMapper();
 
@@ -81,10 +83,12 @@ class ITDefM6011AuditTrailTest {
         var librarianActor = actor(librarian, Role.LIBRARIAN);
 
         var reserved = accepted(loans.reserve(readerActor, new ReservationCommands.ReservationCommand(
-                reader, TitleId.of(title), BusinessDate.of(LocalDate.now().plusDays(1)), "AM",
+                reader, TitleId.of(title), BusinessDate.of(businessClock.today().plusDays(1)), "AM",
                 "ONLINE", true, readerActor)));
         var txId = reserved.txId().value();
         assertAudit("RESERVATION_DECIDED", txId, reader, "CONFIRMED");
+        jdbc.update("UPDATE borrow_transaction SET reservation_date=? WHERE id=?",
+                java.sql.Date.valueOf(businessClock.today()), txId);
 
         accepted(loans.claim(librarianActor, new LoanCommands.ClaimPickup(
                 reserved.txId(), CopyId.of(copyId), librarianActor)));
@@ -143,8 +147,8 @@ class ITDefM6011AuditTrailTest {
         var librarian = seedAccount("def011-revlib-" + System.nanoTime(), "LIBRARIAN");
         var admin = seedAccount("def011-admin-" + System.nanoTime(), "ADMIN");
 
-        var review = accepted(reviews.request(new ReviewCommand(librarian, "REFUND", 1L, "REFUND",
-                Map.of("amountCents", 100), "DEF-M6-011 审计", 1L)));
+        var review = accepted(reviews.request(new ReviewCommand(librarian, "ACCOUNT_CHANGE", 1L, "SUSPEND",
+                Map.of(), "DEF-M6-011 审计", 1L)));
         assertAudit("REVIEW_REQUESTED", review.reviewId(), librarian, "PENDING");
 
         accepted(decisions.decide(new ReviewDeciding.DecideReview(review.reviewId(), "REJECTED",
@@ -195,7 +199,7 @@ class ITDefM6011AuditTrailTest {
         var librarianActor = actor(librarian, Role.LIBRARIAN);
 
         var reserved = accepted(loans.reserve(readerActor, new ReservationCommands.ReservationCommand(
-                reader, TitleId.of(title), BusinessDate.of(LocalDate.now().plusDays(1)), "AM",
+                reader, TitleId.of(title), BusinessDate.of(businessClock.today().plusDays(1)), "AM",
                 "ONLINE", true, readerActor)));
         accepted(loans.cancel(readerActor, new ReservationCommands.CancelReservation(
                 reserved.txId(), "改期", readerActor)));

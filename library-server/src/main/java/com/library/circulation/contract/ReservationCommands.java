@@ -14,6 +14,9 @@ import com.library.circulation.contract.model.TxId;
  */
 public interface ReservationCommands {
 
+    /** RA-0011 per-reader limit shared by the circulation module and application guard. */
+    int MAX_ACTIVE_RESERVATIONS = 5;
+
     ModuleResult<Reservation> reserve(ReservationCommand command);
 
     /** 取消：事务转 NOT_BORROWED 终态；终态/冲突 → MLS-CIRC-003(409)。 */

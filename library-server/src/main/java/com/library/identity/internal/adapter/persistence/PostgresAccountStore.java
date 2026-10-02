@@ -82,6 +82,15 @@ public class PostgresAccountStore implements AccountStore {
     }
 
     @Override
+    public Long updateReviewedState(long accountId, long expectedVersion, String nextStatus, String nextRole) {
+        var versions = jdbc.queryForList("""
+                UPDATE account SET status = ?, role = ?, version = version + 1, updated_at = now()
+                WHERE id = ? AND version = ? RETURNING version
+                """, Long.class, nextStatus, nextRole, accountId, expectedVersion);
+        return versions.isEmpty() ? null : versions.getFirst();
+    }
+
+    @Override
     public long updatePasswordHash(long accountId, String passwordHash) {
         return jdbc.queryForObject("""
                 UPDATE account SET password_hash = ?, version = version + 1, updated_at = now()

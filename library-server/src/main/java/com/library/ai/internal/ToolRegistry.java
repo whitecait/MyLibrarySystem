@@ -44,7 +44,7 @@ public final class ToolRegistry {
                 l1("list_audit_events", "LIBRARIAN_OR_ADMIN", Set.of("LIBRARIAN", "ADMIN"), fields(id("relatedId"),text("eventType"),cursor(),limit()), none()),
                 action("prefill_reservation", "READER_SELF_OR_LIBRARIAN", "L2", Set.of("READER", "LIBRARIAN"), fields(id("titleId"),date("reservationDate"),text("pickupSlot"),text("channel")), required("titleId")),
                 action("prefill_renewal", "READER_SELF", "L2", Set.of("READER"), fields(id("txId")), required("txId")),
-                action("prefill_walk_in_loan", "READER_SELF_OR_LIBRARIAN", "L2", Set.of("READER", "LIBRARIAN"), fields(id("titleId"),id("copyId"),text("channel")), required("titleId")),
+                action("prefill_walk_in_loan", "LIBRARIAN", "L2", Set.of("LIBRARIAN"), fields(id("readerId"),id("titleId"),id("copyId"),text("channel")), required("titleId")),
                 action("prefill_return", "LIBRARIAN", "L2", Set.of("LIBRARIAN"), fields(id("copyId"),text("condition")), required("copyId")),
                 navigation("open_account_change", "LIBRARIAN", Set.of("LIBRARIAN")),
                 navigation("open_password_reset", "LIBRARIAN_OR_ADMIN", Set.of("LIBRARIAN", "ADMIN")),
@@ -60,8 +60,6 @@ public final class ToolRegistry {
                 navigation("open_closing_reopen", "ADMIN", Set.of("ADMIN")),
                 navigation("open_order_creation", "READER_SELF", Set.of("READER")),
                 navigation("open_order_close", "READER_SELF_OR_LIBRARIAN_OR_SYSTEM", Set.of("READER", "LIBRARIAN")),
-                navigation("open_refund_request", "LIBRARIAN_THEN_ADMIN_REVIEW", Set.of("LIBRARIAN")),
-                navigation("open_reconciliation", "SYSTEM_OR_ADMIN", Set.of("ADMIN")),
                 navigation("open_review_request", "LIBRARIAN", Set.of("LIBRARIAN")),
                 navigation("open_review_decision", "ADMIN", Set.of("ADMIN")),
                 navigation("open_notification_read", "AUTHENTICATED_SELF", Set.of("READER", "LIBRARIAN", "ADMIN"))));
@@ -83,7 +81,7 @@ public final class ToolRegistry {
         if ("prefill_reservation".equals(name)) {
             description += "书目详情页有“预约此书”表单，支持 ONLINE 线上与 DESK 到台渠道。提交需读者本人登录，或馆员代办；访客仅能查询、不能提交。预约是否成立由服务端裁定，不得承诺成功。ONLINE 日期最早为次一开馆日，DESK 可当日。预约不会直接借出。";
         } else if ("prefill_walk_in_loan".equals(name)) {
-            description += "这是现场借阅表单预填，不代表现场借阅已提交或已借出。";
+            description += "仅馆员可使用现场借阅表单预填；readerId 表示目标读者，不是权限凭据，提交时服务端仍按馆员会话重新鉴权。预填不代表现场借阅已提交或已借出；读者没有现场借阅自助入口。";
         } else if ("open_pickup_claim".equals(name)) {
             description += "到馆取书后须由现有流程校验预约已绑定副本，校验通过才完成借出。";
         }
@@ -115,23 +113,28 @@ public final class ToolRegistry {
         return tool;
     }
 
-    public void validate(AiTool tool,Map<String,Object> arguments){
+    public void validate(AiTool tool,Map<String,Object> arguments,ActorContext actor){
         try {
             var value=JSON.valueToTree(arguments);
             if(JSON.writeValueAsBytes(value).length>MAX_ARGUMENT_BYTES)throw new ToolRejected("工具参数过大");
-            rejectControlledFields(value);
+            // The walk-in form's root readerId selects a target; write authorization still comes from the actor session.
+            boolean allowWalkInTargetReader = "prefill_walk_in_loan".equals(tool.name())
+                    && actor != null && actor.role() == Role.LIBRARIAN;
+            rejectControlledFields(value,true,allowWalkInTargetReader);
             validateNode(value,JSON.readTree(tool.inputSchema()),0,"$");
         } catch(ToolRejected rejected){throw rejected;}
         catch(Exception failure){throw new ToolRejected("工具参数非法");}
     }
 
-    private void rejectControlledFields(JsonNode value){
+    private void rejectControlledFields(JsonNode value,boolean root,boolean allowWalkInTargetReader){
         if(value.isObject())value.fields().forEachRemaining(entry->{
-            if(Set.of("role","accountId","readerId","amountCents","version").contains(entry.getKey()))
+            boolean allowedTargetReader = root && allowWalkInTargetReader && "readerId".equals(entry.getKey());
+            if(Set.of("role","accountId","readerId","amountCents","version").contains(entry.getKey())
+                    && !allowedTargetReader)
                 throw new ToolRejected("模型参数包含服务端受控字段");
-            rejectControlledFields(entry.getValue());
+            rejectControlledFields(entry.getValue(),false,allowWalkInTargetReader);
         });
-        else if(value.isArray())value.forEach(this::rejectControlledFields);
+        else if(value.isArray())value.forEach(child->rejectControlledFields(child,false,allowWalkInTargetReader));
     }
 
     private void validateNode(JsonNode value,JsonNode schema,int depth,String path){

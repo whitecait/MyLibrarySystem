@@ -1,6 +1,7 @@
 package com.library.settlement.contract;
 
 import com.library.contract.ModuleResult;
+import com.library.contract.security.ActorContext;
 import com.library.settlement.contract.model.FineId;
 
 import java.time.Instant;
@@ -12,7 +13,7 @@ public interface OrderCommands {
 
     record CreateOrder(FineId fineId, long readerId) {}
     record PaymentCallback(String eventId, long orderId, String result, Instant occurredAt) {}
-    record CloseOrder(long orderId) {}
+    record CloseOrder(long orderId, ActorContext actor) {}
     record Order(long orderId, FineId fineId, long amountCents, String status, Instant expiresAt, long version) {}
     record Callback(String eventId, long orderId, String outcome) {}
 }

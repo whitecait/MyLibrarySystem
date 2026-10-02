@@ -177,7 +177,7 @@ export const fixtures = {
     message: 'ok',
     data: {
       items: [
-        { kind: 'LOAN', id: '4001', status: 'ACTIVE', title: 'Database Systems', businessDate: '2026-09-15' },
+        { kind: 'LOAN', id: '4001', status: 'LENT', title: 'Database Systems', businessDate: '2026-09-15' },
         { kind: 'RESERVATION', id: '4003', status: 'WAITLIST', title: 'Database Systems', businessDate: '2026-09-16' },
         { kind: 'FINE', id: '5001', status: 'UNPAID', amountCents: 150 },
       ],
@@ -193,6 +193,11 @@ export const fixtures = {
       ],
       nextCursor: null,
     },
+  },
+  listOccupiedOrders: {
+    code: 'MLS-PAY-S006',
+    message: 'ok',
+    data: { items: [], nextCursor: null },
   },
   createOrder: {
     code: 'MLS-PAY-S002',
@@ -213,12 +218,6 @@ export const fixtures = {
     code: 'MLS-PAY-S005',
     message: 'closed',
     data: { orderId: '6002', fineId: '5001', amountCents: 150, status: 'CLOSED', expiresAt: null },
-  },
-  requestRefund: { code: 'MLS-PAY-S006', message: 'review requested', data: { reviewId: '6003', status: 'PENDING' } },
-  reconcileBusinessDate: {
-    code: 'MLS-PAY-S007',
-    message: 'reconciled',
-    data: { reconciliationId: '9001', counts: { orders: 3, paid: 2, failed: 1 }, exceptions: [] },
   },
   listReviews: {
     code: 'MLS-REV-S001',

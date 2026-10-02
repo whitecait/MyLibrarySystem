@@ -43,10 +43,10 @@ public class PostgresCirculationStore implements CirculationStore {
     }
 
     @Override
-    public long insertCopy(long titleId, String copyNo) {
+    public long insertCopy(long titleId, String copyNo, LocalDate loanEligibleOn) {
         return jdbc.queryForObject("""
-                INSERT INTO book_copy (title_id, copy_no) VALUES (?, ?) RETURNING id
-                """, Long.class, titleId, copyNo);
+                INSERT INTO book_copy (title_id, copy_no, loan_eligible_on) VALUES (?, ?, ?) RETURNING id
+                """, Long.class, titleId, copyNo, Date.valueOf(loanEligibleOn));
     }
 
     @Override
@@ -85,6 +85,15 @@ public class PostgresCirculationStore implements CirculationStore {
     }
 
     @Override
+    public List<CopyRow> loanableCopies(long titleId, LocalDate businessDate, int limit) {
+        return jdbc.query("""
+                SELECT * FROM book_copy
+                WHERE title_id = ? AND status = 'SHELF_READY' AND loan_eligible_on <= ?
+                ORDER BY id LIMIT ?
+                """, COPY, titleId, Date.valueOf(businessDate), limit);
+    }
+
+    @Override
     public Long transitionCopy(long copyId, String expectedStatus, String nextStatus, long version) {
         List<Long> updated = jdbc.queryForList("""
                 UPDATE book_copy SET status = ?, version = version + 1, updated_at = now()
@@ -95,12 +104,80 @@ public class PostgresCirculationStore implements CirculationStore {
     }
 
     @Override
+    public Long transitionCopyAndSetLoanEligibleOn(long copyId, String expectedStatus, String nextStatus,
+                                                   long version, LocalDate loanEligibleOn) {
+        List<Long> updated = jdbc.queryForList("""
+                UPDATE book_copy SET status = ?, loan_eligible_on = ?,
+                                     version = version + 1, updated_at = now()
+                WHERE id = ? AND status = ? AND version = ?
+                RETURNING version
+                """, Long.class, nextStatus, Date.valueOf(loanEligibleOn),
+                copyId, expectedStatus, version);
+        return updated.isEmpty() ? null : updated.get(0);
+    }
+
+    @Override
+    public Long transitionCopyToLent(long copyId, String expectedStatus, long version, LocalDate businessDate) {
+        List<Long> updated = jdbc.queryForList("""
+                UPDATE book_copy SET status = 'LENT', version = version + 1, updated_at = now()
+                WHERE id = ? AND status = ? AND version = ? AND loan_eligible_on <= ?
+                RETURNING version
+                """, Long.class, copyId, expectedStatus, version, Date.valueOf(businessDate));
+        return updated.isEmpty() ? null : updated.get(0);
+    }
+
+    @Override
     public boolean hasOpenTransactionForReaderTitle(long readerId, long titleId) {
         var count = jdbc.queryForObject("""
                 SELECT count(*) FROM borrow_transaction
                 WHERE reader_id = ? AND title_id = ?
                   AND status IN ('AWAIT', 'CONFIRMED', 'MANUAL_HANDLING', 'WAITLIST', 'LENT')
                 """, Integer.class, readerId, titleId);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public void lockReaderActivity(long readerId) {
+        jdbc.query("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", rs -> {
+            while (rs.next()) {
+                // The transaction-scoped advisory lock is the result of this query.
+            }
+        }, "mls.reader.activity:" + readerId);
+    }
+
+    @Override
+    public void lockTitleReservations(long titleId) {
+        jdbc.query("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", rs -> {
+            while (rs.next()) {
+                // Keep reservation creation and renewal cutoff reads ordered for this title.
+            }
+        }, "mls.title.reservations:" + titleId);
+    }
+
+    @Override
+    public int countActiveLoansForReader(long readerId) {
+        var count = jdbc.queryForObject("""
+                SELECT count(*) FROM borrow_transaction
+                WHERE reader_id = ? AND status = 'LENT'
+                """, Integer.class, readerId);
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public int countActiveReservationsForReader(long readerId) {
+        var count = jdbc.queryForObject("""
+                SELECT count(*) FROM borrow_transaction
+                WHERE reader_id = ? AND status IN ('AWAIT', 'CONFIRMED', 'MANUAL_HANDLING', 'WAITLIST')
+                """, Integer.class, readerId);
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public boolean hasOverdueLentForReader(long readerId, LocalDate onDate) {
+        var count = jdbc.queryForObject("""
+                SELECT count(*) FROM borrow_transaction
+                WHERE reader_id = ? AND status = 'LENT' AND due_date < ?
+                """, Integer.class, readerId, Date.valueOf(onDate));
         return count != null && count > 0;
     }
 
@@ -136,6 +213,18 @@ public class PostgresCirculationStore implements CirculationStore {
     }
 
     @Override
+    public Optional<LocalDate> earliestValidReservationDateForTitle(long titleId) {
+        return Optional.ofNullable(jdbc.query("""
+                SELECT min(reservation_date) FROM borrow_transaction
+                WHERE title_id = ? AND status IN ('CONFIRMED', 'WAITLIST')
+                """, rs -> {
+            if (!rs.next()) return null;
+            var date = rs.getDate(1);
+            return date == null ? null : date.toLocalDate();
+        }, titleId));
+    }
+
+    @Override
     public Long transitionTransaction(long txId, String expectedStatus, String nextStatus, long version) {
         List<Long> updated = jdbc.queryForList("""
                 UPDATE borrow_transaction SET status = ?, version = version + 1
@@ -164,7 +253,19 @@ public class PostgresCirculationStore implements CirculationStore {
     @Override
     public void setDueDate(long txId, LocalDate dueDate) {
         jdbc.update("UPDATE borrow_transaction SET due_date = ? WHERE id = ?",
-                Date.valueOf(dueDate));
+                Date.valueOf(dueDate), txId);
+    }
+
+    @Override
+    public LocalDate loanStartedDate(long txId) {
+        return jdbc.query("SELECT loan_started_date FROM borrow_transaction WHERE id = ?", rs ->
+                rs.next() && rs.getDate(1) != null ? rs.getDate(1).toLocalDate() : null, txId);
+    }
+
+    @Override
+    public void setLoanStartedDate(long txId, LocalDate startDate) {
+        jdbc.update("UPDATE borrow_transaction SET loan_started_date = ? WHERE id = ?",
+                Date.valueOf(startDate), txId);
     }
 
     @Override
@@ -179,6 +280,15 @@ public class PostgresCirculationStore implements CirculationStore {
     public int countCopies(long titleId) {
         var count = jdbc.queryForObject(
                 "SELECT count(*) FROM book_copy WHERE title_id = ?", Integer.class, titleId);
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public int countBookableCopies(long titleId) {
+        var count = jdbc.queryForObject("""
+                SELECT count(*) FROM book_copy
+                WHERE title_id = ? AND status IN ('SHELF_READY', 'LENT', 'PENDING_SHELVING')
+                """, Integer.class, titleId);
         return count == null ? 0 : count;
     }
 

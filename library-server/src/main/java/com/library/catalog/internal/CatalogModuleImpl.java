@@ -46,14 +46,22 @@ public class CatalogModuleImpl implements TitleQuery, TitleCommands, ReadingCont
         if (q != null && q.length() > QUERY_MAX_LENGTH) {
             return ModuleResult.Rejected.of(StableErrorCode.MLS_CAT_001.code(), "q 最多 200 字符");
         }
+        var availability = normalize(query.availability());
+        if (availability != null) {
+            availability = availability.toUpperCase(Locale.ROOT);
+            if (!AVAILABILITY.contains(availability)) {
+                return ModuleResult.Rejected.of(StableErrorCode.MLS_CAT_001.code(), "availability 无效");
+            }
+        }
         var cursor = query.page() == null ? PageCursor.first() : query.page();
         var afterId = cursor.cursor() == null ? 0 : parseCursorId(cursor.cursor(), null);
         List<CatalogStore.TitleRow> rows;
         if (q == null || q.isBlank()) {
-            rows = titles.list(normalize(query.category()), afterId, cursor.limit() + 1);
+            rows = titles.list(normalize(query.category()), availability, afterId, cursor.limit() + 1);
         } else {
             Double afterSim = parseCursorSim(cursor.cursor());
-            rows = titles.searchByQuery(q, normalize(query.category()), afterSim, afterId, cursor.limit() + 1);
+            rows = titles.searchByQuery(q, normalize(query.category()), availability,
+                    afterSim, afterId, cursor.limit() + 1);
         }
         var hasNext = rows.size() > cursor.limit();
         var pageRows = rows.stream().limit(cursor.limit()).toList();

@@ -6,12 +6,19 @@
 > - [系统验收条件与验收用例](../docs/01-requirements/acceptance/MLS-DOC-AT-0002.md)
 > - [非功能需求](../docs/01-requirements/requirements/MLS-DOC-RA-0013.md)
 > - [工程基础运行与验证](../ENGINEERING.md)
+> - [P3 缺陷回归自动化设计](P3-AUTOMATION.md)
 
 ## 目录结构
 
 | 路径 | 内容 |
 | ---- | ---- |
 | `playwright.config.js` | Playwright 配置；证据策略（无 HAR、不保存 storageState、截图经守卫）写在文件头注释 |
+| `playwright.p3.config.js` | P3 两项缺陷回归的单 Chrome、串行配置；不采集 HAR、storageState 或 trace |
+| `scenarios/p3-fines.spec.js`、`scenarios/p3-ai-draft.spec.js` | 留空馆员读者筛选和真实模型现场借阅草稿的补充回归 |
+| `scenarios/p3-support.mjs` | P3 用例共享的运行配置、只读 API readback、视口和 safe-shot 帮助函数 |
+| `scripts/p3-runner.mjs`、`scripts/p3-global-setup.mjs` | 在 Windows 原生启动前检查运行账号、隔离夹具及显式提交开关；直接 Playwright 入口也有平台守卫 |
+| `reporters/p3-safe-summary.mjs` | 只输出安全摘要；失败诊断保留在忽略的临时目录 |
+| `.env.p3.example` | Windows 原生 P3 runner 的本地变量模板；实际 `.env.p3` 被忽略 |
 | `browsers/registry.json` | AT-0017 六浏览器矩阵登记表（版本、安装来源、隔离目录、可执行路径、自动更新策略、执行三态 `executionStatus`） |
 | `browsers/verify-matrix.mjs` | 逐项验证 Playwright 可驱动；全部通过退出 0，有未登记项退出 2 |
 | `ai-endpoint/` | 真实模型端点验证 S1~S6（自 `verification/ai-endpoint` 吸收，见下） |
@@ -88,8 +95,21 @@ edge-previous 已登记查证版本但 `executablePath` 仍为 null：`npm run b
 - 本目录产生的报告、trace、截图、数据集输出一律写 `artifacts/m6-acceptance/`（不入库），交付前经敏感证据扫描（含压缩包深扫）。
 - 不采集 HAR、不保存 storageState、不在命令行参数携带凭据（与 `scripts/check-sensitive-evidence.sh` 第一控制一致）。
 
+## P3 缺陷回归子集
+
+2026-09-30 的两个 P3 阻断可用新增 Playwright 子集重复检查：`npm run p3:fines` 覆盖馆员留空读者筛选，`npm run p3:ai-draft` 覆盖真实模型的馆员现场借阅草稿与读者权限，`npm run p3:regression` 顺序运行两项。先运行 `npm run p3:regression:list` 可查看发现到的用例；该命令无需本地凭据，也不会启动浏览器。
+
+用法、夹具前置、一次性提交开关和覆盖边界见 [P3 缺陷回归自动化设计](P3-AUTOMATION.md)。这组回归是补充效率工具，不代替获批的 IAB 正式验收范围或 S1–S9 完成条件。
+
+P3 专用 Playwright 失败诊断写入忽略目录 `e2e/test-results/p3/<run-id>/`，可能包含运行时输入值；不要把该目录作为交付证据。安全摘要和 safe-shot 图各写入 `artifacts/m6-acceptance/p3-blockers/<run-id>/`。
+
 ## 修订记录
 
+- 2026-09-30：登记两项 P3 缺陷的串行 Playwright 回归子集及配置模板；注明正式验收与覆盖边界。
 - 2026-09-19：初建；ai-endpoint 自 verification/ai-endpoint 字节级吸收并登记哈希。
 - 2026-09-20：登记端点验证执行口径（THINKING_MODE=disabled，与应用线格式一致）；scenarios 目录随 E2E-001/E2E-AI-001 纳入。
 - 2026-09-21：登记表回填四槽位可驱动性实测结果（verify-2026-09-20T08-17-15-037Z.json）；edge-previous 登记查证版本 146.0.3856.109（Microsoft Learn 存档发行说明）并注明官方安装包可获得性待核实；firefox-previous 注明 Playwright 构建 v1543 非官方发行版、官方 155.0.1 列为人工规程项；新增三态标记 `executionStatus` 与 W2 待执行项登记；Manual fallback 增补 edge-previous 与 firefox-previous 官方发行版具名条目。
+
+## 被引用信息
+
+- [P3 缺陷回归自动化设计](P3-AUTOMATION.md)。

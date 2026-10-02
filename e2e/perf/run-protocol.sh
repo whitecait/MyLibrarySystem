@@ -32,7 +32,10 @@
 # candidate needs is registered in docs/agents/M6-ACCEPTANCE-PLAN-20260919.md,
 # not decided here.
 #
-# Repeat at least three times per candidate; saturation re-runs count as
+# Legacy protocol asks for three attempts; P0 approved one full P4 attempt
+# and removal of P99 assertions. Set PERF_PERCENTILE_SCOPE=p95 explicitly
+# for that approved run; numeric P95 limits and saturation rules are unchanged.
+# Saturation re-runs count as
 # independent attempts. Prerequisites: stack up with compose.yaml +
 # compose.observability.yaml + compose.perf-quota.yaml; dataset loaded
 # (e2e/data/load-dataset.sh) and queries copied to e2e/perf/out/; K6_IMAGE_TAG
@@ -178,6 +181,7 @@ attempt_write() { # attempt_write <ended-token> <valid-token> <basis-token> <env
     printf '"window_env_collector":%s,' "$4"
     printf '"started_at":%s,"ended_at":%s,"valid":%s,"basis":%s,' \
       "$(json_str "$started_at")" "$1" "$2" "$3"
+    printf '"percentile_scope":%s,' "$(json_str "${PERF_PERCENTILE_SCOPE:-full}")"
     printf '"note":"valid=true means the protocol ran to completion inside this one attempt; whether the attempt is adopted as acceptance evidence is a separate decision recorded by the acceptance summary. An attempt.json left without valid=true marks an incomplete attempt: never merge its files with another attempt."}\n'
   } > "${attempt_dir}/attempt.json"
 }

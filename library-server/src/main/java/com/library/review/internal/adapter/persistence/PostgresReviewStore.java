@@ -66,6 +66,12 @@ public class PostgresReviewStore implements ReviewStore {
     }
 
     @Override
+    public Optional<StoredReview> byIdForUpdate(long reviewId) {
+        return jdbc.query("SELECT * FROM review_request WHERE id = ? FOR UPDATE", ROW, reviewId)
+                .stream().findFirst();
+    }
+
+    @Override
     public List<StoredReview> list(String decision,long afterId,int limit) {
         if(decision==null||decision.isBlank()) return jdbc.query("SELECT * FROM review_request WHERE id>? ORDER BY id LIMIT ?",ROW,afterId,limit);
         return jdbc.query("SELECT * FROM review_request WHERE id>? AND decision=? ORDER BY id LIMIT ?",ROW,afterId,decision,limit);
