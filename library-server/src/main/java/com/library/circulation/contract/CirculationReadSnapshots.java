@@ -2,6 +2,7 @@ package com.library.circulation.contract;
 
 import com.library.catalog.contract.model.TitleId;
 import com.library.circulation.contract.model.BusinessDate;
+import com.library.circulation.contract.model.CopyId;
 import com.library.circulation.contract.model.GuaranteeType;
 import com.library.circulation.contract.model.TxId;
 import com.library.identity.contract.model.ReaderId;
@@ -18,10 +19,10 @@ public interface CirculationReadSnapshots {
                                                                 TxId atOrBeforeId, int limit);
     record ArrivalCounts(int expected, int arrived, int pending, int exceptions) {}
     record TransactionSnapshot(String kind, TxId id, String status, TitleId titleId,
-                               BusinessDate businessDate, String pickupSlot, Long copyId,
+                               BusinessDate businessDate, String pickupSlot, CopyId copyId,
                                GuaranteeType guaranteeType) {
         public TransactionSnapshot(String kind, TxId id, String status, TitleId titleId,
-                                   BusinessDate businessDate, String pickupSlot, Long copyId) {
+                                   BusinessDate businessDate, String pickupSlot, CopyId copyId) {
             this(kind, id, status, titleId, businessDate, pickupSlot, copyId, null);
         }
     }

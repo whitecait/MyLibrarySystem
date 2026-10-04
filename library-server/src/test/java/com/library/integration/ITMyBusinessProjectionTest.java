@@ -111,6 +111,9 @@ class ITMyBusinessProjectionTest {
                 ownerId, directTxId, Date.valueOf(reservationDate));
         jdbc.update("INSERT INTO notification (reader_id, kind, biz_ref, reservation_date) VALUES (?, 'NO_VISIT', ?, ?)",
                 ownerId, notBorrowed, Date.valueOf(reservationDate));
+        // This transaction shares its numeric ID with a fine; only the transaction row owns the notification.
+        jdbc.update("INSERT INTO notification (reader_id, kind, biz_ref, reservation_date) VALUES (?, 'VISIT', ?, ?)",
+                ownerId, abnormal, Date.valueOf(reservationDate));
         // A notification owned by another reader cannot enter the owner's transaction projection.
         jdbc.update("INSERT INTO notification (reader_id, kind, biz_ref, reservation_date) VALUES (?, 'VISIT', ?, ?)",
                 otherId, directTxId, Date.valueOf(reservationDate));
@@ -160,13 +163,16 @@ class ITMyBusinessProjectionTest {
         var directItem = byId(reservations, directTxId);
         assertThat(directItem.path("guaranteeType").asText()).isEqualTo("DIRECT_CONFIRMATION");
         assertThat(directItem.path("reservationDate").asText()).isEqualTo(reservationDate.toString());
+        assertThat(directItem.path("reservationDate").isTextual()).isTrue();
         assertThat(directItem.path("pickupSlot").asText()).isEqualTo("PM");
         assertThat(directItem.path("copyId").asText()).isEqualTo(Long.toString(directCopy));
+        assertThat(directItem.path("copyId").isTextual()).isTrue();
         assertThat(directItem.path("notifications")).hasSize(1);
         var visit = directItem.path("notifications").get(0);
         assertThat(visit.path("type").asText()).isEqualTo("VISIT");
         assertThat(visit.path("read").asBoolean()).isFalse();
         assertThat(visit.path("reservationDate").asText()).isEqualTo(reservationDate.toString());
+        assertThat(visit.path("notificationId").isTextual()).isTrue();
         assertThat(visit.path("notificationId").asText()).isNotBlank();
         assertThat(visit.path("createdAt").asText()).isNotBlank();
         var waitingItem = byId(reservations, waitingTxId);
@@ -183,6 +189,9 @@ class ITMyBusinessProjectionTest {
         var unknownWaitlistItem = byId(reservations, unassignedWaitlist);
         assertThat(unknownWaitlistItem.has("guaranteeType")).isTrue();
         assertThat(unknownWaitlistItem.path("guaranteeType").isNull()).isTrue();
+        assertThat(unknownWaitlistItem.has("copyId")).isTrue();
+        assertThat(unknownWaitlistItem.path("copyId").isNull()).isTrue();
+        assertThat(unknownWaitlistItem.path("reservationDate").asText()).isEqualTo(reservationDate.toString());
         var filteredWaiting = items(get("/api/v1/me/business?group=RESERVATIONS&status=WAITLIST", ownerToken));
         assertThat(ids(filteredWaiting)).containsExactly(Long.toString(unassignedWaitlist));
 
@@ -201,6 +210,9 @@ class ITMyBusinessProjectionTest {
         assertThat(notBorrowedItem.path("notifications")).hasSize(1);
         assertThat(notBorrowedItem.path("notifications").get(0).path("type").asText()).isEqualTo("NO_VISIT");
         assertThat(notBorrowedItem.path("notifications").get(0).path("read").asBoolean()).isFalse();
+        var abnormalItem = byId(history, abnormal);
+        assertThat(abnormalItem.path("notifications")).hasSize(1);
+        assertThat(abnormalItem.path("notifications").get(0).path("type").asText()).isEqualTo("VISIT");
 
         assertThat(reservationIds).doesNotContain(Long.toString(lentOne), Long.toString(returned),
                 Long.toString(notBorrowed), Long.toString(foreignLoan));
@@ -219,6 +231,10 @@ class ITMyBusinessProjectionTest {
             assertThat(item.path("amountCents").asLong()).isEqualTo(720L);
             assertThat(item.has("guaranteeType")).isTrue();
             assertThat(item.path("guaranteeType").isNull()).isTrue();
+            assertThat(item.has("reservationDate")).isTrue();
+            assertThat(item.path("reservationDate").isNull()).isTrue();
+            assertThat(item.has("copyId")).isTrue();
+            assertThat(item.path("copyId").isNull()).isTrue();
             assertThat(item.path("notifications")).isEmpty();
         });
         var mixedFirstResponse = get("/api/v1/me/business?limit=1", ownerToken);

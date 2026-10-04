@@ -3,6 +3,7 @@ package com.library.circulation.internal.adapter.persistence;
 import com.library.circulation.contract.CirculationReadSnapshots;
 import com.library.catalog.contract.model.TitleId;
 import com.library.circulation.contract.model.BusinessDate;
+import com.library.circulation.contract.model.CopyId;
 import com.library.circulation.contract.model.GuaranteeType;
 import com.library.circulation.contract.model.TxId;
 import com.library.identity.contract.model.ReaderId;
@@ -62,7 +63,7 @@ public class PostgresCirculationReadSnapshots implements CirculationReadSnapshot
                     rs.getString("status"), TitleId.of(rs.getLong("title_id")),
                     rs.getDate("reservation_date") == null ? null : BusinessDate.of(rs.getDate("reservation_date").toLocalDate()),
                     rs.getString("pickup_slot"),
-                    rs.getObject("copy_id") == null ? null : rs.getLong("copy_id"),
+                    rs.getObject("copy_id") == null ? null : CopyId.of(rs.getLong("copy_id")),
                     rs.getString("guarantee_type") == null ? null
                             : GuaranteeType.valueOf(rs.getString("guarantee_type"))),
                     reader.value(), before.value(), statuses.toArray(new String[0]), limit));

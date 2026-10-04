@@ -5,6 +5,7 @@ import com.library.contract.error.StableErrorCode;
 import com.library.contract.model.PageCursor;
 import com.library.contract.security.ActorContext;
 import com.library.circulation.contract.model.BusinessDate;
+import com.library.circulation.contract.model.CopyId;
 import com.library.circulation.contract.model.GuaranteeType;
 import com.library.circulation.contract.model.TxId;
 import com.library.identity.contract.model.ReaderId;
@@ -15,7 +16,6 @@ import com.library.circulation.contract.CirculationReadSnapshots;
 import com.library.settlement.contract.SettlementReadSnapshots;
 import com.library.catalog.contract.CatalogReadSnapshots;
 import com.library.catalog.contract.model.TitleId;
-import com.library.delivery.contract.NotificationQuery;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -37,19 +37,17 @@ public class QueryModuleImpl implements ArrivalQuery, MyBusinessQuery {
     private final CirculationReadSnapshots circulation;
     private final SettlementReadSnapshots settlement;
     private final CatalogReadSnapshots catalog;
-    private final NotificationQuery notifications;
 
     public QueryModuleImpl(CirculationReadSnapshots circulation, SettlementReadSnapshots settlement,
-                           CatalogReadSnapshots catalog, NotificationQuery notifications) {
+                           CatalogReadSnapshots catalog) {
         this.circulation = circulation;
         this.settlement = settlement;
         this.catalog = catalog;
-        this.notifications = notifications;
     }
 
     private record BusinessRow(String kind, long id, String status, String title,
                                LocalDate businessDate, Long amountCents, String pickupSlot,
-                               Long copyId, GuaranteeType guaranteeType) {}
+                               CopyId copyId, GuaranteeType guaranteeType) {}
 
     @Override
     public ModuleResult<ArrivalDashboard> arrivals(BusinessDate date, ActorContext actor) {
@@ -138,30 +136,11 @@ public class QueryModuleImpl implements ArrivalQuery, MyBusinessQuery {
                 .limit(cursor.limit() + 1).toList();
         var hasNext = rows.size() > cursor.limit();
         var pageRows = rows.stream().limit(cursor.limit()).toList();
-        var transactionIds = pageRows.stream()
-                .filter(row -> row.kind().equals("RESERVATION") || row.kind().equals("LOAN"))
-                .map(BusinessRow::id).distinct().toList();
-        var notificationsByTransaction = new java.util.HashMap<Long, List<MyBusinessQuery.NotificationFact>>();
-        if (!transactionIds.isEmpty()) {
-            var notificationResult = notifications.notificationsForTransactions(transactionIds, actor);
-            if (notificationResult instanceof ModuleResult.Rejected<List<NotificationQuery.Notification>> rejected) {
-                return ModuleResult.Rejected.propagate(rejected);
-            }
-            for (var notification : ((ModuleResult.Accepted<List<NotificationQuery.Notification>>) notificationResult).value()) {
-                if (notification.relatedTxId() == null) continue;
-                notificationsByTransaction.computeIfAbsent(notification.relatedTxId(), ignored -> new ArrayList<>())
-                        .add(new MyBusinessQuery.NotificationFact(notification.notificationId(),
-                                notification.type(), notification.read(), notification.reservationDate(),
-                                notification.createdAt()));
-            }
-        }
         var items = pageRows.stream().map(row -> new MyBusinessQuery.BusinessItem(
                 row.kind(), row.id(), row.status(), row.title(),
                 row.businessDate() == null ? null : row.businessDate().toString(),
-                row.amountCents(), row.businessDate() == null ? null : row.businessDate().toString(),
-                row.pickupSlot(), row.copyId(), row.guaranteeType(),
-                row.kind().equals("RESERVATION") || row.kind().equals("LOAN")
-                        ? notificationsByTransaction.getOrDefault(row.id(), List.of()) : List.of())).toList();
+                row.amountCents(), row.businessDate() == null ? null : BusinessDate.of(row.businessDate()),
+                row.pickupSlot(), row.copyId(), row.guaranteeType(), List.of())).toList();
         var nextCursor = hasNext && !pageRows.isEmpty()
                 ? pageRows.get(pageRows.size() - 1).id() + ":" + pageRows.get(pageRows.size() - 1).kind() : null;
         return ModuleResult.Accepted.of(new MyBusinessQuery.MyBusinessPage(items, nextCursor));

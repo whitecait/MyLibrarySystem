@@ -77,18 +77,19 @@ public class QueryController {
                         entry.put("title", item.title());
                         entry.put("businessDate", item.businessDate());
                         entry.put("amountCents", item.amountCents());
-                        entry.put("reservationDate", item.reservationDate());
+                        entry.put("reservationDate", item.reservationDate() == null
+                                ? null : item.reservationDate().asString());
                         entry.put("pickupSlot", item.pickupSlot());
-                        entry.put("copyId", item.copyId() == null ? null : String.valueOf(item.copyId()));
+                        entry.put("copyId", item.copyId() == null ? null : item.copyId().asString());
                         entry.put("guaranteeType", item.guaranteeType() == null
                                 ? null : item.guaranteeType().name());
                         entry.put("notifications", item.notifications().stream().map(notification -> {
                             var fact = new LinkedHashMap<String, Object>();
-                            fact.put("notificationId", String.valueOf(notification.notificationId()));
+                            fact.put("notificationId", notification.notificationId().asString());
                             fact.put("type", notification.type());
                             fact.put("read", notification.read());
                             fact.put("reservationDate", notification.reservationDate() == null
-                                    ? null : notification.reservationDate().toString());
+                                    ? null : notification.reservationDate().asString());
                             fact.put("createdAt", notification.createdAt() == null
                                     ? null : notification.createdAt().toString());
                             return fact;

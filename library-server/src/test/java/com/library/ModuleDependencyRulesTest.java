@@ -24,6 +24,11 @@ class ModuleDependencyRulesTest {
             "com\\.library\\.(identity|catalog|circulation|settlement|review|query|ai|delivery)\\.(internal|adapter\\.persistence)(?:\\.|;)");
     private static final Pattern AGGREGATE_REFERENCE = Pattern.compile(
             "com\\.library\\.(identity|catalog|circulation|settlement|review|query|ai|delivery)\\.contract\\.[A-Z][A-Za-z]+Module\\b");
+    private static final Pattern MODULE_CONTRACT_CAPABILITY_REFERENCE = Pattern.compile(
+            "com\\.library\\.(identity|catalog|circulation|settlement|review|query|ai|delivery)"
+                    + "\\.contract\\.(?!model(?:\\.|;|\\s))");
+    private static final Set<String> QUERY_MODULE_SNAPSHOT_MODULES = Set.of(
+            "identity", "catalog", "circulation", "settlement", "query");
 
     @Test
     void internalImplementationsAreVisibleOnlyInsideTheirOwningModule() throws IOException {
@@ -52,6 +57,30 @@ class ModuleDependencyRulesTest {
             }
             if (AGGREGATE_REFERENCE.matcher(Files.readString(source)).find()) {
                 violations.add(source + " imports an aggregate module interface outside bootstrap");
+            }
+        }
+        assertTrue(violations.isEmpty(), () -> String.join(System.lineSeparator(), violations));
+    }
+
+    @Test
+    void queryModuleUsesOnlyMd0002SnapshotModulesForPublicCapabilities() throws IOException {
+        Path root = Path.of("src/main/java/com/library/query/internal");
+        if (!Files.exists(root)) {
+            return;
+        }
+        List<String> violations = new ArrayList<>();
+        List<Path> sources;
+        try (var paths = Files.walk(root)) {
+            sources = paths.filter(path -> path.toString().endsWith(".java")).toList();
+        }
+        for (Path source : sources) {
+            Matcher references = MODULE_CONTRACT_CAPABILITY_REFERENCE.matcher(Files.readString(source));
+            while (references.find()) {
+                String target = references.group(1);
+                if (!QUERY_MODULE_SNAPSHOT_MODULES.contains(target)) {
+                    violations.add(source + " reads public capability from " + target
+                            + "; QUERY snapshots are limited by MD-0002 §3");
+                }
             }
         }
         assertTrue(violations.isEmpty(), () -> String.join(System.lineSeparator(), violations));

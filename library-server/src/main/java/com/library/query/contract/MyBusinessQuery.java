@@ -3,10 +3,12 @@ package com.library.query.contract;
 import com.library.contract.ModuleResult;
 import com.library.contract.model.PageCursor;
 import com.library.contract.security.ActorContext;
+import com.library.circulation.contract.model.BusinessDate;
+import com.library.circulation.contract.model.CopyId;
 import com.library.circulation.contract.model.GuaranteeType;
+import com.library.delivery.contract.model.NotificationId;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -28,12 +30,12 @@ public interface MyBusinessQuery {
 
     /** 业务条目；新增的流通详情字段只来自本人事务与关联通知快照。 */
     record BusinessItem(String kind, long id, String status, String title,
-                        String businessDate, Long amountCents, String reservationDate,
-                        String pickupSlot, Long copyId, GuaranteeType guaranteeType,
+                        String businessDate, Long amountCents, BusinessDate reservationDate,
+                        String pickupSlot, CopyId copyId, GuaranteeType guaranteeType,
                         List<NotificationFact> notifications) {
         public BusinessItem(String kind, long id, String status, String title,
-                            String businessDate, Long amountCents, String reservationDate,
-                            String pickupSlot, Long copyId, List<NotificationFact> notifications) {
+                            String businessDate, Long amountCents, BusinessDate reservationDate,
+                            String pickupSlot, CopyId copyId, List<NotificationFact> notifications) {
             this(kind, id, status, title, businessDate, amountCents, reservationDate,
                     pickupSlot, copyId, null, notifications);
         }
@@ -48,7 +50,7 @@ public interface MyBusinessQuery {
         }
     }
 
-    record NotificationFact(long notificationId, String type, boolean read,
-                            LocalDate reservationDate, Instant createdAt) {
+    record NotificationFact(NotificationId notificationId, String type, boolean read,
+                            BusinessDate reservationDate, Instant createdAt) {
     }
 }
