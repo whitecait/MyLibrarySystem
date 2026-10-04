@@ -1,5 +1,7 @@
 package com.library.circulation.internal.adapter.persistence;
 
+import com.library.circulation.contract.model.GuaranteeType;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ public class InMemoryCirculationStore implements CirculationStore {
     private final Map<Long, CopyRow> copies = new HashMap<>();
     private final Map<Long, LocalDate> loanEligibleDates = new HashMap<>();
     private final Map<Long, TxRow> txs = new HashMap<>();
+    private final Map<Long, GuaranteeType> guaranteeTypes = new HashMap<>();
     private final Map<Long, LocalDate> loanStartedDates = new HashMap<>();
     private long copySequence;
     private long txSequence;
@@ -144,6 +147,7 @@ public class InMemoryCirculationStore implements CirculationStore {
     @Override
     public long insertTransaction(NewTransaction candidate) {
         var id = ++txSequence;
+        guaranteeTypes.put(id, candidate.guaranteeType());
         txs.put(id, new TxRow(id, candidate.readerId(), candidate.titleId(), candidate.copyId(),
                 candidate.status(), candidate.reservationDate(), candidate.pickupSlot(),
                 candidate.dueDate(), 0, 0, Instant.now()));
@@ -151,6 +155,11 @@ public class InMemoryCirculationStore implements CirculationStore {
             loanStartedDates.put(id, candidate.reservationDate());
         }
         return id;
+    }
+
+    /** Unit-test inspection hook for creation-time metadata. */
+    public GuaranteeType guaranteeTypeForTest(long txId) {
+        return guaranteeTypes.get(txId);
     }
 
     @Override

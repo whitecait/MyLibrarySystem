@@ -2,6 +2,8 @@
 
 > 引用文档：
 
+> - [当前交接记录](HANDOFF.md)。
+> - [流通及HTTP契约](docs/04-module-design/MLS-DOC-MD-0003.md)。
 > - [形式化门禁](formal/README.md)。
 > - [交付运维入口](scripts/delivery/README.md)。
 >
@@ -12,6 +14,12 @@
 > - [工程基础行动计划](https://github.com/whitecait/Mylibrary/blob/3181a9fad2951803abe3b2e4f38452bb0123e5a4/HANDOFF-B1-PLAN.md)
 
 本入口用于最小 Vue 状态页、Spring 健康接口及 PostgreSQL/Flyway 基础设施验证，不包含业务功能或业务验收。
+
+## 2026-10-04 当前源码增量
+
+当前源码新增 V14 创建保证类型迁移。实际目标栈版本仍须检查 Flyway 历史和镜像身份，旧 V1～V13 包的运行证据不代替新包。半小时时段的定向 PostgreSQL/HTTP 验证已完成；当前没有新提交完整 CI、同版包或 Windows 部署结论。定向过程事实见 [当前交接记录](HANDOFF.md)，新增契约见 [MD-0003](docs/04-module-design/MLS-DOC-MD-0003.md)。
+
+本次交付拓扑沿用根 Compose：只有 frontend 的 Nginx 端口发布到宿主机环回，UI 与 API 使用同一入口。API 经 `/api/` 转发到同项目的 backend:8080。Vite 预览和旧 API 的组合不作为同版交付证明。
 
 ## 2026-10-01 当前适用范围与批准修订
 
@@ -106,7 +114,7 @@ curl --fail http://localhost:8088/api/health
 
 打开 `http://localhost:8088` 进入应用。只有前端端口发布到宿主机，且仅绑定 `127.0.0.1`；数据库与后端通过 Compose 内部服务名连接。`FRONTEND_PORT` 可修改前端宿主端口。Nginx 将 `/api/` 请求转发到 `backend:8080`，保留前缀，因此 `/api/health` 到达后端仍是 `/api/health`。
 
-数据库使用 `pg_isready -h 127.0.0.1` 检查 TCP，避免将首次初始化期间仅监听 Unix socket 的临时服务误判为可供后端连接；后端在数据库健康后启动并执行业务 Flyway 迁移，当前为 V1～V13，健康检查为 `/api/health`；前端在后端健康后启动。旧工程骨架的占位说明属于历史。镜像构建只编译打包，Testcontainers 测试由独立验证命令和 CI 后端作业执行。
+数据库使用 `pg_isready -h 127.0.0.1` 检查 TCP，避免将首次初始化期间仅监听 Unix socket 的临时服务误判为可供后端连接；后端在数据库健康后启动并执行业务 Flyway 迁移，当前源码包含 V1～V14，健康检查为 `/api/health`；前端在后端健康后启动。旧工程骨架的占位说明属于历史。镜像构建只编译打包，Testcontainers 测试由独立验证命令和 CI 后端作业执行。
 
 停止开发环境并保留数据：
 
@@ -123,6 +131,8 @@ docker compose -p mls-dev down
 原型仍为本地资产，不进入 CI、镜像或干净检出的测试输入。远端通过证据及对应提交记录在行动计划中；工作流存在不代表运行通过，也不代表已配置 GitHub 分支保护。
 
 ## 修订记录
+
+- 2026-10-04：追加 V14 源码增量与同入口 Nginx 发布拓扑，保留旧运行证据的版本边界；未登记新 CI 或实机通过。
 
 - 2026-10-02：记录e1候选五作业、两轴复审和20项运行实证，以固定SHA明确复用边界。
 

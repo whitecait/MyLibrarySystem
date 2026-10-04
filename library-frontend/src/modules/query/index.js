@@ -5,8 +5,11 @@ export function getArrivalDashboard({ businessDate } = {}, options = {}) {
   return apiRequest('getArrivalDashboard', { query: { businessDate }, ...options })
 }
 
-export function getMyBusiness({ kind, status, cursor, limit } = {}, options = {}) {
-  return apiRequest('getMyBusiness', { query: { kind, status, cursor, limit }, ...options })
+export function getMyBusiness({ group, kind, status, cursor, limit } = {}, options = {}) {
+  const query = { status, cursor, limit }
+  if (group !== undefined) query.group = group
+  if (kind !== undefined) query.kind = kind
+  return apiRequest('getMyBusiness', { query, ...options })
 }
 
 export const queryRoutes = [

@@ -6,6 +6,8 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import java.time.*;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Repository
@@ -27,6 +29,18 @@ public class PostgresDeliveryStore implements DeliveryStore {
                 """ + (unread ? " AND n.read_at IS NULL" : "")
                 + " ORDER BY n.reservation_date, n.created_at, n.id LIMIT ?";
         return jdbc.query(sql, NOTE, reader, after, reader, after, limit);
+    }
+    @Override
+    public List<NotificationRow> notificationsForTransactions(long reader, List<Long> transactionIds) {
+        var ids = transactionIds.stream().filter(id -> id != null && id > 0).distinct().toList();
+        if (ids.isEmpty()) return List.of();
+        var placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        var sql = "SELECT n.* FROM notification n WHERE n.reader_id = ? AND n.biz_ref IN ("
+                + placeholders + ") ORDER BY n.biz_ref, n.created_at, n.id";
+        var args = new ArrayList<Object>(ids.size() + 1);
+        args.add(reader);
+        args.addAll(ids);
+        return jdbc.query(sql, NOTE, args.toArray());
     }
     @Override public boolean markRead(long id,long reader,Instant at){return jdbc.update("UPDATE notification SET read_at=COALESCE(read_at,?) WHERE id=? AND reader_id=?",java.sql.Timestamp.from(at),id,reader)==1;}
     @Override public List<AuditRow> audits(Long related,Long actor,String type,long after,int limit){var sql=new StringBuilder("SELECT id,event_type,actor_id,NULLIF(detail->>'relatedId','')::bigint AS related_id,detail->>'outcome' AS outcome,occurred_at FROM audit_event WHERE id>?");var args=new java.util.ArrayList<Object>();args.add(after);if(related!=null){sql.append(" AND detail->>'relatedId'=?");args.add(Long.toString(related));}if(actor!=null){sql.append(" AND actor_id=?");args.add(actor);}if(type!=null){sql.append(" AND event_type=?");args.add(type);}sql.append(" ORDER BY id LIMIT ?");args.add(limit);return jdbc.query(sql.toString(),AUDIT,args.toArray());}

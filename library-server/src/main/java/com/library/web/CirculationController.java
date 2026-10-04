@@ -14,6 +14,7 @@ import com.library.circulation.contract.Transaction;
 import com.library.circulation.contract.ClosingCommands;
 import com.library.circulation.contract.model.BusinessDate;
 import com.library.circulation.contract.model.CopyId;
+import com.library.circulation.contract.model.PickupSlot;
 import com.library.catalog.contract.model.TitleId;
 import com.library.circulation.contract.model.TxId;
 import com.library.application.loan.LoanUseCases;
@@ -200,6 +201,9 @@ public class CirculationController {
         }
         ReservationCommands.ReservationCommand command;
         try {
+            if (!PickupSlot.isValid(body.pickupSlot())) {
+                return fieldError("/api/v1/reservations", "pickupSlot 必须是 AM、PM 或一个有效的半小时时段");
+            }
             command = new ReservationCommands.ReservationCommand(
                     onBehalfOfId(body.onBehalfOf()), TitleId.of(Long.parseLong(body.titleId())),
                     BusinessDate.parse(body.reservationDate()), body.pickupSlot(), body.channel(),

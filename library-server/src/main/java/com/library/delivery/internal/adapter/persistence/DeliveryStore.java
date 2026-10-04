@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface DeliveryStore {
     List<NotificationRow> notifications(long readerId,boolean unreadOnly,long afterId,int limit);
+    List<NotificationRow> notificationsForTransactions(long readerId,List<Long> transactionIds);
     boolean markRead(long notificationId,long readerId,Instant at);
     List<AuditRow> audits(Long relatedId,Long actorId,String eventType,long afterId,int limit);
     boolean claimReceipt(String consumerId,long eventId);

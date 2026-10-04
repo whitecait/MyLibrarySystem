@@ -3,9 +3,9 @@
     <h2>预约此书</h2>
     <form data-testid="reserve-form" @submit.prevent="onSubmit">
       <el-input v-model="reservationDate" data-testid="reserve-date" placeholder="预约日期（YYYY-MM-DD）" class="inline-input" />
-      <select v-model="pickupSlot" data-testid="reserve-slot" aria-label="取书时段">
-        <option value="AM">上午</option>
-        <option value="PM">下午</option>
+      <select v-model="pickupSlot" class="slot-input" required data-testid="reserve-slot" aria-label="取书时段">
+        <option disabled value="">请选择具体时段</option>
+        <option v-for="slot in PICKUP_SLOTS" :key="slot" :value="slot">{{ slot }}</option>
       </select>
       <select v-model="channel" data-testid="reserve-channel" aria-label="预约渠道">
         <option value="ONLINE">线上</option>
@@ -68,17 +68,19 @@
 import { ref } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
-import { reserveTitle } from '../index'
+import { PICKUP_SLOTS, reserveTitle } from '../index'
 
 const props = defineProps({ titleId: { type: String, required: true } })
 
 const reservationDate = ref('')
-const pickupSlot = ref('AM')
+const pickupSlot = ref('')
 const channel = ref('ONLINE')
 const result = ref(null)
 const { state, run } = useApiRequest()
 
 async function submit(confirm = false) {
+  if (!pickupSlot.value) return
+
   const envelope = await run(() =>
     reserveTitle({
       titleId: props.titleId,
@@ -121,6 +123,10 @@ function onSubmit() {
 
 .inline-input {
   min-width: 14rem;
+}
+
+.slot-input {
+  min-width: 13rem;
 }
 
 .note {

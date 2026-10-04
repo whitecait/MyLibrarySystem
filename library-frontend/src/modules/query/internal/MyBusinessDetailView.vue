@@ -23,7 +23,42 @@
           <dt>业务日期</dt>
           <dd data-testid="business-detail-date">{{ detail.businessDate }}</dd>
         </div>
+        <div>
+          <dt>创建时保证类型</dt>
+          <dd data-testid="business-detail-guarantee-type">{{ guaranteeTypeLabel(detail.guaranteeType) }}</dd>
+        </div>
+        <div>
+          <dt>预约日期</dt>
+          <dd data-testid="business-detail-reservation-date">{{ knownText(detail.reservationDate) }}</dd>
+        </div>
+        <div>
+          <dt>取书时段</dt>
+          <dd data-testid="business-detail-pickup-slot">{{ formatPickupSlot(detail.pickupSlot) }}</dd>
+        </div>
+        <div>
+          <dt>绑定副本</dt>
+          <dd data-testid="business-detail-copy">{{ copyBindingLabel(detail.copyId) }}</dd>
+        </div>
       </dl>
+      <section class="business-detail-notifications" data-testid="business-detail-notifications">
+        <h2>关联通知</h2>
+        <p v-if="detail.notifications.length === 0" data-testid="business-detail-notifications-empty">
+          暂无关联通知
+        </p>
+        <ul v-else data-testid="business-detail-notifications-list">
+          <li
+            v-for="notification in detail.notifications"
+            :key="notification.notificationId"
+            :data-testid="`business-detail-notification-${notification.notificationId}`"
+          >
+            <span>通知编号：{{ notification.notificationId }}</span>
+            <span>类型：{{ notificationTypeLabel(notification.type) }}</span>
+            <span>预约日期：{{ knownText(notification.reservationDate) }}</span>
+            <span>通知时间：{{ knownText(notification.createdAt) }}</span>
+            <span>状态：{{ notificationReadLabel(notification.read) }}</span>
+          </li>
+        </ul>
+      </section>
     </section>
 
     <template v-else>
@@ -44,6 +79,7 @@ import { onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { FailureKind, RequestFailure } from '@/platform/http'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { getSessionState, isAuthenticated } from '@/platform/auth/session'
+import { formatPickupSlot } from '../../circulation'
 import { getMyBusiness } from '../index'
 
 const props = defineProps({ txId: { type: String, required: true } })
@@ -53,6 +89,46 @@ const detail = ref(null)
 const state = reactive({ status: 'loading', failure: null })
 const session = getSessionState()
 let generation = 0
+
+const GUARANTEE_TYPE_LABELS = {
+  DIRECT_CONFIRMATION: '直接确认',
+  WAITLIST: '候补',
+}
+const NOTIFICATION_TYPE_LABELS = {
+  VISIT: '到馆办理',
+  NO_VISIT: '无需到馆',
+}
+
+function guaranteeTypeLabel(value) {
+  if (value == null || value === '') return '未记录'
+  return GUARANTEE_TYPE_LABELS[value] ?? '未知'
+}
+
+function knownText(value) {
+  return typeof value === 'string' && value.trim() ? value : '未知'
+}
+
+function copyBindingLabel(value) {
+  return typeof value === 'string' && value.trim() ? value : '未绑定副本'
+}
+
+function notificationTypeLabel(value) {
+  return NOTIFICATION_TYPE_LABELS[value] ?? '未知通知类型'
+}
+
+function notificationReadLabel(value) {
+  if (value === true) return '已读'
+  if (value === false) return '未读'
+  return '读取状态未知'
+}
+
+function hasNotificationIds(notifications) {
+  return Array.isArray(notifications) && notifications.every((notification) =>
+    notification && (typeof notification.notificationId === 'string'
+      ? notification.notificationId.length > 0
+      : Number.isSafeInteger(notification.notificationId)),
+  )
+}
 
 function isCurrentRequest(requestGeneration, txId, identity) {
   return requestGeneration === generation && props.txId === txId
@@ -95,7 +171,10 @@ async function findBorrowTransaction(txId, requestGeneration, identity) {
       const transaction = page.items.find((item) =>
         item?.kind === kind && typeof item.id === 'string' && item.id === txId,
       )
-      if (transaction) return transaction
+      if (transaction) {
+        if (!hasNotificationIds(transaction.notifications)) throw malformedResponse()
+        return transaction
+      }
 
       const nextCursor = page.nextCursor
       if (nextCursor == null) break
@@ -172,5 +251,23 @@ onBeforeUnmount(() => {
 
 .business-detail-fields dd {
   margin: 0;
+}
+
+.business-detail-notifications h2 {
+  font-size: 1rem;
+}
+
+.business-detail-notifications ul {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.business-detail-notifications li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
 }
 </style>

@@ -615,6 +615,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description group 与 kind 不能同时使用；group 只包含借阅与预约事务。 */
         get: operations["getMyBusiness"];
         put?: never;
         post?: never;
@@ -912,11 +913,15 @@ export interface components {
         ReservationCalendarData: {
             items: components["schemas"]["CalendarDay"][];
         };
+        /**
+         * @description Legacy AM/PM values or one exact same-day 30-minute interval; 24:00 is only the end of the final interval.
+         * @enum {string}
+         */
+        PickupSlot: "AM" | "PM" | "00:00-00:30" | "00:30-01:00" | "01:00-01:30" | "01:30-02:00" | "02:00-02:30" | "02:30-03:00" | "03:00-03:30" | "03:30-04:00" | "04:00-04:30" | "04:30-05:00" | "05:00-05:30" | "05:30-06:00" | "06:00-06:30" | "06:30-07:00" | "07:00-07:30" | "07:30-08:00" | "08:00-08:30" | "08:30-09:00" | "09:00-09:30" | "09:30-10:00" | "10:00-10:30" | "10:30-11:00" | "11:00-11:30" | "11:30-12:00" | "12:00-12:30" | "12:30-13:00" | "13:00-13:30" | "13:30-14:00" | "14:00-14:30" | "14:30-15:00" | "15:00-15:30" | "15:30-16:00" | "16:00-16:30" | "16:30-17:00" | "17:00-17:30" | "17:30-18:00" | "18:00-18:30" | "18:30-19:00" | "19:00-19:30" | "19:30-20:00" | "20:00-20:30" | "20:30-21:00" | "21:00-21:30" | "21:30-22:00" | "22:00-22:30" | "22:30-23:00" | "23:00-23:30" | "23:30-24:00";
         ReservationRequest: {
             titleId: components["schemas"]["Id"];
             reservationDate: components["schemas"]["BusinessDate"];
-            /** @enum {string} */
-            pickupSlot: "AM" | "PM";
+            pickupSlot: components["schemas"]["PickupSlot"];
             /** @enum {string} */
             channel: "ONLINE" | "DESK";
             onBehalfOf?: components["schemas"]["Id"];
@@ -1091,9 +1096,31 @@ export interface components {
             kind: "RESERVATION" | "LOAN" | "FINE" | "ORDER";
             id: components["schemas"]["Id"];
             status: string;
-            title?: string;
-            businessDate?: components["schemas"]["BusinessDate"];
-            amountCents?: number;
+            title?: string | null;
+            /** @description Legacy field; retains the existing business date projection. */
+            businessDate?: components["schemas"]["BusinessDate"] | null;
+            amountCents?: number | null;
+            /** @description Stored borrow_transaction.reservation_date; null when the row has no date. */
+            reservationDate?: components["schemas"]["BusinessDate"] | null;
+            /** @description Stored pickup_slot value, returned without time conversion; null when absent. */
+            pickupSlot?: string | null;
+            /** @description Stored copy_id; null when no copy is bound. */
+            copyId?: components["schemas"]["Id"] | null;
+            /**
+             * @description Stored creation-time reservation guarantee type; WAITLIST remains unchanged after assignment; null when unknown or not applicable.
+             * @enum {string|null}
+             */
+            guaranteeType?: "DIRECT_CONFIRMATION" | "WAITLIST" | null;
+            /** @description Notifications owned by the current reader and linked to this transaction; an empty array means a successful lookup with no matching rows. */
+            notifications?: components["schemas"]["BusinessNotificationFact"][];
+        };
+        BusinessNotificationFact: {
+            notificationId: components["schemas"]["Id"];
+            /** @enum {string} */
+            type: "VISIT" | "NO_VISIT";
+            read: boolean;
+            reservationDate: components["schemas"]["BusinessDate"];
+            createdAt: components["schemas"]["Timestamp"];
         };
         MyBusinessPageData: {
             items: components["schemas"]["BusinessItem"][];
@@ -1991,6 +2018,8 @@ export interface components {
         BusinessDateQuery: components["schemas"]["BusinessDate"];
         BusinessKind: "RESERVATION" | "LOAN" | "FINE" | "ORDER";
         BusinessStatus: string;
+        /** @description 独立分页分组；不能与 kind 同时使用。 */
+        BusinessGroup: "CURRENT_LOANS" | "RESERVATIONS" | "HISTORY";
         UnreadOnly: boolean;
         RelatedId: components["schemas"]["Id"];
         ActorId: components["schemas"]["Id"];
@@ -2759,6 +2788,8 @@ export interface operations {
             query?: {
                 kind?: components["parameters"]["BusinessKind"];
                 status?: components["parameters"]["BusinessStatus"];
+                /** @description 独立分页分组；不能与 kind 同时使用。 */
+                group?: components["parameters"]["BusinessGroup"];
                 cursor?: components["parameters"]["Cursor"];
                 limit?: components["parameters"]["Limit"];
             };

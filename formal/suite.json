@@ -79,5 +79,93 @@
     ],
     "timeout_seconds": 180,
     "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
+  },
+  {
+    "model": "BusinessTabs",
+    "config": "BusinessTabs.cfg",
+    "safety": [
+      "TypeOK",
+      "InvGroupPartition",
+      "InvPageProjectionInOwnGroup",
+      "InvPageCursorStateCoherent",
+      "InvVisibleRowsBelongToActiveGroup",
+      "InvHistoryCacheEmptyWhileInvalidated",
+      "InvReservationCacheEmptyWhileInvalidated",
+      "InvCanceledReservationInHistory"
+    ],
+    "probes": [
+      "ProbeNotGroupPartitionChecked",
+      "ProbeNotOtherKindsExcluded",
+      "ProbeNotIndependentPagination",
+      "ProbeNotInactiveTabResponseIsolated",
+      "ProbeNotStaleAccountPageDiscarded",
+      "ProbeNotStalePageGenerationDiscarded",
+      "ProbeNotOldTabResponseAfterNewRendered",
+      "ProbeNotOldAccountResponseAfterNewRendered",
+      "ProbeNotOldGenerationResponseAfterNewRendered",
+      "ProbeNotHistoryRefreshAfterCancel",
+      "ProbeNotCurrentHistoryRefreshAfterCancel",
+      "ProbeNotOldHistoryResponseAfterHistoryRefresh",
+      "ProbeNotCurrentReservationRefreshAfterCancel"
+    ],
+    "timeout_seconds": 180,
+    "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
+  },
+  {
+    "model": "BusinessReservationMetadata",
+    "config": "BusinessReservationMetadata.cfg",
+    "safety": [
+      "TypeOK",
+      "InvSlotInputBoundary",
+      "InvCreationSourcePersisted",
+      "InvAcceptedSlotStoredVerbatim",
+      "InvLegacyRowPreserved",
+      "InvPickupEligibilityIgnoresSlot"
+    ],
+    "probes": [
+      "ProbeNotDirectSourceStored",
+      "ProbeNotWaitlistPromotionRetainedSource",
+      "ProbeNotSameStatusDifferentSources",
+      "ProbeNotLegacyRowPreserved",
+      "ProbeNotPickupSlotNotGuard",
+      "ProbeNotLegacyAMAccepted",
+      "ProbeNotLegacyPMAccepted",
+      "ProbeNotFirstHalfHourAccepted",
+      "ProbeNotInteriorHalfHourAccepted",
+      "ProbeNotLastHalfHourAccepted",
+      "ProbeNotRejected29MinuteSlot",
+      "ProbeNotRejected31MinuteSlot",
+      "ProbeNotRejectedOffBoundarySlot",
+      "ProbeNotRejectedCrossDaySlot",
+      "ProbeNotRejected24StartSlot",
+      "ProbeNotRejectedMalformedSlot"
+    ],
+    "timeout_seconds": 180,
+    "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
+  },
+  {
+    "model": "BusinessDetail",
+    "config": "BusinessDetail.cfg",
+    "safety": [
+      "TypeOK",
+      "InvDetailIsCurrentReaderBorrowRow",
+      "InvDetailNotificationsMatchParent",
+      "InvDetailFieldsFaithful",
+      "InvUnknownFieldsExplicit"
+    ],
+    "probes": [
+      "ProbeNotExactStringIdPreserved",
+      "ProbeNotBorrowRowWonSameIdCollision",
+      "ProbeNotB2B5NoticeAttached",
+      "ProbeNotUnknownFieldsExplicit",
+      "ProbeNotForeignDetailRejected",
+      "ProbeNotMissingDetailRejected",
+      "ProbeNotStaleRouteDetailDiscarded",
+      "ProbeNotStaleAccountDetailDiscarded",
+      "ProbeNotOldRouteDetailAfterNewRendered",
+      "ProbeNotOldAccountDetailAfterNewRendered"
+    ],
+    "timeout_seconds": 180,
+    "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
   }
 ]

@@ -18,6 +18,8 @@ import com.library.circulation.contract.ReaderCirculationQuery;
 import com.library.circulation.contract.Transaction;
 import com.library.circulation.contract.model.BusinessDate;
 import com.library.circulation.contract.model.CopyId;
+import com.library.circulation.contract.model.GuaranteeType;
+import com.library.circulation.contract.model.PickupSlot;
 import com.library.catalog.contract.model.TitleId;
 import com.library.circulation.contract.model.TxId;
 import com.library.circulation.internal.adapter.persistence.CirculationStore;
@@ -144,6 +146,9 @@ public class CirculationModuleImpl implements AvailabilityQuery, ReservationComm
 
     @Override
     public ModuleResult<Reservation> reserve(ReservationCommand command) {
+        if (!PickupSlot.isValid(command.pickupSlot())) {
+            return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_001.code(), "预约时段无效");
+        }
         var today = clock.today();
         var channel = command.channel() == null ? "" : command.channel().toUpperCase(Locale.ROOT);
         if (!List.of("ONLINE", "DESK").contains(channel)) {
@@ -168,13 +173,14 @@ public class CirculationModuleImpl implements AvailabilityQuery, ReservationComm
         if (bound != null) {
             var txId = store.insertTransaction(new CirculationStore.NewTransaction(
                     command.readerId(), command.titleId().value(), bound, "CONFIRMED",
-                    command.reservationDate().value(), command.pickupSlot(), null));
+                    command.reservationDate().value(), command.pickupSlot(), null,
+                    GuaranteeType.DIRECT_CONFIRMATION));
             return ModuleResult.Accepted.of(new Reservation(TxId.of(txId), "CONFIRMED", List.of()));
         }
         if ("DESK".equals(channel) && command.reservationDate().value().equals(today)) {
             var txId = store.insertTransaction(new CirculationStore.NewTransaction(
                     command.readerId(), command.titleId().value(), null, "WAITLIST",
-                    command.reservationDate().value(), command.pickupSlot(), null));
+                    command.reservationDate().value(), command.pickupSlot(), null, GuaranteeType.WAITLIST));
             return ModuleResult.Accepted.of(new Reservation(TxId.of(txId), "WAITLIST_ENQUEUED", List.of()));
         }
         if (!command.confirmWaitlist()) {
@@ -183,7 +189,7 @@ public class CirculationModuleImpl implements AvailabilityQuery, ReservationComm
         }
         var txId = store.insertTransaction(new CirculationStore.NewTransaction(
                 command.readerId(), command.titleId().value(), null, "WAITLIST",
-                command.reservationDate().value(), command.pickupSlot(), null));
+                command.reservationDate().value(), command.pickupSlot(), null, GuaranteeType.WAITLIST));
         return ModuleResult.Accepted.of(new Reservation(TxId.of(txId), "WAITLIST_ENQUEUED", List.of()));
     }
 

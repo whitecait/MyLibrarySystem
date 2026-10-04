@@ -1,5 +1,7 @@
 package com.library.circulation.internal.adapter.persistence;
 
+import com.library.circulation.contract.model.GuaranteeType;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -106,6 +108,14 @@ public interface CirculationStore {
     }
 
     record NewTransaction(long readerId, long titleId, Long copyId, String status,
-                          LocalDate reservationDate, String pickupSlot, LocalDate dueDate) {
+                          LocalDate reservationDate, String pickupSlot, LocalDate dueDate,
+                          GuaranteeType guaranteeType) {
+        /**
+         * Compatibility path for non-reservation or legacy fixtures whose creation source is unknown.
+         */
+        public NewTransaction(long readerId, long titleId, Long copyId, String status,
+                              LocalDate reservationDate, String pickupSlot, LocalDate dueDate) {
+            this(readerId, titleId, copyId, status, reservationDate, pickupSlot, dueDate, null);
+        }
     }
 }

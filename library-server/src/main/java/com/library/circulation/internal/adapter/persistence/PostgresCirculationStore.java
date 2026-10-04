@@ -185,11 +185,12 @@ public class PostgresCirculationStore implements CirculationStore {
     public long insertTransaction(NewTransaction candidate) {
         return jdbc.queryForObject("""
                 INSERT INTO borrow_transaction (reader_id, title_id, copy_id, status,
-                                                reservation_date, pickup_slot, due_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
+                                                reservation_date, pickup_slot, due_date, guarantee_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
                 """, Long.class, candidate.readerId(), candidate.titleId(), candidate.copyId(),
                 candidate.status(), Date.valueOf(candidate.reservationDate()), candidate.pickupSlot(),
-                candidate.dueDate() == null ? null : Date.valueOf(candidate.dueDate()));
+                candidate.dueDate() == null ? null : Date.valueOf(candidate.dueDate()),
+                candidate.guaranteeType() == null ? null : candidate.guaranteeType().name());
     }
 
     @Override

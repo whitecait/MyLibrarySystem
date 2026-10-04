@@ -155,6 +155,18 @@ class CirculationModuleTest {
         assertThat(enqueued.txId()).isNotNull();
     }
 
+    @Test
+    void reserveRejectsInvalidPickupSlotAtCirculationBoundaryBeforeMutation() {
+        var copyId = shelvedCopy("INVALID-PICKUP-SLOT");
+        var invalid = module.reserve(new ReservationCommands.ReservationCommand(
+                reader.accountId().value(), title, BusinessDate.of(TODAY), "14:00-15:00",
+                "DESK", false, reader));
+
+        assertThat(codeOf(invalid)).isEqualTo("MLS-CIRC-001");
+        assertThat(store.hasOpenTransactionForReaderTitle(reader.accountId().value(), title.value())).isFalse();
+        assertThat(store.copyById(copyId).orElseThrow().status()).isEqualTo("SHELF_READY");
+    }
+
     // UT-CIRC-005/006 逐册借出：混合批次保留结果；同书已借拒借
     @Test
     void utCirc005_006_walkInMixedBatch() {

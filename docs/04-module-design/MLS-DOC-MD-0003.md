@@ -4,7 +4,7 @@
 | -------- | -------------------------- |
 | 文档编号 | `MLS-DOC-MD-0003`          |
 | 文档状态 | `Approved`                 |
-| 文档版本 | `v0.9`                     |
+| 文档版本 | `v0.12`                    |
 | 编制日期 | `2026-09-13`               |
 | 阶段     | M5 模块设计收尾与单元测试  |
 | 权威性质 | 已批准的前后端共同契约     |
@@ -119,11 +119,35 @@ HTTP OpenAPI 与生成物本轮保持既有运行内容；本文补齐 ADMIN 关
 | `POST /ai/sessions/{sessionId}/messages` | 账户 Bearer 本人或匹配访客 Cookie | `{message}` | `{messageId,answer,citations,actions,quota}` | `MLS-AI-002` 超额；`003` 端点失败；`004` 工具拒绝；`005` 不可见 | FR-0030/0031/0033/0034/0035 |
 | `GET /ai/sessions/{sessionId}/events` | 账户 Bearer 本人、匹配访客 Cookie；ADMIN | 分页 | 逐事件会话记录 | `MLS-ID-001` 无凭据；`MLS-AI-005` 不可见 | FR-0033 |
 
+### 5.1 本人业务分组与增量投影
+
+`GET /me/business` 保留原 `kind,status,cursor,limit` 查询。可选 `group` 支持三个借阅事务页签，并沿用 `cursor/limit` 独立分页：
+
+| `group` | 事务类别与状态 | 排除内容 |
+| ------- | -------------- | -------- |
+| `CURRENT_LOANS` | `LOAN/LENT` | 预约、终态借阅、罚款与订单 |
+| `RESERVATIONS` | `RESERVATION/AWAIT`、`RESERVATION/CONFIRMED`、`RESERVATION/MANUAL_HANDLING`、`RESERVATION/WAITLIST` | 借阅、历史事务、罚款与订单 |
+| `HISTORY` | `LOAN/RETURNED`、`LOAN/RETURN_ABNORMAL`、`RESERVATION/NOT_BORROWED` | 当前借阅、活动预约、罚款与订单 |
+
+`group` 与 `kind` 同时出现时返回 `400 MLS-QUERY-001`。分组和 `status` 同时出现时，结果同时满足该分组与状态。未提供 `group` 时，旧 `kind` 过滤、混合分页和 FINE/ORDER 查询语义保持不变。详情继续通过本人业务列表按事务编号定位；本次未增加事务详情 HTTP 路径。
+
+OpenAPI 2.1.0 为 `BusinessItem` 增加可选属性，以保持旧响应仍符合契约。更新服务器会返回 `reservationDate`、`pickupSlot`、`copyId` 和 `notifications`。`reservationDate` 只映射 `borrow_transaction.reservation_date`，不从其他时间字段补值；旧字段 `businessDate` 保持原义。`pickupSlot` 逐值映射 `pickup_slot`，不转换成钟点；`copyId` 只映射 `copy_id`。三个属性在来源值为空时显式返回 `null`。`notifications` 是数组，成功读取后没有关联记录时返回 `[]`。
+
+通知项只含 `{notificationId,type,read,reservationDate,createdAt}`，`type` 为 `VISIT|NO_VISIT`。DELIVERY 按当前读者和列表内事务编号筛选通知。读取失败按请求失败处理，不以空数组表示失败。事务编号已由父级 `BusinessItem.id` 关联，因此不重复返回 `relatedTxId`、读者 id、审计细节或凭据。
+
+`BusinessItem.guaranteeType` 是可选兼容属性。更新服务器始终返回该键。流通事务只映射创建时保存的 `DIRECT_CONFIRMATION` 或 `WAITLIST`；候补分配后仍返回 `WAITLIST`。旧记录无法由正向事实可靠还原时返回 `null`。FINE、ORDER 或无适用来源的事务返回 `null`。查询不得从当前状态或副本绑定推导保证类型。完整状态时间轴仍按 AT-0002 当前适用清单移出本次交付验收。
+
 AI `actions` 只允许 `{actionType,level,prefill,draftId,label}`。L1 可带查看入口；L2 只预填当前页面模态表单；L3 只给引导；资金与高风险动作不得由 AI 直接执行。用户提交预填后调用本文件同一业务契约，并携带可选 `Ai-Draft-Id` 供操作审计关联；取消不提交业务请求。
 
 匿名启动由服务端签发 `__Host-mls-ai-visitor` 浏览器会话 Cookie（256-bit 随机凭据；`HttpOnly; Secure; SameSite=Strict; Path=/`），仅存摘要，不在响应正文、日志或审计中出现原值。`clientSessionId` 从 OpenAPI 2.0 删除，`sessionId`、幂等键和客户端自报值均不是所有权凭据。已有访客会话即使请求同时携带 Bearer 也保持 `VISITOR`、使用访客全局额度；Bearer 只使同次新建会话归账户。没有任何所有权凭据返回 401；错误或不匹配凭据统一返回 404／`MLS-AI-005`，不泄露会话存在性。首次响应若在 Cookie 抵达前中断，允许留下不可恢复的空会话。
 
 实际模型运行配置显式采用 `thinking=disabled`（`MLS-DEC-0030`）。provider-default 的强制工具选择不兼容结果保留为证据，不作为首版配置。
+
+### 5.2 预约取书时段值域
+
+`POST /reservations` 的 `pickupSlot` 仍为必填字段。旧值 `AM`、`PM` 继续有效。新增值为 48 个同日半小时时段，格式严格为 ASCII `HH:mm-HH:mm`；起点从 `00:00` 到 `23:30`，终点恰为起点后 30 分钟。最后一段为 `23:30-24:00`，`24:00` 仅可作该段终点。其他格式、错位、时长不符、跨日和以 `24:00` 起始的值返回 `400 MLS-CIRC-001`。OpenAPI `PickupSlot` 枚举列出全部新旧值。
+
+`pickupSlot` 原样保存并返回，不转换为钟点。它只用于备书与统计，不作为到馆、取书或提前／准时／延后处理的状态守卫。既有 MLS-AT-0015 取书语义继续有效。
 
 ## 6. 登录续行与共同样例
 
@@ -158,6 +182,10 @@ AI `actions` 只允许 `{actionType,level,prefill,draftId,label}`。L1 可带查
 
 ## 修订记录
 
+- 2026-10-04，v0.11：OpenAPI 升至 2.2.0。`GET /me/business` 增加可选兼容属性 `guaranteeType`；服务器始终返回枚举值或 `null`，值只来自创建时保存的事务事实。候补分配不改写 `WAITLIST`，未知历史不从状态或副本推导。完整时间轴仍不在范围内。批准人：本任务用户明确授权；结论：保证类型本人查询投影已补。
+- 2026-10-04，v0.12：在 OpenAPI 2.2.0 中扩展预约请求 `pickupSlot`：保留 `AM`／`PM` 并增加全部 48 个同日半小时时段；`24:00` 仅用于最后一段终点。服务器原样保存与返回该值，且不将其作为到馆或取书状态守卫。批准人：本任务用户明确授权；结论：预约时段契约已补。
+
+- 2026-10-04，v0.10：OpenAPI 升至 2.1.0，`GET /me/business` 增加三个独立分页分组，以及预约日期、时段、副本关联和本人通知事实的增量投影。旧 `kind/status/cursor/limit` 语义不变；分组与 `kind` 冲突时返回 `MLS-QUERY-001`。本次不登记保证类型或完整时间轴为已实现能力。批准人：本任务用户明确授权；结论：本人查询局部契约已补，FR-0043 仍有未完成断言。
 
 - 2026-10-01：v0.9，追加当前适用说明并传导 A–E 与新增功能 TLA/CI/完整 PR 要求。原因：限定交付与原完整基线存在范围及状态差异；提出人：lingzz/Codex；影响需求：当前范围和相邻角色、日期规则；影响验收：获批批次边界及迭代验证；内容评审/批准人：lingzz；结论：本轮局部修订 Approved，独立审计及未执行验证另行登记。
 - 2026-09-27，v0.8（P1 裁剪与核心修复）：依据 [P0 范围与基线结果](../agents/delivery-closeout-20260925/results/P0.md) 明确 `/walk-in-loans` 仅允许馆员以 DESK 渠道代办；读者自助扫描扩展从当前交付范围移出。同步 OpenAPI 权限与渠道枚举。影响需求：不改变已批准预约与借阅业务规则；影响验收：读者用任一渠道请求均拒绝且不产生流通事实，馆员 DESK 借出保留；批准事实以 P0 结果为准。

@@ -53,34 +53,36 @@ describe('MyBusinessView', () => {
   })
 
   it('cancels a reservation and reloads the list', async () => {
-    let calls = 0
+    let reservationCalls = 0
     const callsCaptured = []
     const { setTransport } = await import('@/platform/http')
     const { createMockTransport } = await import('@/platform/http/mock/mockAdapter')
     const mock = createMockTransport({ fixtures: {
-      getMyBusiness: {
-        code: 'MLS-QUERY-S002',
-        message: 'ok',
-        get data() {
-          calls += 1
-          return calls === 1
-            ? {
-                items: [{ kind: 'RESERVATION', id: '4003', status: 'WAITLIST' }],
-                nextCursor: null,
-              }
-            : { items: [], nextCursor: null }
-        },
-      },
       cancelReservation: { code: 'MLS-CIRC-S006', message: 'canceled', data: { txId: '4003', outcome: 'CANCELED' } },
     } })
     setTransport({
       mode: 'mock',
       async request(operationId, options = {}) {
         callsCaptured.push({ operationId, options })
+        if (operationId === 'getMyBusiness') {
+          if (options.query.group === 'CURRENT_LOANS') {
+            return { code: 'MLS-QUERY-S002', message: 'ok', data: { items: [], nextCursor: null } }
+          }
+          reservationCalls += 1
+          return {
+            code: 'MLS-QUERY-S002',
+            message: 'ok',
+            data: reservationCalls === 1
+              ? { items: [{ kind: 'RESERVATION', id: '4003', status: 'WAITLIST' }], nextCursor: null }
+              : { items: [], nextCursor: null },
+          }
+        }
         return mock.request(operationId, options)
       },
     })
     const wrapper = await mountView(MyBusinessView)
+    await flushPromises()
+    await wrapper.find('[data-testid="my-business-tab-RESERVATIONS"]').trigger('click')
     await flushPromises()
 
     await wrapper.find('[data-testid="cancel-4003"]').trigger('click')

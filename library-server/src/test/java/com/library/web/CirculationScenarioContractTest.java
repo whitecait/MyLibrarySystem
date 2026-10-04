@@ -22,6 +22,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.junit.jupiter.Container;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -108,6 +110,62 @@ class CirculationScenarioContractTest {
         var invalid = get("/api/v1/copies?titleId=" + titleId + "&status=NOT_A_COPY_STATE", librarianToken);
         assertThat(invalid.getStatusCode().value()).isEqualTo(400);
         assertThat(json.readTree(invalid.getBody()).path("code").asText()).isEqualTo("MLS-CIRC-001");
+    }
+
+    @Test
+    void reservationPickupSlotContractListsLegacyValuesAndEveryHalfHourInterval() {
+        var pickupSlotRef = contract.root()
+                .at("/components/schemas/ReservationRequest/properties/pickupSlot/$ref").asText();
+        assertThat(pickupSlotRef).isEqualTo("#/components/schemas/PickupSlot");
+        var pickupSlotSchema = contract.root().at("/components/schemas/PickupSlot/enum");
+        var expected = new HashSet<>(Set.of("AM", "PM"));
+        for (int start = 0; start < 24 * 60; start += 30) {
+            expected.add(time(start) + "-" + time(start + 30));
+        }
+
+        var actual = new HashSet<String>();
+        pickupSlotSchema.forEach(value -> actual.add(value.asText()));
+        assertThat(actual).hasSize(50).isEqualTo(expected);
+    }
+
+    @Test
+    void halfHourPickupSlotIsValidatedPersistedAndReturnedUnchanged() throws Exception {
+        var token = registerAndLogin("pickup-slot");
+        var titleId = seedTitleWithCopies("half-hour-pickup-" + UUID.randomUUID(), 1);
+        var reservationDate = businessClock.today().plusDays(1).toString();
+        var invalidSlots = java.util.List.of(
+                "14:15-14:45", "14:00-15:00", "23:30-00:00", "24:00-24:30",
+                "14:00–14:30", "14:00-14:30 ");
+
+        for (var invalidSlot : invalidSlots) {
+            var invalid = post("/api/v1/reservations", token, key(), """
+                    {"titleId":"%d","reservationDate":"%s","pickupSlot":"%s","channel":"ONLINE"}
+                    """.formatted(titleId, reservationDate, invalidSlot));
+            assertThat(invalid.getStatusCode().value()).as(invalidSlot).isEqualTo(400);
+            assertThat(json.readTree(invalid.getBody()).path("code").asText())
+                    .as(invalidSlot).isEqualTo("MLS-CIRC-001");
+        }
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM borrow_transaction WHERE title_id = ?", Integer.class, titleId)).isZero();
+
+        var slot = "14:00-14:30";
+        var created = post("/api/v1/reservations", token, key(), """
+                {"titleId":"%d","reservationDate":"%s","pickupSlot":"%s","channel":"ONLINE"}
+                """.formatted(titleId, reservationDate, slot));
+        assertThat(created.getStatusCode().value()).isEqualTo(200);
+        var txId = json.readTree(created.getBody()).at("/data/txId").asText();
+        assertThat(jdbc.queryForObject(
+                "SELECT pickup_slot FROM borrow_transaction WHERE id = ?", String.class, Long.parseLong(txId)))
+                .isEqualTo(slot);
+
+        var readBack = get("/api/v1/me/business?group=RESERVATIONS&limit=100", token);
+        assertThat(readBack.getStatusCode().value()).isEqualTo(200);
+        var items = json.readTree(readBack.getBody()).at("/data/items");
+        var projectedSlot = java.util.stream.StreamSupport.stream(items.spliterator(), false)
+                .filter(item -> txId.equals(item.path("id").asText()))
+                .map(item -> item.path("pickupSlot").asText())
+                .findFirst().orElse(null);
+        assertThat(projectedSlot).isEqualTo(slot);
     }
 
     // 场景 3：无可用副本 → WAITLIST_PENDING_CONFIRMATION（txId=null）；确认 → 入队
@@ -312,6 +370,10 @@ class CirculationScenarioContractTest {
 
     private String key() {
         return "b2-" + UUID.randomUUID();
+    }
+
+    private static String time(int minutes) {
+        return "%02d:%02d".formatted(minutes / 60, minutes % 60);
     }
 
     private ResponseEntity<String> post(String path, String bearer, String idempotencyKey, String body) {

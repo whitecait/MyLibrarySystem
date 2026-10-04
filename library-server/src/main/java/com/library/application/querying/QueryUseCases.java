@@ -22,6 +22,9 @@ public interface QueryUseCases {
 
     ModuleResult<MyBusinessQuery.MyBusinessPage> myBusiness(ActorContext actor, String kind,
                                                             String status, PageCursor page);
+
+    ModuleResult<MyBusinessQuery.MyBusinessPage> myBusiness(ActorContext actor, String kind,
+                                                            String status, String group, PageCursor page);
 }
 
 @Component
@@ -41,11 +44,19 @@ record QueryUseCasesImpl(ArrivalQuery arrivalsQuery,
     @Override
     public ModuleResult<MyBusinessQuery.MyBusinessPage> myBusiness(ActorContext actor, String kind,
                                                                    String status, PageCursor page) {
+        return myBusiness(actor, kind, status, null, page);
+    }
+
+    @Override
+    public ModuleResult<MyBusinessQuery.MyBusinessPage> myBusiness(ActorContext actor, String kind,
+                                                                   String status, String group,
+                                                                   PageCursor page) {
         if (authorization.authorize(actor, Capability.READER,
                 SubjectRef.account(actor.accountId().asString()))
                 instanceof ModuleResult.Rejected<AuthorizationDecision> rejected) {
             return ModuleResult.Rejected.propagate(rejected);
         }
-        return myBusinessQuery.myBusiness(new MyBusinessQuery.MyBusinessCriteria(kind, status, page), actor);
+        return myBusinessQuery.myBusiness(
+                new MyBusinessQuery.MyBusinessCriteria(kind, status, group, page), actor);
     }
 }

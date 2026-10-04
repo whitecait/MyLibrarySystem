@@ -60,9 +60,10 @@ public class QueryController {
     public ResponseEntity<Envelope> myBusiness(HttpServletRequest request,
                                                @RequestParam(required = false) String kind,
                                                @RequestParam(required = false) String status,
+                                               @RequestParam(required = false) String group,
                                                @RequestParam(required = false) String cursor,
                                                @RequestParam(required = false) Integer limit) {
-        var result = queries.myBusiness(Actors.actor(request), kind, status,
+        var result = queries.myBusiness(Actors.actor(request), kind, status, group,
                 PageCursor.of(cursor, limit));
         return responses.forResult(result, SuccessCodes.of("getMyBusiness"),
                 Actors.actorId(request), "/api/v1/me/business",
@@ -76,6 +77,22 @@ public class QueryController {
                         entry.put("title", item.title());
                         entry.put("businessDate", item.businessDate());
                         entry.put("amountCents", item.amountCents());
+                        entry.put("reservationDate", item.reservationDate());
+                        entry.put("pickupSlot", item.pickupSlot());
+                        entry.put("copyId", item.copyId() == null ? null : String.valueOf(item.copyId()));
+                        entry.put("guaranteeType", item.guaranteeType() == null
+                                ? null : item.guaranteeType().name());
+                        entry.put("notifications", item.notifications().stream().map(notification -> {
+                            var fact = new LinkedHashMap<String, Object>();
+                            fact.put("notificationId", String.valueOf(notification.notificationId()));
+                            fact.put("type", notification.type());
+                            fact.put("read", notification.read());
+                            fact.put("reservationDate", notification.reservationDate() == null
+                                    ? null : notification.reservationDate().toString());
+                            fact.put("createdAt", notification.createdAt() == null
+                                    ? null : notification.createdAt().toString());
+                            return fact;
+                        }).toList());
                         return entry;
                     }).toList());
                     data.put("nextCursor", page.nextCursor());

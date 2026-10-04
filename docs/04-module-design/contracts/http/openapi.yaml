@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MyLibrarySystem HTTP Contract
-  version: 2.0.0
+  version: 2.2.0
   description: >-
     Frontend and backend shared structural contract. Business semantics, permissions,
     idempotency and transaction guarantees remain normative in MLS-DOC-MD-0003.
@@ -112,7 +112,7 @@ paths:
   /dashboard/arrivals:
     get: {tags: [Query], operationId: getArrivalDashboard, x-permission: LIBRARIAN, parameters: [{$ref: '#/components/parameters/BusinessDateQuery'}], responses: {'200': {$ref: '#/components/responses/ArrivalDashboard'}, default: {$ref: '#/components/responses/Error'}}}
   /me/business:
-    get: {tags: [Query], operationId: getMyBusiness, x-permission: READER, parameters: [{$ref: '#/components/parameters/BusinessKind'}, {$ref: '#/components/parameters/BusinessStatus'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/MyBusinessPage'}, default: {$ref: '#/components/responses/Error'}}}
+    get: {tags: [Query], operationId: getMyBusiness, description: "group 与 kind 不能同时使用；group 只包含借阅与预约事务。", x-permission: READER, parameters: [{$ref: '#/components/parameters/BusinessKind'}, {$ref: '#/components/parameters/BusinessStatus'}, {$ref: '#/components/parameters/BusinessGroup'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/MyBusinessPage'}, default: {$ref: '#/components/responses/Error'}}}
   /notifications:
     get: {tags: [Delivery], operationId: listNotifications, x-permission: AUTHENTICATED_SELF, parameters: [{$ref: '#/components/parameters/UnreadOnly'}, {$ref: '#/components/parameters/Cursor'}, {$ref: '#/components/parameters/Limit'}], responses: {'200': {$ref: '#/components/responses/NotificationPage'}, default: {$ref: '#/components/responses/Error'}}}
   /notifications/{notificationId}/read:
@@ -163,6 +163,7 @@ components:
     BusinessDateQuery: {name: businessDate, in: query, required: true, schema: {$ref: '#/components/schemas/BusinessDate'}}
     BusinessKind: {name: kind, in: query, schema: {type: string, enum: [RESERVATION, LOAN, FINE, ORDER]}}
     BusinessStatus: {name: status, in: query, schema: {type: string}}
+    BusinessGroup: {name: group, in: query, description: "独立分页分组；不能与 kind 同时使用。", schema: {type: string, enum: [CURRENT_LOANS, RESERVATIONS, HISTORY]}}
     UnreadOnly: {name: unreadOnly, in: query, schema: {type: boolean, default: false}}
     RelatedId: {name: relatedId, in: query, schema: {$ref: '#/components/schemas/Id'}}
     ActorId: {name: actorId, in: query, schema: {$ref: '#/components/schemas/Id'}}
@@ -312,7 +313,61 @@ components:
     CopyPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/CopyData'}}, nextCursor: {type: [string, 'null']}}}
     CalendarDay: {type: object, additionalProperties: false, required: [businessDate, availability], properties: {businessDate: {$ref: '#/components/schemas/BusinessDate'}, availability: {type: string, enum: [GUARANTEED, NOT_GUARANTEED, UNAVAILABLE]}}}
     ReservationCalendarData: {type: object, additionalProperties: false, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/CalendarDay'}}}}
-    ReservationRequest: {type: object, additionalProperties: false, required: [titleId, reservationDate, pickupSlot, channel], properties: {titleId: {$ref: '#/components/schemas/Id'}, reservationDate: {$ref: '#/components/schemas/BusinessDate'}, pickupSlot: {type: string, enum: [AM, PM]}, channel: {type: string, enum: [ONLINE, DESK]}, onBehalfOf: {$ref: '#/components/schemas/Id'}, confirmWaitlist: {type: boolean, default: false}}}
+    PickupSlot:
+      type: string
+      description: "Legacy AM/PM values or one exact same-day 30-minute interval; 24:00 is only the end of the final interval."
+      enum:
+        - 'AM'
+        - 'PM'
+        - '00:00-00:30'
+        - '00:30-01:00'
+        - '01:00-01:30'
+        - '01:30-02:00'
+        - '02:00-02:30'
+        - '02:30-03:00'
+        - '03:00-03:30'
+        - '03:30-04:00'
+        - '04:00-04:30'
+        - '04:30-05:00'
+        - '05:00-05:30'
+        - '05:30-06:00'
+        - '06:00-06:30'
+        - '06:30-07:00'
+        - '07:00-07:30'
+        - '07:30-08:00'
+        - '08:00-08:30'
+        - '08:30-09:00'
+        - '09:00-09:30'
+        - '09:30-10:00'
+        - '10:00-10:30'
+        - '10:30-11:00'
+        - '11:00-11:30'
+        - '11:30-12:00'
+        - '12:00-12:30'
+        - '12:30-13:00'
+        - '13:00-13:30'
+        - '13:30-14:00'
+        - '14:00-14:30'
+        - '14:30-15:00'
+        - '15:00-15:30'
+        - '15:30-16:00'
+        - '16:00-16:30'
+        - '16:30-17:00'
+        - '17:00-17:30'
+        - '17:30-18:00'
+        - '18:00-18:30'
+        - '18:30-19:00'
+        - '19:00-19:30'
+        - '19:30-20:00'
+        - '20:00-20:30'
+        - '20:30-21:00'
+        - '21:00-21:30'
+        - '21:30-22:00'
+        - '22:00-22:30'
+        - '22:30-23:00'
+        - '23:00-23:30'
+        - '23:30-24:00'
+    ReservationRequest: {type: object, additionalProperties: false, required: [titleId, reservationDate, pickupSlot, channel], properties: {titleId: {$ref: '#/components/schemas/Id'}, reservationDate: {$ref: '#/components/schemas/BusinessDate'}, pickupSlot: {$ref: '#/components/schemas/PickupSlot'}, channel: {type: string, enum: [ONLINE, DESK]}, onBehalfOf: {$ref: '#/components/schemas/Id'}, confirmWaitlist: {type: boolean, default: false}}}
     ReservationData: {type: object, additionalProperties: false, required: [txId, outcome], properties: {txId: {oneOf: [{$ref: '#/components/schemas/Id'}, {type: 'null'}]}, outcome: {type: string, enum: [CONFIRMED, WAITLIST_PENDING_CONFIRMATION, WAITLIST_ENQUEUED, MANUAL_HANDLING, REJECTED]}, reasons: {type: array, items: {type: string}}}}
     TransactionData: {type: object, additionalProperties: false, required: [txId, outcome], properties: {txId: {$ref: '#/components/schemas/Id'}, outcome: {type: string}, status: {type: string}}}
     WalkInItem: {type: object, additionalProperties: false, required: [titleId], properties: {titleId: {$ref: '#/components/schemas/Id'}, copyId: {$ref: '#/components/schemas/Id'}}}
@@ -345,7 +400,8 @@ components:
     ReviewPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/ReviewSummary'}}, nextCursor: {type: [string, 'null']}}}
     ReviewDecisionData: {type: object, additionalProperties: false, required: [reviewId, status], properties: {reviewId: {$ref: '#/components/schemas/Id'}, status: {$ref: '#/components/schemas/ReviewStatus'}, targetOutcome: {type: string}}}
     ArrivalDashboardData: {type: object, additionalProperties: false, required: [businessDate, expected, arrived, pending, exceptions], properties: {businessDate: {$ref: '#/components/schemas/BusinessDate'}, expected: {type: integer, minimum: 0}, arrived: {type: integer, minimum: 0}, pending: {type: integer, minimum: 0}, exceptions: {type: integer, minimum: 0}}}
-    BusinessItem: {type: object, additionalProperties: false, required: [kind, id, status], properties: {kind: {type: string, enum: [RESERVATION, LOAN, FINE, ORDER]}, id: {$ref: '#/components/schemas/Id'}, status: {type: string}, title: {type: string}, businessDate: {$ref: '#/components/schemas/BusinessDate'}, amountCents: {type: integer}}}
+    BusinessItem: {type: object, additionalProperties: false, required: [kind, id, status], properties: {kind: {type: string, enum: [RESERVATION, LOAN, FINE, ORDER]}, id: {$ref: '#/components/schemas/Id'}, status: {type: string}, title: {type: [string, 'null']}, businessDate: {anyOf: [{$ref: '#/components/schemas/BusinessDate'}, {type: 'null'}], description: "Legacy field; retains the existing business date projection."}, amountCents: {type: [integer, 'null']}, reservationDate: {anyOf: [{$ref: '#/components/schemas/BusinessDate'}, {type: 'null'}], description: "Stored borrow_transaction.reservation_date; null when the row has no date."}, pickupSlot: {type: [string, 'null'], description: "Stored pickup_slot value, returned without time conversion; null when absent."}, copyId: {anyOf: [{$ref: '#/components/schemas/Id'}, {type: 'null'}], description: "Stored copy_id; null when no copy is bound."}, guaranteeType: {type: [string, 'null'], enum: [DIRECT_CONFIRMATION, WAITLIST, null], description: "Stored creation-time reservation guarantee type; WAITLIST remains unchanged after assignment; null when unknown or not applicable."}, notifications: {type: array, items: {$ref: '#/components/schemas/BusinessNotificationFact'}, description: "Notifications owned by the current reader and linked to this transaction; an empty array means a successful lookup with no matching rows."}}}
+    BusinessNotificationFact: {type: object, additionalProperties: false, required: [notificationId, type, read, reservationDate, createdAt], properties: {notificationId: {$ref: '#/components/schemas/Id'}, type: {type: string, enum: [VISIT, NO_VISIT]}, read: {type: boolean}, reservationDate: {$ref: '#/components/schemas/BusinessDate'}, createdAt: {$ref: '#/components/schemas/Timestamp'}}}
     MyBusinessPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/BusinessItem'}}, nextCursor: {type: [string, 'null']}}}
     NotificationData: {type: object, additionalProperties: false, required: [notificationId, type, message, read, createdAt], properties: {notificationId: {$ref: '#/components/schemas/Id'}, type: {type: string}, message: {type: string}, read: {type: boolean}, relatedTxId: {$ref: '#/components/schemas/Id'}, reservationDate: {$ref: '#/components/schemas/BusinessDate'}, createdAt: {$ref: '#/components/schemas/Timestamp'}}}
     NotificationPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/NotificationData'}}, nextCursor: {type: [string, 'null']}}}

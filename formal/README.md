@@ -24,7 +24,7 @@ python3 formal/verify.py --output-dir artifacts/formal-new-run
 
 工具从 toolchain.json 固定的官方 v1.7.4 发布下载，SHA-256 必须一致；工具缓存、输出和 Python 缓存不入库。可用 --tool-jar 指定同哈希的本地副本。每次选用空输出目录，禁止混合旧结果。
 
-执行入口包含当前 OD 结构覆盖检查、判定表枚举、真实 TLC 门禁自检、两组安全不变量和 22 个单独的可达性探针。安全检查必须完整结束且没有错误；每个探针只在指定取反不变量产生预期违例与状态轨迹时通过。语法错误、工具错误、未达到出口、错误性质、缺轨迹、校验和不符和超时均失败，退出码非零。真实不变量不与探针混跑。
+执行入口包含当前 OD 结构覆盖检查、判定表枚举、真实 TLC 门禁自检、六个模型中的 36 项安全不变量和 73 个单独的可达性探针。安全检查必须完整结束且没有错误；每个探针只在指定取反不变量产生预期违例与状态轨迹时通过。语法错误、工具错误、未达到出口、错误性质、缺轨迹、校验和不符和超时均失败，退出码非零。真实不变量不与探针混跑。
 
 result.json 记录实际检出提交、PR head 提交、工作树是否存在未提交差异、工具与环境版本、输入哈希、命令、退出码和结果；每例保存实际模型、配置与原始 TLC 日志。PR 作业检出的是 GitHub 生成的合并候选，其 checkout_commit 与 pr_head_commit 分别保存，不能把合并候选 SHA 当作 PR head。CI 工件保留 14 天；发布前须另封存对应结果。
 
@@ -39,6 +39,7 @@ result.json 记录实际检出提交、PR head 提交、工作树是否存在未
 | 注册、每日开馆、上架与最早外借日期、RESTORE 例外 | 这两组共享模型不直接覆盖这些独立规则 | RegistrationContractProbeTest、P1CoreCirculationRulesTest、V13MigrationTest；这是覆盖边界，不能以共享模型通过代替这些测试或未来新增能力的专属映射 |
 | 读者对象归属、订单关闭角色、同键降权重放、AI 草稿确认与权限 | 模型动作只抽象已通过入口鉴权的合法业务事件；Closing 的 adminAuth 是当前命令权限与追平的合取，不证明动态权限存储 | SettlementControllerTest、ITID002PermissionAndInvisibilityTest、前端 guard／草稿测试及 Windows 核心冒烟；真实鉴权与重放守卫仍需对应结果 |
 | 通知产生、互斥与持久化归属；审计、看板及原三组混合验收 | 不声明形式化覆盖 | ITDefM6012NotificationChainTest、ITDefM6011AuditTrailTest 及 AT-0002 逐项执行状态。原完整统计、时间轴和 Banner 堆叠按适用清单分别处理 |
+| AT-0026／AT-0002 §2.26 保留的三组本人业务页签、分页、完整只读详情及关联通知；完整状态时间轴移出范围 | BusinessTabs、BusinessReservationMetadata、BusinessDetail：8 个页签安全不变量和 13 个页签反取反 probe 检查分组映射：CURRENT_LOANS=(LOAN,LENT)，RESERVATIONS=(RESERVATION,AWAIT／CONFIRMED／MANUAL_HANDLING／WAITLIST)，HISTORY=(RESERVATION或LOAN,RETURNED／RETURN_ABNORMAL／NOT_BORROWED)；并检查 FINE／ORDER 排除、独立游标、最多两个在途响应下的页签／账号／请求代次竞态，以及取消后清空 RESERVATIONS／HISTORY 缓存、重置列表代次、按当前页签立即重查和丢弃旧响应。模型保留一条旧 HISTORY 或 RESERVATIONS 请求；探针证明当前 HISTORY 结果先渲染后旧 HISTORY 响应到达仍被丢弃，也覆盖当前 RESERVATIONS 立即重查和历史页惰性重查。请求代次与取消前后快照对应 MyBusinessView 的 requestId 保护。取消路径仅抽象一条 CONFIRMED 预约转 NOT_BORROWED；它不扩大完整状态时间轴。6 个元数据安全不变量和 16 个反取反 probe 检查创建来源写入、候补转 CONFIRMED 后仍保留 WAITLIST、旧行缺来源时显示未知、AM／PM 兼容、半小时首段／中间／末段样本与非法边界样本拒绝，并检查时段不进入抽象取书资格条件。5 个详情安全不变量和 10 个反取反 probe 检查本人 RESERVATION／LOAN 精确字符串 ID、同号 FINE／ORDER、通知父事务、缺失字段、外来／缺失详情及“新结果先渲染、旧路由／账号响应后到” | MyBusinessTabs.test.js、MyBusinessDetailView.test.js、ITReleaseAuditRegressionTest 提供前端请求／呈现和本人投影的对应检查。页签与详情模型把本人过滤后的业务事实、分页页内容和按读者／类型／父 ID 预关联的通知当作外部快照；元数据模型则显式抽象创建写入与候补分配迁移，但不把模型状态当成 SQL 持久化证明。时段模型仅枚举首段 00:00-00:30、中间样本 12:30-13:00、末段 23:30-24:00 和六个非法样本；它不穷举全部 48 段，也不解析任意字符串。必须由独立 Java／HTTP 测试核对全部 48 段、旧客户端输入和格式异常。模型不证明真实 SQL、HTTP 鉴权、分页游标实现、前端 DOM、浏览器呈现、通知关联持久化或活性，也不覆盖已移出的完整状态时间轴。
 | 单条未读 Banner 的最近预约日期选择、关联事务点击、成功标记已读后的推进／隐藏；中心列表分页不清空 Banner 来源；会话或路由变化后丢弃旧响应。GOV-0008／AT-0002 §1.44 保留单条呈现，明确不覆盖已移出范围的堆叠卡片和“另有 N 条”计数 | NotificationNavigation：类型、单个或无 Banner、最近日期候选、Banner 来源账号、关联 ID 保持、本人业务详情类型／ID／状态；12 个独立反取反 probe 给出成功路径的可达轨迹 | AppShell.test.js、DeliveryViews.test.js、MyBusinessDetailView.test.js、ITDefM6012NotificationChainTest 和 ITReleaseAuditRegressionTest 分别覆盖呈现、前端请求边界、通知持久化关联，以及服务端本人业务投影的类型筛选／分页／同号行。模型将成功响应抽象为一步，假定通知查询和本人业务投影已经由服务端按当前读者过滤；只将相关 ID 作为路由事务 ID，再从 RESERVATION／LOAN 投影解析类型。有限样本显式含同号 FINE／ORDER、他人唯一事务和不存在事务。模型不证明 HTTP 鉴权、数据库查询／提交、DOM、浏览器、游标算法、通知生产／互斥或活性；同日通知没有规定先后 |
 | 交付停写备份与新项目恢复 | Closing 的隔离／追平思想仅作为关联抽象，不是运维脚本的证明 | delivery/manage.py 的故障拒绝测试与独立 Docker 操作验证；Windows 原生运行、恢复数据及核心写入分别取证 |
 
@@ -55,6 +56,8 @@ result.json 记录实际检出提交、PR head 提交、工作树是否存在未
 - 2026-10-02：追加增量复审的领域契约与混合分页映射；未扩大形式化证明范围。
 
 - 2026-10-02：追加五项独立审计整改的模型影响和真实 PG 映射，保留原性能与页面证据边界。
+
+- 2026-10-04：新增 AT-0026 页签、创建来源／时段和只读详情三个有限模型；补入取消后双缓存失效、当前页签立即重查及旧 requestId 丢弃轨迹；保留完整时间轴移出边界，并明确有限时段样本与 SQL／HTTP 验证限制。
 
 - 2026-10-01：按用户批准计划建立可追踪门禁；日结普通轮改为显式重开，补充关闭后回调冲突路径；明确模型、真实验证和未覆盖边界。实现及本地结果与远端 CI、审计、P5 分别登记。
 

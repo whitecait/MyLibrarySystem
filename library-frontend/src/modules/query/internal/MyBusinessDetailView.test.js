@@ -13,6 +13,22 @@ function page(items, nextCursor = null) {
   return { code: 'MLS-QUERY-S002', message: 'ok', data: { items, nextCursor } }
 }
 
+function businessItem(kind, id, overrides = {}) {
+  return {
+    kind,
+    id,
+    status: 'CONFIRMED',
+    title: '测试书目',
+    businessDate: '2026-10-03',
+    guaranteeType: null,
+    reservationDate: null,
+    pickupSlot: null,
+    copyId: null,
+    notifications: [],
+    ...overrides,
+  }
+}
+
 function deferred() {
   let resolve
   const promise = new Promise((complete) => {
@@ -52,13 +68,16 @@ describe('MyBusinessDetailView', () => {
     expect(wrapper.find('[data-testid="business-detail-not-found"]').exists()).toBe(true)
   })
 
-  it('does not reveal a same-id fine when no owned borrow transaction matches', async () => {
+  it('does not reveal same-id fine or order rows when no owned borrow transaction matches', async () => {
     const calls = []
     setTransport({
       mode: 'mock',
       async request(operationId, options = {}) {
         calls.push({ operationId, options })
-        return page([{ kind: 'FINE', id: '4500', status: 'OPEN', amountCents: 12345 }])
+        return page([
+          { kind: 'FINE', id: '4500', status: 'OPEN', amountCents: 12345 },
+          { kind: 'ORDER', id: '4500', status: 'OPEN', amountCents: 12345 },
+        ])
       },
     })
 
@@ -107,9 +126,9 @@ describe('MyBusinessDetailView', () => {
     await flushPromises()
     expect(pending).toHaveLength(2)
 
-    pending[1].request.resolve(page([{ kind: 'RESERVATION', id: '5102', status: 'CONFIRMED', title: 'Current target' }]))
+    pending[1].request.resolve(page([businessItem('RESERVATION', '5102', { title: 'Current target' })]))
     await flushPromises()
-    pending[0].request.resolve(page([{ kind: 'RESERVATION', id: '5101', status: 'CONFIRMED', title: 'Stale target' }]))
+    pending[0].request.resolve(page([businessItem('RESERVATION', '5101', { title: 'Stale target' })]))
     await flushPromises()
 
     const detail = wrapper.find('[data-testid="business-detail"]')
@@ -133,11 +152,11 @@ describe('MyBusinessDetailView', () => {
     await flushPromises()
     expect(pending).toHaveLength(2)
 
-    pending[0].request.resolve(page([{ kind: 'RESERVATION', id: '5201', status: 'CONFIRMED', title: 'First reader data' }]))
+    pending[0].request.resolve(page([businessItem('RESERVATION', '5201', { title: 'First reader data' })]))
     await flushPromises()
     expect(wrapper.find('[data-testid="business-detail"]').exists()).toBe(false)
 
-    pending[1].request.resolve(page([{ kind: 'RESERVATION', id: '5201', status: 'CONFIRMED', title: 'Second reader data' }]))
+    pending[1].request.resolve(page([businessItem('RESERVATION', '5201', { title: 'Second reader data' })]))
     await flushPromises()
     const detail = wrapper.find('[data-testid="business-detail"]')
     expect(detail.text()).toContain('Second reader data')
@@ -158,7 +177,7 @@ describe('MyBusinessDetailView', () => {
     const wrapper = await mountDetail('5301')
     logout()
     await flushPromises()
-    pending[0].request.resolve(page([{ kind: 'RESERVATION', id: '5301', status: 'CONFIRMED', title: 'Logged out data' }]))
+    pending[0].request.resolve(page([businessItem('RESERVATION', '5301', { title: 'Logged out data' })]))
     await flushPromises()
 
     expect(wrapper.find('[data-testid="business-detail"]').exists()).toBe(false)
@@ -174,13 +193,7 @@ describe('MyBusinessDetailView', () => {
         calls.push({ operationId, options })
         return options.query.cursor == null
           ? page([{ kind: 'RESERVATION', id: '41', status: 'WAITLIST' }], 'next-reservation-page')
-          : page([{
-              kind: 'RESERVATION',
-              id: '4003',
-              status: 'CONFIRMED',
-              title: 'Reserved title',
-              businessDate: '2026-10-03',
-            }])
+          : page([businessItem('RESERVATION', '4003', { title: 'Reserved title' })])
       },
     })
 
@@ -200,13 +213,11 @@ describe('MyBusinessDetailView', () => {
       ['RESERVATION|', page([{ kind: 'FINE', id: txId, amountCents: 9999 }], 'reservation-next')],
       ['RESERVATION|reservation-next', page([{ kind: 'RESERVATION', id: '42', status: 'WAITLIST' }])],
       ['LOAN|', page([{ kind: 'FINE', id: txId, amountCents: 9999 }], 'loan-next')],
-      ['LOAN|loan-next', page([{
-        kind: 'LOAN',
-        id: txId,
+      ['LOAN|loan-next', page([businessItem('LOAN', txId, {
         status: 'RETURNED',
         title: 'Target title',
         businessDate: '2026-10-02',
-      }])],
+      })])],
     ])
     setTransport({
       mode: 'mock',
@@ -232,5 +243,175 @@ describe('MyBusinessDetailView', () => {
       ['LOAN', undefined, 20],
       ['LOAN', 'loan-next', 20],
     ])
+  })
+
+  it('shows B2 details and only the notices attached to the matched reservation', async () => {
+    const calls = []
+    const visitNotification = {
+      notificationId: '7101',
+      type: 'VISIT',
+      read: false,
+      reservationDate: '2026-10-03',
+      createdAt: '2026-10-02T08:00:00Z',
+    }
+    setTransport({
+      mode: 'mock',
+      async request(operationId, options = {}) {
+        calls.push({ operationId, options })
+        return page([
+          businessItem('RESERVATION', '6000', {
+            notifications: [{ notificationId: '7000', type: 'NO_VISIT', read: true }],
+          }),
+          businessItem('FINE', '6001', {
+            notifications: [{ notificationId: '7001', type: 'NO_VISIT', read: true }],
+          }),
+          businessItem('ORDER', '6001', {
+            notifications: [{ notificationId: '7002', type: 'NO_VISIT', read: true }],
+          }),
+          businessItem('RESERVATION', '6001', {
+            title: 'B2 已确认预约',
+            guaranteeType: 'DIRECT_CONFIRMATION',
+            reservationDate: '2026-10-03',
+            pickupSlot: 'PM',
+            copyId: 'copy-202',
+            notifications: [visitNotification],
+          }),
+        ])
+      },
+    })
+
+    const wrapper = await mountDetail('6001')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="business-detail-status"]').text()).toBe('CONFIRMED')
+    expect(wrapper.find('[data-testid="business-detail-guarantee-type"]').text()).toBe('直接确认')
+    expect(wrapper.find('[data-testid="business-detail-guarantee-type"]').element.parentElement.textContent)
+      .toContain('创建时保证类型')
+    expect(wrapper.find('[data-testid="business-detail-reservation-date"]').text()).toBe('2026-10-03')
+    expect(wrapper.find('[data-testid="business-detail-pickup-slot"]').text()).toBe('下午（PM）')
+    expect(wrapper.find('[data-testid="business-detail-copy"]').text()).toBe('copy-202')
+
+    const renderedNotification = wrapper.find('[data-testid="business-detail-notification-7101"]')
+    expect(renderedNotification.text()).toContain('7101')
+    expect(renderedNotification.text()).toContain('到馆办理')
+    expect(renderedNotification.text()).toContain('2026-10-03')
+    expect(renderedNotification.text()).toContain('2026-10-02T08:00:00Z')
+    expect(renderedNotification.text()).toContain('未读')
+    expect(wrapper.find('[data-testid="business-detail-notification-7000"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="business-detail-notification-7001"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="business-detail-notification-7002"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="business-detail-notifications-empty"]').exists()).toBe(false)
+    expect(renderedNotification.find('button').exists()).toBe(false)
+    expect(calls).toHaveLength(1)
+  })
+
+  it('shows a concrete pickup interval exactly as recorded', async () => {
+    setTransport({
+      mode: 'mock',
+      async request() {
+        return page([businessItem('RESERVATION', '6002', { pickupSlot: '14:00-14:30' })])
+      },
+    })
+
+    const wrapper = await mountDetail('6002')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="business-detail-pickup-slot"]').text()).toBe('14:00-14:30')
+  })
+
+  it('shows B3 waitlist state, explicit unknown fields, no copy binding, and the empty notice state', async () => {
+    setTransport({
+      mode: 'mock',
+      async request() {
+        return page([businessItem('RESERVATION', '6003', {
+          status: 'WAITLIST',
+          title: 'B3 候补预约',
+          guaranteeType: 'WAITLIST',
+          reservationDate: null,
+          pickupSlot: null,
+          copyId: null,
+          notifications: [],
+        })])
+      },
+    })
+
+    const wrapper = await mountDetail('6003')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="business-detail-status"]').text()).toBe('WAITLIST')
+    expect(wrapper.find('[data-testid="business-detail-guarantee-type"]').text()).toBe('候补')
+    expect(wrapper.find('[data-testid="business-detail-reservation-date"]').text()).toBe('未知')
+    expect(wrapper.find('[data-testid="business-detail-pickup-slot"]').text()).toBe('未知')
+    expect(wrapper.find('[data-testid="business-detail-copy"]').text()).toBe('未绑定副本')
+    expect(wrapper.find('[data-testid="business-detail-notifications-empty"]').text()).toContain('暂无关联通知')
+  })
+
+  it('shows B5 as not borrowed and displays its no-visit notice', async () => {
+    const calls = []
+    setTransport({
+      mode: 'mock',
+      async request(operationId, options = {}) {
+        calls.push({ operationId, options })
+        return options.query.kind === 'RESERVATION'
+          ? page([])
+          : page([businessItem('LOAN', '6005', {
+              status: 'NOT_BORROWED',
+              title: 'B5 未借出历史事务',
+              notifications: [{
+                notificationId: '7105',
+                type: 'NO_VISIT',
+                read: true,
+                reservationDate: '2026-10-03',
+                createdAt: '2026-10-03T20:00:00Z',
+              }],
+            })])
+      },
+    })
+
+    const wrapper = await mountDetail('6005')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="business-detail-status"]').text()).toBe('NOT_BORROWED')
+    expect(wrapper.find('[data-testid="business-detail-guarantee-type"]').text()).toBe('未记录')
+    expect(wrapper.find('[data-testid="business-detail-notifications-empty"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="business-detail-notification-7105"]').text()).toContain('无需到馆')
+    expect(calls.map(({ options }) => options.query.kind)).toEqual(['RESERVATION', 'LOAN'])
+  })
+
+  it('fails when a matched transaction omits its notice collection', async () => {
+    setTransport({
+      mode: 'mock',
+      async request() {
+        return page([{
+          kind: 'RESERVATION',
+          id: '6006',
+          status: 'CONFIRMED',
+          title: '通知查询字段缺失',
+        }])
+      },
+    })
+
+    const wrapper = await mountDetail('6006')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="business-detail"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="business-detail-notifications-empty"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="error-alert"]').text()).toContain('响应异常')
+  })
+
+  it('does not report an empty notice state when the business query fails', async () => {
+    setTransport({
+      mode: 'mock',
+      async request() {
+        throw new Error('query unavailable')
+      },
+    })
+
+    const wrapper = await mountDetail('6007')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="business-detail"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="business-detail-notifications-empty"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="error-alert"]').exists()).toBe(true)
   })
 })
