@@ -1,7 +1,8 @@
 import { flushPromises } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { login, logout } from '@/platform/auth/session'
+import { getOperation } from '@/platform/http/operations'
 import sharedFixtures from '@/platform/http/mock/fixtures'
 import { installMockTransport, mountView } from '../../../tests/helpers'
 import ClosingAdminView from './ClosingAdminView.vue'
@@ -63,17 +64,24 @@ describe('ClosingAdminView', () => {
 
 describe('isolation period presentation', () => {
   it('shows an explicit closing-coordination failure instead of hanging', async () => {
-    installMockTransport({
+    const transport = installMockTransport({
       fixtures: {
         reserveTitle: { status: 422, code: 'MLS-CIRC-014', message: '闭馆协调失败，请稍后重试', data: {} },
       },
     })
+    const request = vi.spyOn(transport, 'request')
     const wrapper = await mountView(ReservePanel, { props: { titleId: '2001' } })
     await flushPromises()
 
     await wrapper.find('[data-testid="reserve-date"]').setValue('2026-09-16')
+    await wrapper.find('[data-testid="reserve-slot"]').setValue('14:00-14:30')
     await wrapper.find('[data-testid="reserve-form"]').trigger('submit')
     await flushPromises()
+
+    expect(request).toHaveBeenCalledOnce()
+    expect(request.mock.calls[0][0]).toBe('reserveTitle')
+    expect(getOperation(request.mock.calls[0][0]).method).toBe('POST')
+    expect(request.mock.calls[0][1].body.pickupSlot).toBe('14:00-14:30')
 
     const alert = wrapper.find('[data-testid="error-alert"]')
     expect(alert.exists()).toBe(true)

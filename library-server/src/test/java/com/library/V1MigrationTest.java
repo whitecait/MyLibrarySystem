@@ -4,6 +4,7 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -13,8 +14,12 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.sql.DataSource;
+import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -158,7 +163,7 @@ class V1MigrationTest {
     }
 
     @Test
-    void v10UpgradeAddsConservativeLoanStartLowerBoundAndPreservesLiveLoans() {
+    void v10UpgradeAddsConservativeLoanStartLowerBoundAndPreservesLiveLoans() throws IOException {
         jdbc.execute("CREATE DATABASE v10_upgrade");
         var source = new org.springframework.jdbc.datasource.DriverManagerDataSource(
                 POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/v10_upgrade"),
@@ -178,10 +183,35 @@ class V1MigrationTest {
                 java.sql.Date.valueOf(dueWithoutDate));
 
         var upgraded = Flyway.configure().dataSource(source).locations("classpath:db/migration").load();
-        // V10 adds the conservative lower bound, V11 tracks contiguous closing progress,
-        // V12 adds registration-session rate-limit storage, and V13 adds copy loan eligibility.
-        assertThat(upgraded.migrate().migrationsExecuted).isEqualTo(4);
+        // This fixture uses only classpath:db/migration. Build its post-V9 baseline from
+        // versioned SQL sources, then reject extra repeatable or Java migrations explicitly.
+        var expectedUpgradeHistory = Arrays.stream(new PathMatchingResourcePatternResolver()
+                        .getResources("classpath:db/migration/V*.sql"))
+                .map(resource -> Objects.requireNonNull(resource.getFilename()))
+                .filter(script -> migrationVersion(script) > 9)
+                .sorted(Comparator.comparingInt(V1MigrationTest::migrationVersion))
+                .map(script -> migrationVersion(script) + ":" + script)
+                .toList();
+        var pendingUpgradeHistory = Arrays.stream(upgraded.info().pending())
+                .map(migration -> (migration.getVersion() == null
+                        ? "repeatable" : migration.getVersion().getVersion()) + ":" + migration.getScript())
+                .toList();
+        assertThat(pendingUpgradeHistory).containsExactlyElementsOf(expectedUpgradeHistory);
+
+        assertThat(upgraded.migrate().migrationsExecuted).isEqualTo(expectedUpgradeHistory.size());
         upgraded.validate();
+        var appliedUpgradeHistory = old.queryForList("""
+                SELECT version || ':' || script
+                FROM flyway_schema_history
+                WHERE success = true
+                  AND installed_rank > (
+                      SELECT installed_rank
+                      FROM flyway_schema_history
+                      WHERE version = '9' AND success = true
+                  )
+                ORDER BY installed_rank
+                """, String.class);
+        assertThat(appliedUpgradeHistory).containsExactlyElementsOf(expectedUpgradeHistory);
 
         var inferredLowerBound = shortenedRenewalDue.minusDays(30 + 14);
         assertThat(inferredLowerBound).isEqualTo(actualOldStart.minusDays(8));
@@ -213,6 +243,10 @@ class V1MigrationTest {
                 VALUES (?, 'x', ?, 'READER')
                 """, username, username);
         return jdbc.queryForObject("SELECT id FROM account WHERE username = ?", Long.class, username);
+    }
+
+    private static int migrationVersion(String script) {
+        return Integer.parseInt(script.substring(1, script.indexOf("__")));
     }
 
     private long insertTitle(String name) {
