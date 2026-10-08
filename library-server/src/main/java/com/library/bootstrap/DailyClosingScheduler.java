@@ -38,32 +38,39 @@ public final class DailyClosingScheduler implements SmartInitializingSingleton {
     @Scheduled(cron = "${library.closing.daily-cron:0 0 0 * * *}",
             zone = "${library.closing.time-zone:Asia/Shanghai}")
     public synchronized void closePreviousBusinessDate() {
-        var today = clock.today();
-        var yesterday = today.minusDays(1);
-        var next = status.firstUnclosedDateThrough(yesterday);
-        while (next.isPresent()) {
+        while (true) {
+            var yesterday = clock.today().minusDays(1);
+            var next = status.firstUnclosedDateThrough(yesterday);
+            if (next.isEmpty()) {
+                // Catch-up can cross midnight before startup has registered the next cron trigger.
+                if (!yesterday.equals(clock.today().minusDays(1))) continue;
+                var reopened = closing.reopen(new ClosingCommands.ReopenCommand(BusinessDate.of(yesterday)));
+                if (reopened instanceof ModuleResult.Rejected<ClosingCommands.ReopenedDate> rejected) {
+                    log.error("Automatic reopen rejected throughBusinessDate={} code={} reasons={}; administrator recovery is available",
+                            yesterday, rejected.code(), rejected.reasons());
+                    return;
+                }
+                if (!yesterday.equals(clock.today().minusDays(1))) continue;
+                log.info("Daily close caught up through businessDate={}; ordinary writes reopened automatically", yesterday);
+                return;
+            }
+
             var date = next.get();
+            if (status.requiresManualRecovery(date)) {
+                log.error("Automatic daily close stopped businessDate={}; retry budget exhausted, administrator recovery is required", date);
+                return;
+            }
             var outcome = closing.closeBusinessDate(new ClosingCommands.ClosingCommand(BusinessDate.of(date)));
             if (outcome instanceof ModuleResult.Rejected<ClosingCommands.ClosingRun> rejected) {
-                log.error("Scheduled daily close rejected businessDate={} code={} reasons={}",
-                        date, rejected.code(), rejected.reasons());
+                log.error("Daily close rejected businessDate={} code={} reasons={}", date, rejected.code(), rejected.reasons());
                 return;
             }
             var run = ((ModuleResult.Accepted<ClosingCommands.ClosingRun>) outcome).value();
             if (!"SUCCEEDED".equals(run.status())) {
-                log.error("Scheduled daily close did not succeed businessDate={} status={}", date, run.status());
+                log.error("Daily close did not succeed businessDate={} status={}", date, run.status());
                 return;
             }
-            log.info("Scheduled daily close completed businessDate={} status={}", date, run.status());
-            next = status.firstUnclosedDateThrough(yesterday);
+            log.info("Daily close completed businessDate={} status={}", date, run.status());
         }
-
-        var reopened = closing.reopen(new ClosingCommands.ReopenCommand(BusinessDate.of(yesterday)));
-        if (reopened instanceof ModuleResult.Rejected<ClosingCommands.ReopenedDate> rejected) {
-            log.error("Automatic reopen rejected throughBusinessDate={} code={} reasons={}; administrator recovery is available",
-                    yesterday, rejected.code(), rejected.reasons());
-            return;
-        }
-        log.info("Daily close caught up through businessDate={}; ordinary writes reopened automatically", yesterday);
     }
 }

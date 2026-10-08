@@ -29,6 +29,11 @@ public class PostgresClosingStore implements ClosingStore {
                 """,rs->rs.next()?Optional.of(rs.getDate(1).toLocalDate()):Optional.empty(),
                 Date.valueOf(baseline),Date.valueOf(inclusiveDate));
     }
+    @Override public boolean requiresManualRecovery(LocalDate date){
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM closing_batch WHERE business_date=? AND status='MANUAL')",
+                Boolean.class, Date.valueOf(date)));
+    }
     @Override public void beginDraining(LocalDate date){jdbc.update("UPDATE closing_admission SET draining=TRUE,updated_at=now() WHERE scope='GLOBAL'");}
     /** 隔离事务（提交即逻辑 T）：未到馆处理、清点、结算三阶段与事件在同一事务（DD-0004 §1、SC-Q5）。 */
     @Override @Transactional public String isolateAndRun(LocalDate date){

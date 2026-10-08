@@ -5,6 +5,7 @@ import java.util.Optional;
 
 public interface ClosingStore {
     Optional<LocalDate> firstUnclosedDateThrough(LocalDate inclusiveDate);
+    boolean requiresManualRecovery(LocalDate date);
     void beginDraining(LocalDate date);
     String isolateAndRun(LocalDate date);
     Failure markFailure(LocalDate date);

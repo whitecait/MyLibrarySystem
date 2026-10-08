@@ -11,6 +11,7 @@ public final class InMemoryClosingStore implements ClosingStore {
             if(!"SUCCEEDED".equals(batches.get(date)))return Optional.of(date);
         return Optional.empty();
     }
+    public boolean requiresManualRecovery(LocalDate d){return "MANUAL".equals(batches.get(d));}
     public void beginDraining(LocalDate d){draining=true;}
     public String isolateAndRun(LocalDate d){batches.put(d,"SUCCEEDED");if(firstBusinessDate==null)firstBusinessDate=d;return "SUCCEEDED";}
     public Failure markFailure(LocalDate d){batches.put(d,"MANUAL");return new Failure(2,1,"MANUAL");}

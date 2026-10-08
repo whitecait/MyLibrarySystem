@@ -34,14 +34,16 @@
       "InvSuccessfulDatesNotRepeated",
       "InvOpenOnlyWhenCaughtUp",
       "InvFailureKeepsIsolation",
-      "InvWritesAfterRecovery"
+      "InvWritesAfterRecovery",
+      "InvNoFutureDateClosed"
     ],
     "probes": [
       "ProbeNotStartupCatchUp",
       "ProbeNotTwoMissingDatesRecovered",
       "ProbeNotRestartRecovery",
       "ProbeNotPreservedSuccessfulDate",
-      "ProbeNotFailureIsolation"
+      "ProbeNotFailureIsolation",
+      "ProbeNotStartupCrossedMidnight"
     ],
     "timeout_seconds": 180,
     "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."

@@ -741,6 +741,8 @@ class P1CoreCirculationRulesTest {
                     SELECT count(*) FROM audit_event
                     WHERE event_type='WAITLIST_ASSIGNED' AND detail->>'relatedId'=?
                     """, Integer.class, Long.toString(waitlistTx))).isZero();
+            // A restart/next automatic check must preserve the exhausted persistent budget.
+            dailyClosingScheduler.closePreviousBusinessDate();
             assertThat(jdbc.queryForMap("SELECT status,attempts FROM closing_batch WHERE business_date=?",
                     java.sql.Date.valueOf(closingDate))).containsEntry("status", "MANUAL")
                     .containsEntry("attempts", 2);
