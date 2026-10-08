@@ -42,6 +42,7 @@ trap 'exit 143' TERM
 } > "$evidence/environment.txt"
 dc config --quiet
 bash scripts/test-database-readiness.sh > "$evidence/readiness-regression.txt" 2>&1
+python3 scripts/test-frontend-bundle.py > "$evidence/frontend-bundle-regression.txt" 2>&1
 dc build --pull
 sql() { dc exec -T database psql -U library -d library -v ON_ERROR_STOP=1 -Atc "$1"; }
 check() {
@@ -59,10 +60,10 @@ check() {
   done
   address="$(dc port frontend 80)"
   curl --fail --silent --show-error --connect-timeout 3 --max-time 15 "http://$address/" > "$evidence/$phase-index.html"
-  # Check that the delivered HTML references the current application shell bundle.
+  # Check the delivered application entry without depending on visible page text.
   asset="$(python3 -c 'import re,sys; print(re.search(r"src=\"([^\"]+\.js)\"",open(sys.argv[1]).read())[1])' "$evidence/$phase-index.html")"
   curl --fail --silent --show-error --connect-timeout 3 --max-time 15 "http://$address$asset" > "$evidence/$phase-app.js"
-  python3 -c 'import sys; assert "MyLibrarySystem" in open(sys.argv[1]).read()' "$evidence/$phase-app.js"
+  python3 scripts/check-frontend-bundle.py "$evidence/$phase-app.js"
   curl --fail --silent --show-error --connect-timeout 3 --max-time 15 "http://$address/api/health" > "$evidence/$phase-health.json"
   python3 -c 'import json,sys; assert json.load(open(sys.argv[1])) == {"status":"UP"}' "$evidence/$phase-health.json"
   test "$(sql 'SELECT 1')" = 1

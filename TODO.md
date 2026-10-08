@@ -2,6 +2,8 @@
 
 引用文档：
 
+- [本轮本地修改源码提交 3a03a4d](https://github.com/whitecait/Mylibrary/commit/3a03a4da58dcd0b76ca31bdef2fc29fc53f5e91f)
+- [本轮源码 CI（四项通过，Compose 失败）](https://github.com/whitecait/Mylibrary/actions/runs/37771624213)
 - [现代书目与阅读演示追加记录](artifacts/modern-demo-import-20261008/REPORT.md)
 - [日结自动恢复与本地运行更新](artifacts/closing-recovery-20261007/REPORT.md)
 - [AI 会话闭馆协调诊断](artifacts/closing-startup-diagnosis-20261007/REPORT.md)
@@ -30,10 +32,11 @@
 
 下列任务是该目标的执行分解。未勾选项尚未完成。旧批次验收状态不作为当前工作排期；当前候选的发布结论以实际结果为准。
 
-本地预览后端仍运行固定提交 `19b77e70a46e2c30c342eb7bfe8f375d59285d2b` 的镜像。PR [#9](https://github.com/whitecait/Mylibrary/pull/9) 已以普通 merge 方式合入远程 `main`，merge commit 为 [`39c246bc1773610a7a941dd2dc47d70e98856c75`](https://github.com/whitecait/Mylibrary/commit/39c246bc1773610a7a941dd2dc47d70e98856c75)；Issue [#8](https://github.com/whitecait/Mylibrary/issues/8) 已自动关闭。推送 CI、PR CI 与合并后 main CI 五项作业均已通过。已刷新 `origin/main` 到 `39c246bc1773610a7a941dd2dc47d70e98856c75`；权威本地 `main` HEAD 仍为基线 `3a9f142f5427b950b211d8c7607660cda3a5c3b5`，工作区 102 条状态项保持原样。运行镜像内容与 merge tree 一致，合并后未重新部署。ECS 尚未部署，最终前端候选仍未固定。
+本地预览后端仍运行固定提交 `19b77e70a46e2c30c342eb7bfe8f375d59285d2b` 的镜像。PR [#9](https://github.com/whitecait/Mylibrary/pull/9) 已以普通 merge 方式合入远程 `main`，merge commit 为 [`39c246bc1773610a7a941dd2dc47d70e98856c75`](https://github.com/whitecait/Mylibrary/commit/39c246bc1773610a7a941dd2dc47d70e98856c75)；Issue [#8](https://github.com/whitecait/Mylibrary/issues/8) 已自动关闭。推送 CI、PR CI 与合并后 main CI 五项作业均已通过。PR #9 合并核对时，`origin/main` 刷新到 `39c246bc1773610a7a941dd2dc47d70e98856c75`，权威本地 `main` HEAD 仍为基线 `3a9f142f5427b950b211d8c7607660cda3a5c3b5`，工作区保留 102 条状态项。2026-10-08，本轮页面、书目导入工具和文档整理随后固定为源码提交 `3a03a4d`，并同步 GitHub `main`。运行镜像内容与 merge tree 一致，合并后未重新部署。ECS 尚未部署，最终前端候选仍未固定。
 
 ## 本轮已完成
 
+- [x] 提交并同步当前页面、书目导入工具和文档整理，源码为 [`3a03a4d`](https://github.com/whitecait/Mylibrary/commit/3a03a4da58dcd0b76ca31bdef2fc29fc53f5e91f)；304 项前端、12 项导入脚本测试及相关门禁通过，文档结构检查无错误。
 - [x] 核对并修复 AI 持续闭馆协调：复现实际拒绝与漏结，固定提交通过后更新本地后端；启动补结成功后自动开放，第二次重启不重复结算。
 - [x] 盘点 Git 未追踪及忽略文档，区分文档、历史证据和书籍语料。
 - [x] 移出旧计划、历史验收报告、快照和旧交接材料，并保存本机恢复副本。
@@ -55,7 +58,7 @@
 - [ ] 核对登录、预约／取书、借阅／续借／归还、罚款与管理入口的核心操作。确认页面反馈与真实接口结果一致。
 - [ ] 对最终页面候选执行前端测试、契约／架构／ESLint 门禁和 HTTP 模式构建，记录同一候选的实际结果。
 - [ ] 核对 ECS 实例的系统、架构、资源与访问入口，明确模型配置、数据持久化、账号初始化和启动方式。
-- [ ] 固定发布候选的源码提交，纳入当前未提交的前端修改，更新版本与候选记录。
+- [ ] 根据实机与 ECS 验证结果固定最终发布候选，核对源码、镜像和运行包身份。当前页面与导入工具已提交，本轮同步没有形成最终发布接受结论。
 
 ## 第2日：ECS 部署验证与发布定版
 
@@ -89,6 +92,7 @@
 
 ## 修订记录
 
+- 2026-10-08：登记本轮页面、书目导入工具和文档整理提交至 3a03a4d 并同步 GitHub main。304 项前端、12 项导入脚本及文档结构检查通过。ECS 部署与 Windows 实页复核仍未完成。
 - 2026-10-08：登记 1,000 条现代书目与 5 册演示图书追加、ISBN 清洗、2,723 页 PDF 文字阅读、备份恢复及当前预览验证。
 - 2026-10-07：登记固定提交后端与形式化通过、启动补结和本地后端更新；将 AI 闭馆协调阻断改为已完成，保留 ECS、远端 CI、GUI 和备份恢复演练未完成状态。
 - 2026-10-07：根据用户明确授权，登记修复分支推送、Issue #8、PR #9 与两轮 CI 全部通过；保留尚未合并、ECS、GUI 和备份恢复演练边界。

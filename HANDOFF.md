@@ -2,6 +2,8 @@
 
 引用文档：
 
+- [本轮本地修改源码提交 3a03a4d](https://github.com/whitecait/Mylibrary/commit/3a03a4da58dcd0b76ca31bdef2fc29fc53f5e91f)
+- [本轮源码 CI（四项通过，Compose 失败）](https://github.com/whitecait/Mylibrary/actions/runs/37771624213)
 - [现代书目与阅读演示追加记录](artifacts/modern-demo-import-20261008/REPORT.md)
 - [日结自动恢复与本地运行更新](artifacts/closing-recovery-20261007/REPORT.md)
 - [AI 会话闭馆协调诊断](artifacts/closing-startup-diagnosis-20261007/REPORT.md)
@@ -47,7 +49,7 @@
 
 最近一次页面修订报告记录：47 个测试文件、304 项前端测试通过，契约、样例同步、模块边界、ESLint 与 HTTP 模式构建通过。本地预览曾更新至 `http://127.0.0.1:40424/`，六个在线文件与构建一致，健康及书目查询通过。完整分类与随机图书修订已更新同一入口，6 个在线资源与构建一致。真实 HTTP 组件检查通过 102 个分类、三本书的真实详情及分类筛选。以上为已保存的实际验证结果。
 
-本版 Windows 原生视觉与操作复查尚未登记完成。旧账号横向溢出和馆员事件呈现反馈，需要在当前页面重新核对。前端修改及新增文件仍未提交；发布前必须固定同一候选的源码、镜像和运行包身份。
+本版 Windows 原生视觉与操作复查尚未登记完成。旧账号横向溢出和馆员事件呈现反馈，需要在当前页面重新核对。本轮前端修改及新增文件已纳入源码提交 [`3a03a4d`](https://github.com/whitecait/Mylibrary/commit/3a03a4da58dcd0b76ca31bdef2fc29fc53f5e91f) 并同步 GitHub `main`。发布候选的源码、镜像和运行包身份尚未完成统一核对。
 
 ## 当前部署基础
 
@@ -112,10 +114,26 @@
 
 第二次后端重启没有重复执行日结。两日 attempts 仍为 1，控制状态仍为 `REOPENED`、`current_date=2026-10-07`，version=4、`draining=false`。健康、首页和书目请求均返回 HTTP 200；三个服务均 healthy。更新前后数据计数保持为 8 个账号、996 册书目、2,500 本副本、79,882 页全文和 0 笔借阅。当前入口为 `http://localhost:40424/`，也可通过 `http://127.0.0.1:40424/` 访问。前端没有重建，现有 6 个运行文件与 `dist` 哈希一致。
 
-PR [#9](https://github.com/whitecait/Mylibrary/pull/9) 已于 2026-10-08T10:54:54Z（Denver 04:54:54）以普通 merge 合入 `main`，merge commit 为 [`39c246bc1773610a7a941dd2dc47d70e98856c75`](https://github.com/whitecait/Mylibrary/commit/39c246bc1773610a7a941dd2dc47d70e98856c75)；PR head 为固定修复提交 `19b77e70a46e2c30c342eb7bfe8f375d59285d2b`。Issue [#8](https://github.com/whitecait/Mylibrary/issues/8) 于 10:54:56Z 自动关闭。原 5 个修复提交均保留，未绕过门禁或删除分支。推送 CI、PR CI 与合并后 [main CI](https://github.com/whitecait/Mylibrary/actions/runs/37766613941) 五项作业均已通过。PR 候选 formal 的 checkout 是 `a5a8c9b5457267856fb3bfd554657729e3c6d1f0`，PR head 是 `19b77e70a46e2c30c342eb7bfe8f375d59285d2b`；合并后 main formal 的 checkout 与 pr_head 均为 `39c246bc1773610a7a941dd2dc47d70e98856c75`。远程 `main` 与已刷新 `origin/main` 均为 `39c246bc1773610a7a941dd2dc47d70e98856c75`；`19b77e70a46e2c30c342eb7bfe8f375d59285d2b` 是其祖先，代码内容完全一致，`19b77e70a46e2c30c342eb7bfe8f375d59285d2b..origin/main` 只有 merge commit。权威本地 `main` HEAD 保持基线 `3a9f142f5427b950b211d8c7607660cda3a5c3b5`；仅刷新了 `origin/main`，没有移动 HEAD 或覆盖工作区。工作区保留 102 条状态项。运行后端镜像仍是 `mls-backend:closing-recovery-19b77e7`，其文件内容与 merge tree 一致，但合并后未重新部署。ECS 尚未更新。更新前备份尚未做恢复演练。Windows 原生 GUI 页面核对由用户完成。
+PR [#9](https://github.com/whitecait/Mylibrary/pull/9) 已于 2026-10-08T10:54:54Z（Denver 04:54:54）以普通 merge 合入 `main`，merge commit 为 [`39c246bc1773610a7a941dd2dc47d70e98856c75`](https://github.com/whitecait/Mylibrary/commit/39c246bc1773610a7a941dd2dc47d70e98856c75)；PR head 为固定修复提交 `19b77e70a46e2c30c342eb7bfe8f375d59285d2b`。Issue [#8](https://github.com/whitecait/Mylibrary/issues/8) 于 10:54:56Z 自动关闭。原 5 个修复提交均保留，未绕过门禁或删除分支。推送 CI、PR CI 与合并后 [main CI](https://github.com/whitecait/Mylibrary/actions/runs/37766613941) 五项作业均已通过。PR 候选 formal 的 checkout 是 `a5a8c9b5457267856fb3bfd554657729e3c6d1f0`，PR head 是 `19b77e70a46e2c30c342eb7bfe8f375d59285d2b`；合并后 main formal 的 checkout 与 pr_head 均为 `39c246bc1773610a7a941dd2dc47d70e98856c75`。远程 `main` 与已刷新 `origin/main` 均为 `39c246bc1773610a7a941dd2dc47d70e98856c75`；`19b77e70a46e2c30c342eb7bfe8f375d59285d2b` 是其祖先，代码内容完全一致，`19b77e70a46e2c30c342eb7bfe8f375d59285d2b..origin/main` 只有 merge commit。PR #9 合并核对时，权威本地 `main` HEAD 保持基线 `3a9f142f5427b950b211d8c7607660cda3a5c3b5`；当时仅刷新 `origin/main`，没有移动 HEAD 或覆盖工作区，保留 102 条状态项。后续本地修改的提交与同步见下一节。运行后端镜像仍是 `mls-backend:closing-recovery-19b77e7`，其文件内容与 merge tree 一致，但合并后未重新部署。ECS 尚未更新。更新前备份尚未做恢复演练。Windows 原生 GUI 页面核对由用户完成。
+
+## 本地修改提交与 GitHub 同步（2026-10-08）
+
+用户授权提交本地修改并同步 GitHub。原始快照为 `a725d187e637d57961ed2a00df1acec070b297a0`，该快照没有推送。最终源码以 `39c246bc1773610a7a941dd2dc47d70e98856c75` 为基线，固定为 [`3a03a4d`](https://github.com/whitecait/Mylibrary/commit/3a03a4da58dcd0b76ca31bdef2fc29fc53f5e91f)，并正常推送到 GitHub `main`。
+
+整合时解决七处文档修订记录与历史链接冲突。整合后的提交树与原始快照完全一致，所有保存文件的 SHA-256 均一致。相对远端基线，本次提交变更 93 个文件，包含页面、模态与 AI 交互、书目发现、导入脚本与测试、文档整理和追踪规则。后端与形式模型源码已经合入基线，本次没有重复修改这些源码。
+
+本轮 WSL 使用 Node 22.23.2 和 npm 10.9.8。47 个前端测试文件、304 项测试通过。契约、样例同步、模块边界、ESLint 与 HTTP 模式构建通过。两份导入脚本测试各通过 6 项。
+
+文档结构检查覆盖 246 个唯一标识及 134 行追踪矩阵，错误数为零。日志与快照标识位于 `/tmp/mylibrary-local-sync-20261008/`，该目录是本机临时记录。源码推送的 CI 入口见[本轮源码 CI（四项通过，Compose 失败）](https://github.com/whitecait/Mylibrary/actions/runs/37771624213)，本段记录的测试结果来自本地执行。
+
+源码提交的首轮远端 CI 中，前端、后端、观测和形式验证通过，Compose 失败。失败来自应用包检查仍要求旧英文标题 `MyLibrarySystem`。当前页面已显示中文名称，实际入口包完整且正常挂载 `#app`。原断言在本地实际构建产物上连续两次失败。门禁已改为检查 `#app` 挂载并拒绝 HTML 回退资源，七项 CLI 回归及实际入口包检查通过。
+
+本轮没有更新运行中的容器、数据库或 Windows 验证副本。凭据、全文、PDF、运行数据、忽略证据和本地操作规则仍按现有追踪政策留在本机。ECS 部署、Windows 实页复核及最终发布候选仍未完成。
 
 ## 修订记录
 
+- 2026-10-08：登记首次源码 CI 的四项通过及 Compose 标题断言失败。门禁改为检查应用挂载，七项回归与实际构建产物检查通过。
+- 2026-10-08：登记本轮页面、书目导入工具和文档整理提交至 3a03a4d 并同步 GitHub main。304 项前端、12 项导入脚本及文档结构检查通过。ECS 部署与 Windows 实页复核仍未完成。
 - 2026-10-08：登记 1,000 条现代书目与 5 册演示图书追加、ISBN 清洗、2,723 页 PDF 文字阅读、备份恢复及当前预览验证。
 - 2026-10-07：登记固定提交验证、闭馆启动补结、自动开放、后端本地更新、第二次重启不重复结算及尚未完成的 ECS/GUI/远端验证。
 - 2026-10-07：根据用户明确授权，登记修复分支推送、Issue #8、PR #9 与两轮 CI 全部通过；保留合并、ECS、GUI、未提交前端和备份恢复演练边界。

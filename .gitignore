@@ -137,3 +137,7 @@ scripts/delivery/__pycache__/
 !scripts/append-book-datasets.py
 
 !scripts/test-append-book-datasets.py
+
+# Compose frontend entry validation and its regression tests.
+!scripts/check-frontend-bundle.py
+!scripts/test-frontend-bundle.py

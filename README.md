@@ -2,6 +2,8 @@
 
 引用文档：
 
+- [本轮本地修改源码提交 3a03a4d](https://github.com/whitecait/Mylibrary/commit/3a03a4da58dcd0b76ca31bdef2fc29fc53f5e91f)
+- [本轮源码 CI（四项通过，Compose 失败）](https://github.com/whitecait/Mylibrary/actions/runs/37771624213)
 - [现代书目与阅读演示追加记录](artifacts/modern-demo-import-20261008/REPORT.md)
 - [日结自动恢复与本地运行更新](artifacts/closing-recovery-20261007/REPORT.md)
 - [当前交接记录](HANDOFF.md)
@@ -31,9 +33,9 @@
 
 最近一次页面修订记录为 47 个测试文件、304 项前端测试通过，契约、架构、ESLint 与 HTTP 模式构建通过。上述结果对应本次首页修订。实机视觉与操作结果按实际执行另行登记。
 
-当前前端修改仍在未提交工作树中。现有 Compose 入口绑定本机环回地址；ECS 的访问入口、运行配置和同版启动验证列在冲刺待办中。当前工作区不等同于已封存的发布候选。
+2026-10-08，本轮页面、书目导入工具和文档整理已固定为源码提交 [`3a03a4d`](https://github.com/whitecait/Mylibrary/commit/3a03a4da58dcd0b76ca31bdef2fc29fc53f5e91f)，并同步到 GitHub `main`。该提交以 `39c246b` 为基线，保留已合入的日结修复。304 项前端测试、契约、架构、ESLint、HTTP 构建、12 项导入脚本测试和文档结构检查通过。现有 Compose 入口绑定本机环回地址。ECS 的访问入口、运行配置和同版启动验证尚未完成，当前提交没有形成发布接受结论。
 
-本地预览后端仍运行固定闭馆恢复提交 `19b77e70a46e2c30c342eb7bfe8f375d59285d2b` 的镜像；其文件内容与远程 main merge commit [`39c246bc1773610a7a941dd2dc47d70e98856c75`](https://github.com/whitecait/Mylibrary/commit/39c246bc1773610a7a941dd2dc47d70e98856c75) 一致，合并后未重新部署。PR [#9](https://github.com/whitecait/Mylibrary/pull/9) 已合并，Issue [#8](https://github.com/whitecait/Mylibrary/issues/8) 已关闭；推送、PR 与合并后 main CI 五项作业均通过。本地 `main` HEAD 仍为基线 `3a9f142f5427b950b211d8c7607660cda3a5c3b5`，`origin/main` 已刷新到 `39c246bc1773610a7a941dd2dc47d70e98856c75`；未提交页面修改仍保留且未推送。ECS 尚未更新，Windows 原生页面复核仍待用户执行。详见[日结恢复报告](artifacts/closing-recovery-20261007/REPORT.md)。
+本地预览后端仍运行固定闭馆恢复提交 `19b77e70a46e2c30c342eb7bfe8f375d59285d2b` 的镜像；其文件内容与远程 main merge commit [`39c246bc1773610a7a941dd2dc47d70e98856c75`](https://github.com/whitecait/Mylibrary/commit/39c246bc1773610a7a941dd2dc47d70e98856c75) 一致，合并后未重新部署。PR [#9](https://github.com/whitecait/Mylibrary/pull/9) 已合并，Issue [#8](https://github.com/whitecait/Mylibrary/issues/8) 已关闭；推送、PR 与合并后 main CI 五项作业均通过。PR #9 合并核对时，本地 `main` HEAD 仍为基线 `3a9f142f5427b950b211d8c7607660cda3a5c3b5`，`origin/main` 刷新到 `39c246bc1773610a7a941dd2dc47d70e98856c75`，页面修改尚未提交。本轮页面与工具的后续提交和同步见上文。ECS 尚未更新，Windows 原生页面复核仍待用户执行。详见[日结恢复报告](artifacts/closing-recovery-20261007/REPORT.md)。
 
 当前预览库包含 2,001 册书目：996 册 Gutenberg 全文、1,000 条现代开放获取元数据及 5 册阅读演示图书。5 册演示图书提供 PDF 提取文字的分页阅读。追加与备份验证已完成。
 
@@ -57,6 +59,7 @@
 
 ## 修订记录
 
+- 2026-10-08：登记本轮页面、书目导入工具和文档整理提交至 3a03a4d 并同步 GitHub main。304 项前端、12 项导入脚本及文档结构检查通过。ECS 部署与 Windows 实页复核仍未完成。
 - 2026-10-08：登记 1,000 条现代书目与 5 册演示图书追加、ISBN 清洗、2,723 页 PDF 文字阅读、备份恢复及当前预览验证。
 - 2026-10-07：登记本地后端闭馆自动恢复、启动补结、再次重启不重复结算及仍未完成的 ECS／远端验证。
 - 2026-10-07：根据用户明确授权，登记修复分支已推送、Issue #8 已创建、PR #9 开放及两轮 CI 全部通过；页面修改仍未推送。
