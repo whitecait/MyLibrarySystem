@@ -45,12 +45,12 @@ public final class DailyClosingScheduler implements SmartInitializingSingleton {
                 // Catch-up can cross midnight before startup has registered the next cron trigger.
                 if (!yesterday.equals(clock.today().minusDays(1))) continue;
                 var reopened = closing.reopen(new ClosingCommands.ReopenCommand(BusinessDate.of(yesterday)));
+                if (!yesterday.equals(clock.today().minusDays(1))) continue;
                 if (reopened instanceof ModuleResult.Rejected<ClosingCommands.ReopenedDate> rejected) {
                     log.error("Automatic reopen rejected throughBusinessDate={} code={} reasons={}; administrator recovery is available",
                             yesterday, rejected.code(), rejected.reasons());
                     return;
                 }
-                if (!yesterday.equals(clock.today().minusDays(1))) continue;
                 log.info("Daily close caught up through businessDate={}; ordinary writes reopened automatically", yesterday);
                 return;
             }

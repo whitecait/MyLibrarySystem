@@ -3,6 +3,7 @@
 ## 引用文档
 
 - [内部接口与实现对应](../docs/04-module-design/MLS-DOC-MD-0004.md)。
+- [事务边界、并发与恢复规则](../docs/03-detailed-design/MLS-DOC-DD-0004.md)。
 
 - [限定范围与迭代规则](../docs/00-governance/MLS-DOC-GOV-0008.md)。
 - [总体设计](../docs/02-overall-design/MLS-DOC-OD-0002.md)。
@@ -55,13 +56,13 @@ result.json 记录实际检出提交、PR head 提交、工作树是否存在未
 
 ClosingRecovery 对应 DailyClosingScheduler 的启动检查和共用恢复流程。Start 抽象应用启动前的检查入口，CloseSuccess 按两个到期日期处理，AutomaticOpen 仅在全部成功时恢复普通写入。Stop 保留成功日期，最多两个 Start 表示一次重启。七项安全性质检查类型、顺序、既有成功日期不重复、未追平不开放、失败保持隔离、恢复后的写入条件和当前未到期日期不处理。六个探针给出启动补结、两日漏结、重启恢复、既有成功日期保留、失败隔离及跨午夜补结轨迹。两日漏结探针要求初始到期边界包含两个日期、两日最初均未成功、D1 与 D2 在本次模型中各成功一次，之后追平并开放。重启探针要求首次 Stop 时 D1 已成功、D2 尚未成功且 horizon=2；第二次 Start 必须实际成功结算 D2，并最终以两日各成功一次、追平和开放作为出口。`interruptedCatchUp` 记录符合条件的中断，`secondStartClosedD2` 记录第二次启动期间的 D2 成功。
 
-模型的 isolated 同时抽象应用尚未就绪和持久化准入隔离，不声明两者是同一个数据库字段。Dates 最多包含两个日期。horizon 表示已到期日期边界，MidnightDuringRecovery 表示启动仍隔离时新增一个到期日期；未到期日期不能处理。writes 在每次 Start 清零，表示本启动轮的普通写入计数。失败与修复抽象为可观测结果，真实重试预算仍由 Closing 模型与数据库回归检查。该模型只枚举一次边界推进；无限日期增长、进程崩溃时数据库事务和多实例调度没有在该有限模型中证明。
+模型的 isolated 同时抽象应用尚未就绪和持久化准入隔离，不声明两者是同一个数据库字段。Dates 最多包含两个日期。horizon 表示已到期日期边界，MidnightDuringRecovery 表示启动仍隔离时新增一个到期日期；未到期日期不能处理。writes 在每次 Start 清零，表示本启动轮的普通写入计数。失败与修复抽象为可观测结果，真实重试预算仍由 Closing 模型与数据库回归检查。该模型只枚举一次边界推进；无限日期增长、进程崩溃时数据库事务、多实例调度和 PostgreSQL 控制行锁语义没有在该有限模型中证明。
 
-实现回归为 DailyClosingSchedulerTest 与 P1CoreCirculationRulesTest：实际 Spring 启动生命周期、真实 PostgreSQL 多日补结、重复执行、跨午夜、持久化 MANUAL 不再自动重试、自动开放失败、结算整体回滚及 AI 普通写入准入。模型结果与这些实现结果分别记录，不作完整活性证明。
+实现回归为 DailyClosingSchedulerTest 与 P1CoreCirculationRulesTest：实际 Spring 启动生命周期、真实 PostgreSQL 多日补结、重复执行、跨午夜、持久化 MANUAL 或 attempts 超预算不再自动重试、预算内 FAILED 恢复、自动开放失败、控制行锁等待后的最新范围复查、失败状态独立事务提交、结算整体回滚及 AI 普通写入准入。真实 SQL 锁与事务行为由这些 PostgreSQL 回归验证；有限模型不证明控制行锁实现。模型结果与实现结果分别记录，不作完整活性证明。
 
 ## 修订记录
 
-- 2026-10-07：按用户批准追加自动恢复规则、启动模型及实现映射，更新七个模型的性质数量。
+- 2026-10-07：按用户批准追加启动恢复规则、模型及实现映射；补充控制行锁、锁内最新范围与真实预算由 PostgreSQL 回归覆盖，有限模型不证明数据库锁；七个模型保持 43 项安全性质和 80 个探针。
 
 - 2026-10-02：新增通知呈现与关联事务导航的有限模型、反取反 probe 和实现映射；明确服务端读者过滤为输入假设，未扩展到通知生产、HTTP 鉴权或浏览器证明。
 
@@ -76,6 +77,7 @@ ClosingRecovery 对应 DailyClosingScheduler 的启动检查和共用恢复流�
 ## 被引用信息
 
 - [工程验证入口](../ENGINEERING.md)。
+- [事务边界、并发与恢复规则](../docs/03-detailed-design/MLS-DOC-DD-0004.md)。
 - [交付运维入口](../scripts/delivery/README.md)。
 
 - [本轮实际执行报告](../artifacts/release-gates-20261001/REPORT.md)。

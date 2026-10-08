@@ -111,6 +111,23 @@ class DailyClosingSchedulerTest {
                 "close:2026-10-07", "reopen:2026-10-07");
     }
 
+    @Test
+    void rejectedReopenAfterMidnightReturnsToCatchUpInsteadOfStopping() {
+        var now = new AtomicReference<>(Instant.parse("2026-10-07T15:59:59Z"));
+        BusinessClock changingClock = now::get;
+        var oldDueDate = LocalDate.of(2026, 10, 6);
+        var newDueDate = LocalDate.of(2026, 10, 7);
+        var closing = new RecordingClosing(oldDueDate, newDueDate);
+        closing.rejectedReopenDate = oldDueDate;
+        closing.afterReopen = () -> now.set(Instant.parse("2026-10-07T16:00:01Z"));
+
+        new DailyClosingScheduler(closing, closing, changingClock).closePreviousBusinessDate();
+
+        assertThat(closing.actions).containsExactly("close:2026-10-06", "reopen:2026-10-06",
+                "close:2026-10-07", "reopen:2026-10-07");
+        assertThat(closing.open).isTrue();
+    }
+
     private static final class RecordingClosing implements ClosingCommands, ClosingStatusQuery {
         private final TreeSet<LocalDate> missing = new TreeSet<>();
         private final List<String> actions = new ArrayList<>();
@@ -119,6 +136,7 @@ class DailyClosingSchedulerTest {
         private boolean rejectReopen;
         private boolean open;
         private LocalDate manualDate;
+        private LocalDate rejectedReopenDate;
         private Runnable afterClose = () -> {};
         private Runnable afterReopen = () -> {};
 
@@ -136,11 +154,14 @@ class DailyClosingSchedulerTest {
             return ModuleResult.Accepted.of(new ClosingRun(date.toEpochDay(), batchStatus));
         }
         @Override public ModuleResult<ReopenedDate> reopen(ReopenCommand command) {
-            actions.add("reopen:" + command.throughDate().value());
-            assertThat(missing.headSet(command.throughDate().value(), true)).isEmpty();
-            if (rejectReopen) return ModuleResult.Rejected.of("MLS-CIRC-008", "reopen rejected");
-            open = true;
+            var date = command.throughDate().value();
+            actions.add("reopen:" + date);
+            assertThat(missing.headSet(date, true)).isEmpty();
             afterReopen.run();
+            if (rejectReopen || date.equals(rejectedReopenDate)) {
+                return ModuleResult.Rejected.of("MLS-CIRC-008", "reopen rejected");
+            }
+            open = true;
             return ModuleResult.Accepted.of(new ReopenedDate("REOPENED", 1));
         }
     }

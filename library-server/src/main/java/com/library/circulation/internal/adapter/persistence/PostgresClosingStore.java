@@ -1,20 +1,24 @@
 package com.library.circulation.internal.adapter.persistence;
 
 import com.library.circulation.internal.SettlementAllocation;
+import com.library.contract.time.BusinessClock;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 @Repository
 public class PostgresClosingStore implements ClosingStore {
     private final JdbcTemplate jdbc;
     private final SettlementAllocation settlement;
-    public PostgresClosingStore(JdbcTemplate jdbc, SettlementAllocation settlement){this.jdbc=jdbc;this.settlement=settlement;}
+    private final BusinessClock clock;
+    public PostgresClosingStore(JdbcTemplate jdbc, SettlementAllocation settlement, BusinessClock clock){this.jdbc=jdbc;this.settlement=settlement;this.clock=clock;}
     @Override public Optional<LocalDate> firstUnclosedDateThrough(LocalDate inclusiveDate){
         var baseline=jdbc.query("SELECT first_business_date FROM closing_control WHERE scope='GLOBAL'",rs->{if(!rs.next())return (LocalDate)null;var date=rs.getDate(1);return date==null?null:date.toLocalDate();});
         if(baseline==null)baseline=jdbc.query("SELECT min(business_date) FROM closing_batch",rs->{if(!rs.next())return (LocalDate)null;var date=rs.getDate(1);return date==null?null:date.toLocalDate();});
@@ -30,13 +34,17 @@ public class PostgresClosingStore implements ClosingStore {
                 Date.valueOf(baseline),Date.valueOf(inclusiveDate));
     }
     @Override public boolean requiresManualRecovery(LocalDate date){
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM closing_batch WHERE business_date=? AND status='MANUAL')",
-                Boolean.class, Date.valueOf(date)));
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1 FROM closing_batch b CROSS JOIN closing_control c
+                    WHERE b.business_date=? AND b.status<>'SUCCEEDED' AND c.scope='GLOBAL'
+                      AND (b.status='MANUAL' OR b.attempts>c.retry_budget)
+                )
+                """, Boolean.class, Date.valueOf(date)));
     }
     @Override public void beginDraining(LocalDate date){jdbc.update("UPDATE closing_admission SET draining=TRUE,updated_at=now() WHERE scope='GLOBAL'");}
     /** 隔离事务（提交即逻辑 T）：未到馆处理、清点、结算三阶段与事件在同一事务（DD-0004 §1、SC-Q5）。 */
-    @Override @Transactional public String isolateAndRun(LocalDate date){
+    @Override @Transactional(propagation = Propagation.REQUIRES_NEW) public String isolateAndRun(LocalDate date){
         var day=Date.valueOf(date);
         jdbc.queryForObject("SELECT version FROM closing_control WHERE scope='GLOBAL' FOR UPDATE",Long.class);
         jdbc.update("UPDATE closing_control SET status='ISOLATED', \"current_date\"=?, first_business_date=CASE WHEN first_business_date IS NULL OR first_business_date>? THEN ? ELSE first_business_date END, version=version+1, updated_at=now() WHERE scope='GLOBAL'",day,day,day);
@@ -87,7 +95,25 @@ public class PostgresClosingStore implements ClosingStore {
             return null;
         });
     }
-    @Override public Failure markFailure(LocalDate date){jdbc.update("INSERT INTO closing_batch(business_date,status,attempts) VALUES (?,'FAILED',1) ON CONFLICT(business_date) DO UPDATE SET attempts=closing_batch.attempts+1,status='FAILED',updated_at=now()",Date.valueOf(date));var row=jdbc.queryForMap("SELECT b.attempts,c.retry_budget FROM closing_batch b CROSS JOIN closing_control c WHERE b.business_date=? AND c.scope='GLOBAL'",Date.valueOf(date));var attempts=((Number)row.get("attempts")).intValue();var budget=((Number)row.get("retry_budget")).intValue();var status=attempts>budget?"MANUAL":"RETRYING";jdbc.update("UPDATE closing_batch SET status=? WHERE business_date=?",status,Date.valueOf(date));return new Failure(attempts,budget,status);}
+    @Override @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Failure markFailure(LocalDate date){
+        jdbc.update("INSERT INTO closing_batch(business_date,status,attempts) VALUES (?,'FAILED',1) ON CONFLICT(business_date) DO UPDATE SET attempts=closing_batch.attempts+1,status='FAILED',updated_at=now()",Date.valueOf(date));
+        var row=jdbc.queryForMap("SELECT b.attempts,c.retry_budget FROM closing_batch b CROSS JOIN closing_control c WHERE b.business_date=? AND c.scope='GLOBAL'",Date.valueOf(date));
+        var attempts=((Number)row.get("attempts")).intValue();
+        var budget=((Number)row.get("retry_budget")).intValue();
+        var status=attempts>budget?"MANUAL":"RETRYING";
+        jdbc.update("UPDATE closing_batch SET status=? WHERE business_date=?",status,Date.valueOf(date));
+        return new Failure(attempts,budget,status);
+    }
     @Override public boolean caughtUpThrough(LocalDate date){return firstUnclosedDateThrough(date).isEmpty();}
-    @Override @Transactional public long reopen(LocalDate date){var version=jdbc.queryForObject("UPDATE closing_control SET status='REOPENED',\"current_date\"=?,version=version+1,updated_at=now() WHERE scope='GLOBAL' RETURNING version",Long.class,Date.valueOf(date));jdbc.update("UPDATE closing_admission SET draining=FALSE,updated_at=now() WHERE scope='GLOBAL'");return version==null?1:version;}
+    @Override @Transactional public OptionalLong reopen(LocalDate requestedThroughDate){
+        jdbc.queryForObject("SELECT version FROM closing_control WHERE scope='GLOBAL' FOR UPDATE",Long.class);
+        if(!caughtUpThrough(requestedThroughDate))return OptionalLong.empty();
+        var latestDueDate=clock.today().minusDays(1);
+        var effectiveThroughDate=requestedThroughDate.isAfter(latestDueDate)?requestedThroughDate:latestDueDate;
+        if(!caughtUpThrough(effectiveThroughDate))return OptionalLong.empty();
+        var version=jdbc.queryForObject("UPDATE closing_control SET status='REOPENED',\"current_date\"=?,version=version+1,updated_at=now() WHERE scope='GLOBAL' RETURNING version",Long.class,Date.valueOf(effectiveThroughDate));
+        jdbc.update("UPDATE closing_admission SET draining=FALSE,updated_at=now() WHERE scope='GLOBAL'");
+        return OptionalLong.of(version==null?1:version);
+    }
 }

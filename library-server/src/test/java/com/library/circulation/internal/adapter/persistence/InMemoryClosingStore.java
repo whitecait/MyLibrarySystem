@@ -16,6 +16,6 @@ public final class InMemoryClosingStore implements ClosingStore {
     public String isolateAndRun(LocalDate d){batches.put(d,"SUCCEEDED");if(firstBusinessDate==null)firstBusinessDate=d;return "SUCCEEDED";}
     public Failure markFailure(LocalDate d){batches.put(d,"MANUAL");return new Failure(2,1,"MANUAL");}
     public boolean caughtUpThrough(LocalDate d){return firstUnclosedDateThrough(d).isEmpty();}
-    public long reopen(LocalDate d){draining=false;return ++epoch;}
+    public OptionalLong reopen(LocalDate d){if(!caughtUpThrough(d))return OptionalLong.empty();draining=false;return OptionalLong.of(++epoch);}
     public boolean draining(){return draining;}
 }

@@ -535,6 +535,55 @@ class P1CoreCirculationRulesTest {
     }
 
     @Test
+    void startupDoesNotRetryPersistedFailedBatchPastRetryBudget() {
+        var today = businessClock.today();
+        var failedDate = today.minusDays(2);
+        var latestDueDate = today.minusDays(1);
+        resetClosingControl(failedDate, "ISOLATED", true);
+        jdbc.update("UPDATE closing_control SET retry_budget=1 WHERE scope='GLOBAL'");
+        jdbc.update("DELETE FROM closing_batch WHERE business_date BETWEEN ? AND ?",
+                java.sql.Date.valueOf(failedDate), java.sql.Date.valueOf(latestDueDate));
+        jdbc.update("INSERT INTO closing_batch(business_date,status,attempts) VALUES (?,'FAILED',2)",
+                java.sql.Date.valueOf(failedDate));
+
+        dailyClosingScheduler.closePreviousBusinessDate();
+
+        assertThat(jdbc.queryForMap("SELECT status,attempts FROM closing_batch WHERE business_date=?",
+                java.sql.Date.valueOf(failedDate))).containsEntry("status", "FAILED")
+                .containsEntry("attempts", 2);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM closing_batch WHERE business_date>?",
+                Integer.class, java.sql.Date.valueOf(failedDate))).isZero();
+        assertThat(jdbc.queryForObject("SELECT status FROM closing_control WHERE scope='GLOBAL'", String.class))
+                .isEqualTo("ISOLATED");
+        assertThat(jdbc.queryForObject("SELECT draining FROM closing_admission WHERE scope='GLOBAL'", Boolean.class))
+                .isTrue();
+        assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/ai/sessions"))).isFalse();
+    }
+
+    @Test
+    void startupRetriesPersistedFailedBatchWithinRetryBudget() {
+        var today = businessClock.today();
+        var failedDate = today.minusDays(2);
+        var latestDueDate = today.minusDays(1);
+        resetClosingControl(failedDate, "ISOLATED", true);
+        jdbc.update("UPDATE closing_control SET retry_budget=1 WHERE scope='GLOBAL'");
+        jdbc.update("DELETE FROM closing_batch WHERE business_date BETWEEN ? AND ?",
+                java.sql.Date.valueOf(failedDate), java.sql.Date.valueOf(latestDueDate));
+        jdbc.update("INSERT INTO closing_batch(business_date,status,attempts) VALUES (?,'FAILED',1)",
+                java.sql.Date.valueOf(failedDate));
+
+        dailyClosingScheduler.closePreviousBusinessDate();
+
+        assertThat(jdbc.queryForMap("SELECT status,attempts FROM closing_batch WHERE business_date=?",
+                java.sql.Date.valueOf(failedDate))).containsEntry("status", "SUCCEEDED")
+                .containsEntry("attempts", 2);
+        assertThat(jdbc.queryForMap("SELECT status,attempts FROM closing_batch WHERE business_date=?",
+                java.sql.Date.valueOf(latestDueDate))).containsEntry("status", "SUCCEEDED")
+                .containsEntry("attempts", 1);
+        assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/ai/sessions"))).isTrue();
+    }
+
+    @Test
     void dailyCloseWaitsForAdmittedWriteToCommitAndPreservesIt() throws Exception {
         var today = businessClock.today();
         var closingDate = today.minusDays(1);
@@ -586,6 +635,76 @@ class P1CoreCirculationRulesTest {
             assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/loans"))).isTrue();
         } finally {
             releaseWriter.countDown();
+            workers.shutdownNow();
+        }
+    }
+
+    @Test
+    void administratorCannotReopenUsingOldThroughDateWhenNewestDueBatchIsMissing() {
+        var today = businessClock.today();
+        var requestedThrough = today.minusDays(2);
+        var latestDue = today.minusDays(1);
+        resetClosingControl(requestedThrough, "ISOLATED", true);
+        jdbc.update("DELETE FROM closing_batch WHERE business_date BETWEEN ? AND ?",
+                java.sql.Date.valueOf(requestedThrough), java.sql.Date.valueOf(latestDue));
+        jdbc.update("INSERT INTO closing_batch(business_date,status,attempts) VALUES (?,'SUCCEEDED',1)",
+                java.sql.Date.valueOf(requestedThrough));
+
+        var result = closing.reopen(new ClosingCommands.ReopenCommand(BusinessDate.of(requestedThrough)));
+
+        assertThat(result).isInstanceOf(ModuleResult.Rejected.class);
+        assertThat(((ModuleResult.Rejected<?>) result).code()).isEqualTo("MLS-CIRC-008");
+        assertThat(jdbc.queryForObject("SELECT status FROM closing_control WHERE scope='GLOBAL'", String.class))
+                .isEqualTo("ISOLATED");
+        assertThat(jdbc.queryForObject("SELECT draining FROM closing_admission WHERE scope='GLOBAL'", Boolean.class))
+                .isTrue();
+        assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/ai/sessions"))).isFalse();
+    }
+
+    @Test
+    void reopenRechecksLatestBatchAfterWaitingForControlRowLock() throws Exception {
+        var latestDue = businessClock.today().minusDays(1);
+        resetClosingControl(latestDue, "ISOLATED", true);
+        jdbc.update("DELETE FROM closing_batch WHERE business_date=?", java.sql.Date.valueOf(latestDue));
+        jdbc.update("INSERT INTO closing_batch(business_date,status,attempts) VALUES (?,'SUCCEEDED',1)",
+                java.sql.Date.valueOf(latestDue));
+
+        var controlLocked = new CountDownLatch(1);
+        var releaseControl = new CountDownLatch(1);
+        var reopenStarted = new CountDownLatch(1);
+        ExecutorService workers = Executors.newFixedThreadPool(2);
+        try {
+            var holder = CompletableFuture.runAsync(() -> unitOfWork.inTransaction(() -> {
+                jdbc.queryForObject("SELECT version FROM closing_control WHERE scope='GLOBAL' FOR UPDATE", Long.class);
+                controlLocked.countDown();
+                awaitLatch(releaseControl);
+                jdbc.update("UPDATE closing_batch SET status='MANUAL',attempts=2 WHERE business_date=?",
+                        java.sql.Date.valueOf(latestDue));
+            }), workers);
+            assertThat(controlLocked.await(5, TimeUnit.SECONDS)).isTrue();
+
+            var reopen = CompletableFuture.supplyAsync(() -> {
+                reopenStarted.countDown();
+                return closing.reopen(new ClosingCommands.ReopenCommand(BusinessDate.of(latestDue)));
+            }, workers);
+            assertThat(reopenStarted.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(awaitClosingControlLockWait()).isTrue();
+
+            releaseControl.countDown();
+            holder.get(10, TimeUnit.SECONDS);
+            var result = reopen.get(10, TimeUnit.SECONDS);
+
+            assertThat(result).isInstanceOf(ModuleResult.Rejected.class);
+            assertThat(((ModuleResult.Rejected<?>) result).code()).isEqualTo("MLS-CIRC-008");
+            assertThat(jdbc.queryForObject("SELECT status FROM closing_batch WHERE business_date=?",
+                    String.class, java.sql.Date.valueOf(latestDue))).isEqualTo("MANUAL");
+            assertThat(jdbc.queryForObject("SELECT status FROM closing_control WHERE scope='GLOBAL'", String.class))
+                    .isEqualTo("ISOLATED");
+            assertThat(jdbc.queryForObject("SELECT draining FROM closing_admission WHERE scope='GLOBAL'", Boolean.class))
+                    .isTrue();
+            assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/ai/sessions"))).isFalse();
+        } finally {
+            releaseControl.countDown();
             workers.shutdownNow();
         }
     }
@@ -722,7 +841,10 @@ class P1CoreCirculationRulesTest {
                 FOR EACH ROW EXECUTE FUNCTION p1_fail_closing_success()
                 """);
         try {
-            dailyClosingScheduler.closePreviousBusinessDate();
+            var closeResult = unitOfWork.inTransaction(() -> closing.closeBusinessDate(
+                    new ClosingCommands.ClosingCommand(BusinessDate.of(closingDate))));
+            assertThat(closeResult).isInstanceOf(ModuleResult.Rejected.class);
+            assertThat(((ModuleResult.Rejected<?>) closeResult).code()).isEqualTo("MLS-CIRC-014");
 
             assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/ai/sessions"))).isFalse();
             assertThat(jdbc.queryForObject("SELECT draining FROM closing_admission WHERE scope='GLOBAL'", Boolean.class))
@@ -800,6 +922,21 @@ class P1CoreCirculationRulesTest {
 
     private String transactionStatus(long txId) {
         return jdbc.queryForObject("SELECT status FROM borrow_transaction WHERE id=?", String.class, txId);
+    }
+
+    private boolean awaitClosingControlLockWait() throws InterruptedException {
+        var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (System.nanoTime() < deadline) {
+            if (jdbc.queryForObject("""
+                    SELECT count(*) FROM pg_stat_activity
+                    WHERE state='active' AND wait_event_type='Lock'
+                      AND pid<>pg_backend_pid() AND query ILIKE '%closing_control%'
+                    """, Integer.class) > 0) {
+                return true;
+            }
+            Thread.onSpinWait();
+        }
+        return false;
     }
 
     private boolean awaitClosingAdmissionLock() throws InterruptedException {
