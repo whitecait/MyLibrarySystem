@@ -801,7 +801,7 @@ class P1CoreCirculationRulesTest {
     }
 
     @Test
-    void failedDailyCloseRollsBackReleaseAssignmentAuditAndOutboxFacts() {
+    void failedDailyCloseKeepsIsolationWhenOuterIdempotentRequestRollsBack() {
         var closingDate = businessClock.today().minusDays(4);
         resetClosingControl(closingDate, "OPEN", false);
         jdbc.update("DELETE FROM closing_batch WHERE business_date BETWEEN ? AND ?",
@@ -841,14 +841,24 @@ class P1CoreCirculationRulesTest {
                 FOR EACH ROW EXECUTE FUNCTION p1_fail_closing_success()
                 """);
         try {
-            var closeResult = unitOfWork.inTransaction(() -> closing.closeBusinessDate(
-                    new ClosingCommands.ClosingCommand(BusinessDate.of(closingDate))));
-            assertThat(closeResult).isInstanceOf(ModuleResult.Rejected.class);
-            assertThat(((ModuleResult.Rejected<?>) closeResult).code()).isEqualTo("MLS-CIRC-014");
+            IllegalStateException outerFailure = null;
+            try {
+                unitOfWork.inTransaction(() -> {
+                    assertThat(admission.acquire("/api/v1/closing/runs")).isTrue();
+                    var closeResult = closing.closeBusinessDate(
+                            new ClosingCommands.ClosingCommand(BusinessDate.of(closingDate)));
+                    assertThat(closeResult).isInstanceOf(ModuleResult.Rejected.class);
+                    assertThat(((ModuleResult.Rejected<?>) closeResult).code()).isEqualTo("MLS-CIRC-014");
+                    throw new IllegalStateException("injected outer idempotent request rollback");
+                });
+            } catch (IllegalStateException failure) {
+                outerFailure = failure;
+            }
+            assertThat(outerFailure).hasMessage("injected outer idempotent request rollback");
 
-            assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/ai/sessions"))).isFalse();
             assertThat(jdbc.queryForObject("SELECT draining FROM closing_admission WHERE scope='GLOBAL'", Boolean.class))
                     .isTrue();
+            assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/ai/sessions"))).isFalse();
             assertThat(jdbc.queryForObject("SELECT count(*) FROM closing_batch WHERE business_date > ?",
                     Integer.class, java.sql.Date.valueOf(closingDate))).isZero();
             assertThat(transactionStatus(confirmedTx)).isEqualTo("CONFIRMED");
@@ -868,6 +878,9 @@ class P1CoreCirculationRulesTest {
             assertThat(jdbc.queryForMap("SELECT status,attempts FROM closing_batch WHERE business_date=?",
                     java.sql.Date.valueOf(closingDate))).containsEntry("status", "MANUAL")
                     .containsEntry("attempts", 2);
+            assertThat(jdbc.queryForObject("SELECT draining FROM closing_admission WHERE scope='GLOBAL'", Boolean.class))
+                    .isTrue();
+            assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/ai/sessions"))).isFalse();
         } finally {
             jdbc.execute("DROP TRIGGER IF EXISTS p1_fail_closing_success ON closing_batch");
             jdbc.execute("DROP FUNCTION IF EXISTS p1_fail_closing_success()");

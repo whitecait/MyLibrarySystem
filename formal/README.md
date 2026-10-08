@@ -58,11 +58,11 @@ ClosingRecovery 对应 DailyClosingScheduler 的启动检查和共用恢复流�
 
 模型的 isolated 同时抽象应用尚未就绪和持久化准入隔离，不声明两者是同一个数据库字段。Dates 最多包含两个日期。horizon 表示已到期日期边界，MidnightDuringRecovery 表示启动仍隔离时新增一个到期日期；未到期日期不能处理。writes 在每次 Start 清零，表示本启动轮的普通写入计数。失败与修复抽象为可观测结果，真实重试预算仍由 Closing 模型与数据库回归检查。该模型只枚举一次边界推进；无限日期增长、进程崩溃时数据库事务、多实例调度和 PostgreSQL 控制行锁语义没有在该有限模型中证明。
 
-实现回归为 DailyClosingSchedulerTest 与 P1CoreCirculationRulesTest：实际 Spring 启动生命周期、真实 PostgreSQL 多日补结、重复执行、跨午夜、持久化 MANUAL 或 attempts 超预算不再自动重试、预算内 FAILED 恢复、自动开放失败、控制行锁等待后的最新范围复查、失败状态独立事务提交、结算整体回滚及 AI 普通写入准入。真实 SQL 锁与事务行为由这些 PostgreSQL 回归验证；有限模型不证明控制行锁实现。模型结果与实现结果分别记录，不作完整活性证明。
+实现回归为 DailyClosingSchedulerTest 与 P1CoreCirculationRulesTest：实际 Spring 启动生命周期、真实 PostgreSQL 多日补结、重复执行、跨午夜、持久化 MANUAL 或 attempts 超预算不再自动重试、预算内 FAILED 恢复、自动开放失败、控制行锁等待后的最新范围复查、失败状态独立事务提交，以及外层 UOW 回滚后的 draining 保留。外层回滚用例验证业务与 Outbox 回滚、失败次数和 MANUAL 状态保留、scheduler 不重试 MANUAL、普通 AI 写入仍被拒绝。真实 SQL 锁与事务行为由这些 PostgreSQL 回归验证；有限模型不证明控制行锁或 SQL 事务实现。模型结果与实现结果分别记录，不作完整活性证明。
 
 ## 修订记录
 
-- 2026-10-07：按用户批准追加启动恢复规则、模型及实现映射；补充控制行锁、锁内最新范围与真实预算由 PostgreSQL 回归覆盖，有限模型不证明数据库锁；七个模型保持 43 项安全性质和 80 个探针。
+- 2026-10-07：按用户批准追加启动恢复规则、模型及实现映射；补充控制行锁、锁内最新范围、真实预算和外层回滚后的 draining 保留由 PostgreSQL 回归覆盖，有限模型不证明数据库锁或 SQL 事务；七个模型保持 43 项安全性质和 80 个探针。
 
 - 2026-10-02：新增通知呈现与关联事务导航的有限模型、反取反 probe 和实现映射；明确服务端读者过滤为输入假设，未扩展到通知生产、HTTP 鉴权或浏览器证明。
 

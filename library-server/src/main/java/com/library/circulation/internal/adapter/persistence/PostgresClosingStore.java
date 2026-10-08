@@ -42,7 +42,8 @@ public class PostgresClosingStore implements ClosingStore {
                 )
                 """, Boolean.class, Date.valueOf(date)));
     }
-    @Override public void beginDraining(LocalDate date){jdbc.update("UPDATE closing_admission SET draining=TRUE,updated_at=now() WHERE scope='GLOBAL'");}
+    @Override @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void beginDraining(LocalDate date){jdbc.update("UPDATE closing_admission SET draining=TRUE,updated_at=now() WHERE scope='GLOBAL'");}
     /** 隔离事务（提交即逻辑 T）：未到馆处理、清点、结算三阶段与事件在同一事务（DD-0004 §1、SC-Q5）。 */
     @Override @Transactional(propagation = Propagation.REQUIRES_NEW) public String isolateAndRun(LocalDate date){
         var day=Date.valueOf(date);
