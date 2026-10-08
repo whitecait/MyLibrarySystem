@@ -17,6 +17,8 @@ describe('ClosingAdminView', () => {
     const wrapper = await mountView(ClosingAdminView)
     await flushPromises()
 
+    await wrapper.get('[data-testid="closing-reopen-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="reopen-date"]').setValue('2026-09-15')
     await wrapper.find('[data-testid="reopen-form"]').trigger('submit')
     await flushPromises()
@@ -37,6 +39,8 @@ describe('ClosingAdminView', () => {
     const wrapper = await mountView(ClosingAdminView)
     await flushPromises()
 
+    await wrapper.get('[data-testid="closing-reopen-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="reopen-form"]').trigger('submit')
     await flushPromises()
 
@@ -54,6 +58,8 @@ describe('ClosingAdminView', () => {
     const wrapper = await mountView(ClosingAdminView)
     await flushPromises()
 
+    await wrapper.get('[data-testid="closing-reopen-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="reopen-form"]').trigger('submit')
     await flushPromises()
 

@@ -2,6 +2,7 @@
   <section class="payment-simulator-view">
     <h1>模拟支付调度（受控测试操作员）</h1>
     <p class="note">仅为联调与测试提供模拟结果调度；正式支付回调由模拟器凭证发起，无页面入口。</p>
+    <ActionPanel title="调度模拟支付结果" entry-id="simulator" description="设置现有支付单的模拟回调。">
     <form data-testid="simulator-form" @submit.prevent="submit">
       <el-input v-model="orderId" data-testid="simulator-order-id" placeholder="支付单 ID" class="inline-input" />
       <select v-model="result" data-testid="simulator-result" aria-label="模拟结果">
@@ -27,10 +28,12 @@
       :title="`已调度模拟 ${resultData.simulationId}（${resultData.status}）`"
     />
     <ErrorAlert v-if="state.status === 'failure'" :failure="state.failure" />
+    </ActionPanel>
   </section>
 </template>
 
 <script setup>
+import ActionPanel from '@/components/ActionPanel.vue'
 import { ref } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'

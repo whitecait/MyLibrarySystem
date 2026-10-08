@@ -28,6 +28,8 @@ export function removeTitle({ titleId, version, reason }, options = {}) {
   return apiRequest('removeTitle', { params: { titleId }, body: { version, reason }, ...options })
 }
 
+export { getCatalogDiscovery } from './internal/discovery'
+
 export { default as PortalView } from './internal/PortalView.vue'
 export { default as TitleDetailView } from './internal/TitleDetailView.vue'
 export { default as ReadingView } from './internal/ReadingView.vue'

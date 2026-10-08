@@ -2,6 +2,7 @@
   <section class="walk-in-loans-view">
     <h1>现场借阅</h1>
     <p>馆员在服务台逐册办理；每一册独立判定，混合成败按册保留，副本可借状态不构成提交保证。</p>
+    <ActionPanel title="现场借阅办理" :active-key="aiDraftId || null" entry-id="walkin" description="逐册提交借阅，查看每册的办理结果。">
     <form data-testid="walkin-form" @submit.prevent="submit">
       <el-input
         v-model="readerId"
@@ -54,10 +55,12 @@
       </table>
     </template>
     <ErrorAlert v-if="state.status === 'failure'" :failure="state.failure" />
+    </ActionPanel>
   </section>
 </template>
 
 <script setup>
+import ActionPanel from '@/components/ActionPanel.vue'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
@@ -107,6 +110,7 @@ async function submit() {
 
 .item-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
 }

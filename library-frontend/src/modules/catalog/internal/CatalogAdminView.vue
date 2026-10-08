@@ -26,10 +26,11 @@
           </tr>
         </tbody>
       </table>
+      <ErrorAlert v-if="detailState.status === 'failure'" :failure="detailState.failure" />
       <ErrorAlert v-if="searchState.status === 'failure'" :failure="searchState.failure" />
     </div>
 
-    <div class="action-block">
+    <ActionPanel title="修改书目" entry-id="catalog-edit" :active-key="selectionRequest" description="从检索结果选择书目，修改或下架。">
       <h2>修改书目</h2>
       <form v-if="edit" data-testid="update-form" @submit.prevent="submitUpdate">
         <el-form-item label="书名"><el-input v-model="edit.title" data-testid="update-title" /></el-form-item>
@@ -67,9 +68,9 @@
       </form>
       <el-alert v-if="removeResult" type="success" :closable="false" data-testid="remove-success" title="书目已下架" />
       <ErrorAlert v-if="removeState.status === 'failure'" :failure="removeState.failure" />
-    </div>
+    </ActionPanel>
 
-    <div class="action-block">
+    <ActionPanel title="新增书目" entry-id="catalog-create" description="登记书目信息。">
       <h2>新增书目</h2>
       <form data-testid="create-form" @submit.prevent="submitCreate">
         <el-form-item label="ISBN"><el-input v-model="create.isbn" data-testid="create-isbn" /></el-form-item>
@@ -91,15 +92,18 @@
         :title="`已新增书目 ${createResult.titleId}`"
       />
       <ErrorAlert v-if="createState.status === 'failure'" :failure="createState.failure" />
-    </div>
+    </ActionPanel>
   </section>
 </template>
 
 <script setup>
+import ActionPanel from '@/components/ActionPanel.vue'
 import { reactive, ref, computed } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { createTitle, getTitle, removeTitle, searchTitles, updateTitle } from '../index'
+
+const selectionRequest = ref(null)
 
 const q = ref('')
 const results = ref([])
@@ -140,6 +144,7 @@ async function search() {
 async function selectTitle(titleId) {
   const detail = await runDetail(() => getTitle({ titleId }))
   if (detail) {
+    selectionRequest.value = (selectionRequest.value ?? 0) + 1
     const data = detail.data
     edit.value = {
       titleId: data.titleId,
@@ -173,6 +178,7 @@ async function submitUpdate() {
   updateResult.value = envelope.data
   edit.value.version = envelope.data.version
   edit.value.title = envelope.data.title
+  await search()
 }
 
 async function submitRemove() {
@@ -182,6 +188,7 @@ async function submitRemove() {
   if (!envelope) return
   removeResult.value = envelope.data
   edit.value = null
+  await search()
 }
 
 async function submitCreate() {
@@ -194,7 +201,10 @@ async function submitCreate() {
       priceCents: toCents(create.priceYuan),
     }),
   )
-  if (envelope) createResult.value = envelope.data
+  if (envelope) {
+    createResult.value = envelope.data
+    await search()
+  }
 }
 </script>
 

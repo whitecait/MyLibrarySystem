@@ -15,6 +15,8 @@ describe('PaymentSimulatorView', () => {
     const wrapper = await mountView(PaymentSimulatorView)
     await flushPromises()
 
+    await wrapper.get('[data-testid="simulator-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="simulator-order-id"]').setValue('6002')
     await wrapper.find('[data-testid="simulator-result"]').setValue('FAILURE')
     await wrapper.find('[data-testid="simulator-duplicate"]').setValue('2')

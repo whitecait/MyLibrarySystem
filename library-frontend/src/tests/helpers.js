@@ -24,8 +24,8 @@ export function createTestRouter(extraRoutes = []) {
   })
 }
 
-export async function mountView(view, { props, router = createTestRouter() } = {}) {
-  const wrapper = mount(view, { props, global: { plugins: [ElementPlus, router] } })
+export async function mountView(view, { props, router = createTestRouter(), provide = {} } = {}) {
+  const wrapper = mount(view, { props, global: { plugins: [ElementPlus, router], provide } })
   await wrapper.vm.$nextTick()
   return wrapper
 }

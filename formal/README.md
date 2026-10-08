@@ -74,10 +74,11 @@ ClosingRecovery 对应 DailyClosingScheduler 的启动检查和共用恢复流�
 
 - 2026-10-01：按用户批准计划建立可追踪门禁；日结普通轮改为显式重开，补充关闭后回调冲突路径；明确模型、真实验证和未覆盖边界。实现及本地结果与远端 CI、审计、P5 分别登记。
 
+- 2026-10-07：按用户确认的整理范围撤下旧计划、历史报告和交接材料链接。正文保留必要的历史来源标识；已登记的需求、设计与验收结论保持。
+
 ## 被引用信息
 
+- [日结自动恢复与本地运行更新](../artifacts/closing-recovery-20261007/REPORT.md)。
 - [工程验证入口](../ENGINEERING.md)。
 - [事务边界、并发与恢复规则](../docs/03-detailed-design/MLS-DOC-DD-0004.md)。
 - [交付运维入口](../scripts/delivery/README.md)。
-
-- [本轮实际执行报告](../artifacts/release-gates-20261001/REPORT.md)。

@@ -2,6 +2,7 @@
 // 未登录访问受保护页面时只保存登录续行意图，角色不足呈现 403 页面。
 // 页面组件经各模块公开入口（index.js）引用，不触碰模块 internal。
 import { createRouter, createWebHistory } from 'vue-router'
+import { isModalRoute } from './presentation'
 import { getRole, isAuthenticated } from '../platform/auth/session.js'
 import { saveContinuation } from '../platform/auth/continuation.js'
 import { AccountAdminView, LoginView, RegisterView, ReviewInitiationView } from '../modules/identity/index.js'
@@ -54,7 +55,7 @@ export function createAppRouter({ history = createWebHistory(), extraRoutes = []
   const router = createRouter({
     history,
     routes: [...routes, ...extraRoutes],
-    scrollBehavior: () => ({ top: 0 }),
+    scrollBehavior: (to, from, savedPosition) => savedPosition || ((isModalRoute(to) || isModalRoute(from)) ? false : { top: 0 }),
   })
 
   router.beforeEach((to) => {

@@ -13,6 +13,8 @@ async function mountInitiation({ fixtures } = {}) {
   installMockTransport({ fixtures })
   const wrapper = await mountView(ReviewInitiationView)
   await flushPromises()
+  await wrapper.get('[data-testid="initiation-open"]').trigger('click')
+  await flushPromises()
   return wrapper
 }
 

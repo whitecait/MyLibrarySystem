@@ -2,7 +2,7 @@
   <section class="librarian-desk-view">
     <h1>馆员工作台</h1>
 
-    <div class="action-block">
+    <ActionPanel title="归还" entry-id="desk-return" description="登记归还状况，查看罚款或异常处理结果。">
       <h2>归还</h2>
       <form data-testid="return-form" @submit.prevent="submitReturn">
         <el-input v-model="returnCopyId" data-testid="return-copy-id" placeholder="副本 ID" class="inline-input" />
@@ -33,9 +33,9 @@
         />
       </template>
       <ErrorAlert v-if="returnState.status === 'failure'" :failure="returnState.failure" />
-    </div>
+    </ActionPanel>
 
-    <div class="action-block">
+    <ActionPanel title="到台取书确认" entry-id="desk-claim" description="核对预约交易与交付副本。">
       <h2>到台取书确认</h2>
       <form data-testid="claim-form" @submit.prevent="submitClaim">
         <el-input v-model="claimTxId" data-testid="claim-tx-id" placeholder="预约交易号" class="inline-input" />
@@ -60,9 +60,9 @@
         :title="`取书完成：交易 ${claimResult.txId} 现为 ${claimResult.status ?? claimResult.outcome}`"
       />
       <ErrorAlert v-if="claimState.status === 'failure'" :failure="claimState.failure" />
-    </div>
+    </ActionPanel>
 
-    <div class="action-block">
+    <ActionPanel title="人工处置" entry-id="desk-manual" description="处理需要人工确认的交易。">
       <h2>人工处置</h2>
       <form data-testid="manual-form" @submit.prevent="submitManual">
         <el-input v-model="manualTxId" data-testid="manual-tx-id" placeholder="交易号" class="inline-input" />
@@ -84,11 +84,12 @@
         :title="`处置完成：交易 ${manualResult.txId} 现为 ${manualResult.status ?? manualResult.outcome}`"
       />
       <ErrorAlert v-if="manualState.status === 'failure'" :failure="manualState.failure" />
-    </div>
+    </ActionPanel>
   </section>
 </template>
 
 <script setup>
+import ActionPanel from '@/components/ActionPanel.vue'
 import { ref } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'

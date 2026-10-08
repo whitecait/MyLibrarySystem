@@ -260,11 +260,16 @@ describe('MyBusinessView tabs', () => {
     const wrapper = await mountBusiness()
     await wrapper.find('[data-testid="renew-601"]').trigger('click')
     await flushPromises()
+    expect(wrapper.find('[data-testid="renew-result"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="renew-modal-submit"]').trigger('click')
+    await flushPromises()
     expect(wrapper.find('[data-testid="renew-result"]').text()).toContain('2026-10-20')
     expect(calls.filter((query) => query.group === 'CURRENT_LOANS')).toHaveLength(2)
 
     await selectTab(wrapper, 'RESERVATIONS')
     await wrapper.find('[data-testid="cancel-701"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="cancel-confirm"]').trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="my-business-empty"]').exists()).toBe(true)
     expect(calls.filter((query) => query.group === 'RESERVATIONS')).toHaveLength(2)
@@ -302,6 +307,8 @@ describe('MyBusinessView tabs', () => {
     await selectTab(wrapper, 'RESERVATIONS')
     await wrapper.find('[data-testid="cancel-701"]').trigger('click')
     await flushPromises()
+    await wrapper.get('[data-testid="cancel-confirm"]').trigger('click')
+    await flushPromises()
 
     await selectTab(wrapper, 'HISTORY')
     expect(historyCalls).toBe(2)
@@ -333,6 +340,8 @@ describe('MyBusinessView tabs', () => {
     await selectTab(wrapper, 'HISTORY')
     await selectTab(wrapper, 'RESERVATIONS')
     await wrapper.find('[data-testid="cancel-701"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="cancel-confirm"]').trigger('click')
     await selectTab(wrapper, 'HISTORY')
     expect(wrapper.find('[data-testid="my-business-table"]').text()).not.toContain('B5')
 
@@ -383,6 +392,8 @@ describe('MyBusinessView tabs', () => {
     await selectTab(wrapper, 'RESERVATIONS')
     await wrapper.find('[data-testid="cancel-701"]').trigger('click')
     await flushPromises()
+    await wrapper.get('[data-testid="cancel-confirm"]').trigger('click')
+    await flushPromises()
 
     oldHistoryPage.resolve(page([transaction('LOAN', 'stale-history-row', 'RETURNED', 'STALE')], 'stale-cursor'))
     await flushPromises()
@@ -411,6 +422,8 @@ describe('MyBusinessView tabs', () => {
     await selectTab(wrapper, 'HISTORY')
     await selectTab(wrapper, 'RESERVATIONS')
     await wrapper.find('[data-testid="cancel-701"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="cancel-confirm"]').trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="error-alert"]').exists()).toBe(true)
 

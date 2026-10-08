@@ -58,7 +58,7 @@
                 v-if="item.kind === 'LOAN' && item.status === 'LENT'"
                 size="small"
                 :data-testid="`renew-${item.id}`"
-                :loading="renewState.status === 'loading'"
+                :loading="modalRenewState.status === 'loading'"
                 @click="renew(item)"
               >
                 续借
@@ -68,7 +68,7 @@
                 size="small"
                 :data-testid="`cancel-${item.id}`"
                 :loading="cancelState.status === 'loading'"
-                @click="cancelReservation(item)"
+                @click="openCancellation(item)"
               >
                 取消预约
               </el-button>
@@ -158,10 +158,9 @@
       data-testid="renew-result"
       :title="`续借成功：交易 ${renewResult.txId}，新到期日 ${renewResult.dueDate}`"
     />
-    <ErrorAlert v-if="renewState.status === 'failure'" :failure="renewState.failure" />
     <ErrorAlert v-if="cancelState.status === 'failure'" :failure="cancelState.failure" />
 
-    <el-dialog v-model="renewModalVisible" title="续借" data-testid="renew-modal">
+    <BusinessDialog :open="renewModalVisible" :assistant="!aiDraftId" title="续借" data-testid="renew-modal" @close="closeRenewModal">
       <p v-if="aiDraftId" class="note" data-testid="renew-draft-note">
         来自 AI 助手预填（草稿 {{ aiDraftId }}）；提交时走现行续借接口并重新鉴权，取消不会发送任何请求。
       </p>
@@ -173,14 +172,25 @@
           提交续借
         </el-button>
       </template>
-    </el-dialog>
+    </BusinessDialog>
 
-    <AiAssistantView can-apply-prefill data-testid="ai-panel" @prefill="applyAiPrefill" />
+    <BusinessDialog :open="Boolean(cancellation)" title="取消预约" @close="cancellation = null">
+      <template v-if="cancellation">
+        <p>确认取消预约 {{ cancellation.id }}（{{ cancellation.title || '预约事务' }}）？</p>
+        <ErrorAlert v-if="cancelState.status === 'failure'" :failure="cancelState.failure" />
+        <el-button type="primary" data-testid="cancel-confirm" :loading="cancelState.status === 'loading'" @click="confirmCancellation">确认取消预约</el-button>
+      </template>
+    </BusinessDialog>
+    <ActionPanel title="AI 借阅助手" entry-id="business-assistant" :assistant="false" button-label="询问助手">
+      <AiAssistantView can-apply-prefill data-testid="ai-panel" @prefill="applyAiPrefill" />
+    </ActionPanel>
   </section>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import BusinessDialog from '@/components/BusinessDialog.vue'
+import ActionPanel from '@/components/ActionPanel.vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { FailureKind, RequestFailure, useApiRequest } from '@/platform/http'
 import { getSessionState, isAuthenticated } from '@/platform/auth/session'
@@ -213,10 +223,10 @@ const otherBusinessState = computed(() => lists[otherKind.value] ?? newListState
 const session = getSessionState()
 let sessionGeneration = 0
 
-const renewState = reactive(newActionState())
 const cancelState = reactive(newActionState())
 const modalRenewState = reactive(newActionState())
 const renewResult = ref(null)
+const cancellation = ref(null)
 const renewModalVisible = ref(false)
 const renewModalTxId = ref('')
 const aiDraftId = ref(null)
@@ -340,11 +350,20 @@ async function runAction(actionState, executor) {
   return envelope
 }
 
-async function renew(item) {
-  const envelope = await runAction(renewState, () => renewLoan({ txId: item.id }))
-  if (!envelope) return
-  renewResult.value = envelope.data
-  await loadGroup('CURRENT_LOANS')
+function renew(item) {
+  resetActionState(modalRenewState)
+  renewResult.value = null
+  renewModalTxId.value = item.id
+  aiDraftId.value = null
+  renewModalVisible.value = true
+}
+function openCancellation(item) {
+  resetActionState(cancelState)
+  cancellation.value = item
+}
+async function confirmCancellation() {
+  await cancelReservation(cancellation.value)
+  if (cancelState.status === 'success') cancellation.value = null
 }
 
 async function cancelReservation(item) {
@@ -401,10 +420,10 @@ watch(
   () => {
     sessionGeneration += 1
     Object.values(lists).forEach(resetListState)
-    resetActionState(renewState)
     resetActionState(cancelState)
     resetActionState(modalRenewState)
     renewResult.value = null
+    cancellation.value = null
     renewModalVisible.value = false
     renewModalTxId.value = ''
     aiDraftId.value = null
@@ -417,7 +436,6 @@ watch(
 onBeforeUnmount(() => {
   sessionGeneration += 1
   Object.values(lists).forEach((list) => { list.requestId += 1 })
-  resetActionState(renewState)
   resetActionState(cancelState)
   resetActionState(modalRenewState)
 })

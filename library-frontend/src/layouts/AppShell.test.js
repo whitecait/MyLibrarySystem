@@ -36,7 +36,10 @@ vi.mock('vue-router', async () => {
     },
     RouterView: { template: '<div />' },
     useRoute: () => routeState.value,
-    useRouter: () => ({ push: routerPush }),
+    useRouter: () => ({
+      push: routerPush,
+      resolve: (path) => ({ fullPath: path, path, name: path === '/' ? 'home' : 'my-business', meta: { requiresAuth: false, roles: [] } }),
+    }),
   }
 })
 
@@ -120,6 +123,28 @@ describe('AppShell notification Banner and logout behavior', () => {
     await link.trigger('click')
     expect(routerPush).toHaveBeenCalledWith({ name: 'my-business-detail', params: { txId: '4003' } })
     expect(markReadCalls).toEqual([])
+  })
+
+  it('keeps the same compact header and role work entries on each background', async () => {
+    login({ accessToken: 'token-home-shell-reader', actor: { accountId: '1001', role: 'READER' } })
+
+    const wrapper = mountShell()
+    await flushPromises()
+
+    expect(wrapper.find('.app-shell').classes()).toContain('app-shell--home')
+    expect(wrapper.find('.brand').text()).toBe('云图公共图书馆')
+    expect(wrapper.get('[data-testid="app-nav"]').element.children).toHaveLength(2)
+    expect(wrapper.get('[data-testid="personal-info-menu"] summary').text()).toBe('个人信息')
+    expect(wrapper.find('.home-work-menu').text()).toContain('我的业务')
+    expect(wrapper.find('.home-work-menu').text()).toContain('通知')
+
+    Object.assign(routeState.value, { name: 'my-business', fullPath: '/me/business' })
+    await flushPromises()
+
+    expect(wrapper.find('.app-shell').classes()).not.toContain('app-shell--home')
+    expect(wrapper.find('.brand').text()).toBe('云图公共图书馆')
+    expect(wrapper.find('.home-work-menu').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-nav"]').text()).toContain('我的业务')
   })
 
   it('hides the banner when unread items have no valid reservation association', async () => {

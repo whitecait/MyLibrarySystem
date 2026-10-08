@@ -129,3 +129,11 @@ scripts/delivery/__pycache__/
 
 !scripts/observability-env.sh
 !scripts/test-observability-env.sh
+
+!scripts/import-book-corpus.py
+
+!scripts/test-import-book-corpus.py
+
+!scripts/append-book-datasets.py
+
+!scripts/test-append-book-datasets.py

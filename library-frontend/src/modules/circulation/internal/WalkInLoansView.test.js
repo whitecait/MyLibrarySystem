@@ -13,6 +13,8 @@ describe('WalkInLoansView', () => {
     installMockTransport({ scenarioId: 'WALKIN-MIXED-BATCH' })
     const wrapper = await mountView(WalkInLoansView)
     await flushPromises()
+    await wrapper.get('[data-testid="walkin-open"]').trigger('click')
+    await flushPromises()
 
     await wrapper.find('[data-testid="walkin-title-0"]').setValue('2001')
     await wrapper.find('[data-testid="walkin-copy-0"]').setValue('3001')
@@ -20,6 +22,8 @@ describe('WalkInLoansView', () => {
     await wrapper.find('[data-testid="walkin-title-1"]').setValue('2002')
     await wrapper.find('[data-testid="walkin-copy-1"]').setValue('3002')
     await wrapper.find('[data-testid="walkin-form"]').trigger('submit')
+    await flushPromises()
+    await wrapper.get('[data-testid="walkin-open"]').trigger('click')
     await flushPromises()
 
     const rows = wrapper.findAll('[data-testid="walkin-results"] tbody tr')
@@ -41,6 +45,8 @@ describe('WalkInLoansView', () => {
     })
     const wrapper = await mountView(WalkInLoansView)
     await flushPromises()
+    await wrapper.get('[data-testid="walkin-open"]').trigger('click')
+    await flushPromises()
 
     expect(wrapper.find('[data-testid="walkin-channel"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('馆员在服务台逐册办理')
@@ -48,6 +54,8 @@ describe('WalkInLoansView', () => {
     await wrapper.find('[data-testid="walkin-title-0"]').setValue('2001')
     await wrapper.find('[data-testid="walkin-copy-0"]').setValue('3001')
     await wrapper.find('[data-testid="walkin-form"]').trigger('submit')
+    await flushPromises()
+    await wrapper.get('[data-testid="walkin-open"]').trigger('click')
     await flushPromises()
 
     expect(captured.options.body.channel).toBe('DESK')
@@ -60,6 +68,10 @@ describe('WalkInLoansView', () => {
     await router.push('/walk-in?readerId=2&titleId=700001&copyId=800002')
     await router.isReady()
     const wrapper = await mountView(WalkInLoansView, { router })
+    await flushPromises()
+    await wrapper.get('[data-testid="walkin-open"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="walkin-open"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.find('[data-testid="walkin-reader-id"]').element.value).toBe('2')
@@ -116,9 +128,13 @@ describe('WalkInLoansView', () => {
     })
     const wrapper = await mountView(WalkInLoansView)
     await flushPromises()
+    await wrapper.get('[data-testid="walkin-open"]').trigger('click')
+    await flushPromises()
 
     await wrapper.find('[data-testid="walkin-title-0"]').setValue('2001')
     await wrapper.find('[data-testid="walkin-form"]').trigger('submit')
+    await flushPromises()
+    await wrapper.get('[data-testid="walkin-open"]').trigger('click')
     await flushPromises()
 
     expect(captured.options.body.items).toEqual([])

@@ -3,11 +3,8 @@
 > 性质：针对 2026-09-30 Windows 原生复验两项失败补充的效率回归；不改变 P3 原始验收范围。
 > 引用文档：
 >
-> - [2026-10-01 修订与测试记录](../artifacts/p3-revision-20261001/RUN-REPORT.md)
 > - [M6 验收 harness](README.md)
 > - [e2e 证据策略](EVIDENCE-POLICY.md)
-> - [P3 Windows 集中验收规格](../docs/agents/delivery-closeout-20260925/P3-windows-acceptance.spec.md)
-> - [P3 执行记录](../docs/agents/delivery-closeout-20260925/results/P3.md)
 > - [Playwright 最佳实践](https://playwright.dev/docs/best-practices)
 > - [Playwright 测试夹具](https://playwright.dev/docs/test-fixtures)
 
@@ -105,9 +102,10 @@ Windows 新候选报告已留证真实馆员草稿三字段、双实际视口预
 
 - 2026-09-30：新增两项 P3 失败的专用 Playwright runner、动态隔离夹具要求、真实模型角色链及显式一次提交边界；登记分层覆盖和正式验收边界。
 
+- 2026-10-07：按用户确认的整理范围撤下旧计划、历史报告和交接材料链接。正文保留必要的历史来源标识；已登记的需求、设计与验收结论保持。
+
 ## 被引用信息
 
 - [M6 验收 harness](README.md)。
 - [根交接记录](../HANDOFF.md)。
 - [开发任务规划](../TODO.md)。
-- [P3 执行记录](../docs/agents/delivery-closeout-20260925/results/P3.md)。

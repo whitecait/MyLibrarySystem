@@ -1,0 +1,24 @@
+:root { color: #192238; background: #f5f7fc; font-family: Inter, 'PingFang SC', 'Microsoft YaHei', sans-serif; --el-color-primary: #3458c8; }
+body { margin: 0; }
+* { box-sizing: border-box; }
+a { color: #3458c8; }
+button, input, select { font: inherit; }
+button:focus-visible, a:focus-visible, select:focus-visible { outline: 3px solid #90a9ff; outline-offset: 3px; }
+.app-shell { background: #f5f7fc; }
+.app-main { width: min(1240px, 100%); margin: 0 auto; padding: 32px !important; }
+.app-main > section { max-width: none !important; min-width: 0; }
+.app-main > section:not(.home) > h1 { color: #172554; font-size: 30px; margin: 0 0 12px; }
+.app-main .action-block, .app-main .other-business { background: #fff; border: 1px solid #dce4f2; border-radius: 16px; padding: 24px; }
+.app-main table { background: #fff; border-radius: 12px; }
+.app-main th { color: #64748b; background: #edf2fc; font-size: 13px; }
+.app-main th, .app-main td { padding: 16px 12px; }
+.app-main tr:hover td { background: #f5f8ff; }
+.app-main select, .modal-workspace select { min-height: 34px; max-width: 100%; border: 1px solid #dce4f2; border-radius: 8px; background: #fff; padding: 5px 10px; color: #334155; }
+.app-main .filters, .app-main .search-bar { flex-wrap: wrap; }
+@media (max-width: 760px) {
+  .app-main { padding: 20px 16px !important; }
+  .app-main > section:not(.home) > h1 { font-size: 26px; }
+  .app-main table { display: block; width: 100%; overflow-x: auto; }
+  .app-main th, .app-main td { white-space: nowrap; }
+  .app-main .action-block { padding: 16px; }
+}

@@ -33,6 +33,8 @@ describe('CopyAdminView', () => {
     const wrapper = await mountCopies(sharedFixtures)
 
     await wrapper.find('[data-testid="copy-filter-title"]').setValue('2001')
+    await wrapper.get('[data-testid="copy-create-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="create-copy-no"]').setValue('C-003')
     await wrapper.find('[data-testid="create-copy-form"]').trigger('submit')
     await flushPromises()

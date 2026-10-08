@@ -2,6 +2,7 @@
   <section class="review-initiation-view">
     <h1>复核发起</h1>
     <p>高风险账户变更（停用 / 恢复 / 变更角色）由馆员发起、管理员在复核决定页处置；变更在批准前不生效。</p>
+    <ActionPanel title="发起账户变更复核" entry-id="initiation" description="提交停用、恢复或角色变更申请。">
     <form data-testid="initiation-form" @submit.prevent="submit">
       <el-input
         v-model="accountId"
@@ -34,10 +35,12 @@
       description="变更在管理员批准前不生效。"
     />
     <ErrorAlert v-if="state.status === 'failure'" :failure="state.failure" />
+    </ActionPanel>
   </section>
 </template>
 
 <script setup>
+import ActionPanel from '@/components/ActionPanel.vue'
 import { ref } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'

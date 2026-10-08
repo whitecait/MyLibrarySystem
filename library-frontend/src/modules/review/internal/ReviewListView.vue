@@ -41,7 +41,7 @@
     </template>
     <ErrorAlert v-if="state.status === 'failure'" :failure="state.failure" />
 
-    <div v-if="selected" class="action-block">
+    <ActionPanel title="复核决定" entry-id="review-decision" v-if="selected" :active-key="selectionRequest">
       <h2 data-testid="review-target-line">
         复核 {{ selected.reviewId }}：{{ selected.targetType }} / {{ selected.targetId }}（{{ selected.action }}）
       </h2>
@@ -73,16 +73,19 @@
         />
       </template>
       <ErrorAlert v-if="decisionState.status === 'failure' && !targetChanged" :failure="decisionState.failure" />
-    </div>
+    </ActionPanel>
   </section>
 </template>
 
 <script setup>
+import ActionPanel from '@/components/ActionPanel.vue'
 import { computed, ref } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { FailureKind } from '@/platform/http'
 import { useApiRequest } from '@/platform/http'
 import { decideReview, listReviews } from '../index'
+
+const selectionRequest = ref(null)
 
 const reviews = ref([])
 const nextCursor = ref(null)
@@ -109,6 +112,7 @@ async function load(cursor) {
 }
 
 function select(review) {
+  selectionRequest.value = (selectionRequest.value ?? 0) + 1
   selected.value = review
   decisionResult.value = null
 }

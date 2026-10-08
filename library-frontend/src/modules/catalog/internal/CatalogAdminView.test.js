@@ -73,6 +73,8 @@ describe('CatalogAdminView', () => {
   it('creates a title and reports its id', async () => {
     const wrapper = await mountAdmin(sharedFixtures)
 
+    await wrapper.get('[data-testid="catalog-create-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="create-isbn"]').setValue('978-9-999')
     await wrapper.find('[data-testid="create-title"]').setValue('New Book')
     await wrapper.find('[data-testid="create-authors"]').setValue('A. Author')
@@ -92,6 +94,8 @@ describe('CatalogAdminView', () => {
       createTitle: { status: 409, code: 'MLS-CAT-003', message: 'isbn conflict', data: {} },
     })
 
+    await wrapper.get('[data-testid="catalog-create-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="create-isbn"]').setValue('dup')
     await wrapper.find('[data-testid="create-title"]').setValue('t')
     await wrapper.find('[data-testid="create-authors"]').setValue('a')

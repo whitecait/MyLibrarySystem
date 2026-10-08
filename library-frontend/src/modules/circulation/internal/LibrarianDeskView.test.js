@@ -19,6 +19,8 @@ describe('LibrarianDeskView', () => {
   it('records an intact return and points to the formed fine', async () => {
     const wrapper = await mountDesk({ scenarioId: 'RETURN-WITH-FINE' })
 
+    await wrapper.get('[data-testid="desk-return-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="return-copy-id"]').setValue('3001')
     await wrapper.find('[data-testid="return-form"]').trigger('submit')
     await flushPromises()
@@ -41,6 +43,8 @@ describe('LibrarianDeskView', () => {
       },
     })
 
+    await wrapper.get('[data-testid="desk-return-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="return-copy-id"]').setValue('3001')
     await wrapper.find('[data-testid="return-form"]').trigger('submit')
     await flushPromises()
@@ -52,6 +56,8 @@ describe('LibrarianDeskView', () => {
   it('confirms a pickup claim', async () => {
     const wrapper = await mountDesk({ fixtures: sharedFixtures })
 
+    await wrapper.get('[data-testid="desk-claim-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="claim-tx-id"]').setValue('4002')
     await wrapper.find('[data-testid="claim-copy-id"]').setValue('3001')
     await wrapper.find('[data-testid="claim-form"]').trigger('submit')
@@ -73,6 +79,8 @@ describe('LibrarianDeskView', () => {
       },
     })
 
+    await wrapper.get('[data-testid="desk-claim-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="claim-tx-id"]').setValue('4002')
     await wrapper.find('[data-testid="claim-copy-id"]').setValue('3001')
     await wrapper.find('[data-testid="claim-form"]').trigger('submit')
@@ -85,6 +93,8 @@ describe('LibrarianDeskView', () => {
   it('applies a manual action with its reason', async () => {
     const wrapper = await mountDesk({ fixtures: sharedFixtures })
 
+    await wrapper.get('[data-testid="desk-manual-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="manual-tx-id"]').setValue('4003')
     await wrapper.find('[data-testid="manual-action"]').setValue('REJECT')
     await wrapper.find('[data-testid="manual-reason"]').setValue('无法确认入库')
@@ -101,6 +111,8 @@ describe('LibrarianDeskView', () => {
       },
     })
 
+    await wrapper.get('[data-testid="desk-return-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="return-copy-id"]').setValue('3001')
     await wrapper.find('[data-testid="return-form"]').trigger('submit')
     await flushPromises()
@@ -109,4 +121,32 @@ describe('LibrarianDeskView', () => {
     expect(wrapper.find('[data-testid="return-abnormal"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="error-alert"]').text()).toContain('MLS-CIRC-006')
   })
+})
+
+it('sends one real HTTP return request only after submission inside the modal', async () => {
+  const { startLoopbackHttp } = await import('@/platform/http/testing/loopback')
+  const receiver = await startLoopbackHttp({
+    getToken: () => 'local-modal-test-token',
+    responseEnvelope: { code: 'MLS-CIRC-S003', message: 'returned', data: { txId: '4001', outcome: 'RETURNED', fineId: null } },
+  })
+  setTransport(receiver.transport)
+  let wrapper
+  try {
+    wrapper = await mountView(LibrarianDeskView)
+    await flushPromises()
+    await wrapper.get('[data-testid="desk-return-open"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="return-copy-id"]').setValue('3001')
+    expect(receiver.requests).toHaveLength(0)
+    await wrapper.get('[data-testid="return-form"]').trigger('submit')
+    const { vi } = await import('vitest')
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="return-returned"]').exists()).toBe(true))
+    expect(receiver.requests).toHaveLength(1)
+    expect(receiver.requests[0]).toMatchObject({ method: 'POST', body: { copyId: '3001', condition: 'INTACT' } })
+    expect(receiver.requests[0].headers.authorization).toBe('Bearer local-modal-test-token')
+    expect(receiver.requests[0].headers['idempotency-key']).toBeTruthy()
+  } finally {
+    wrapper?.unmount()
+    await receiver.close()
+  }
 })

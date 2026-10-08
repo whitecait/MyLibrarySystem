@@ -1,4 +1,4 @@
-# Windows 本机交付操作
+# 容器交付包与本机验证
 
 ## 引用文档
 
@@ -12,9 +12,13 @@
 
 本说明随交付包复制到根目录，源码及上述工程文档位于包内 source/。运行依赖为 Windows 原生 Python 3.12、Docker Desktop Linux 容器与 Compose；页面验证在 Windows 原生 Chrome 执行。包不依赖 WSL 的 node_modules 或 Maven 缓存。
 
+## 当前部署目标
+
+2026-10-07，用户确认项目进入实机部署的页面微调阶段，目标为阿里云 ECS 云服务器上的可发布版本。本文件描述已实现的打包及本机运维入口。现有配置绑定环回地址；ECS 访问入口与同版启动尚未验证，待办由根 TODO.md 维护。
+
 ## 打包与身份
 
-从确切提交的干净检出执行 python3 scripts/delivery/package.py --commit 完整提交SHA --output-dir 仓库内忽略的产物目录。入口拒绝未提交差异、错误提交和已存在包目录；从 git archive 获取源码，固定基础镜像构建前后端，记录镜像 ID／提交标签并导出镜像。原 P4 包保持原字节，生成包的 release.json、SHA256SUMS 和包外 seal.json 分别记录提交、文件及压缩包身份。构建或校验通过不等于 CI、目标机测试或 P5 通过。
+从确切提交的干净检出执行 python3 scripts/delivery/package.py --commit 完整提交SHA --output-dir 仓库内忽略的产物目录。入口拒绝未提交差异、错误提交和已存在包目录；从 git archive 获取源码，固定基础镜像构建前后端，记录镜像 ID／提交标签并导出镜像。生成包的 release.json、SHA256SUMS 和包外 seal.json 分别记录提交、文件及压缩包身份。构建与校验结果由发布候选记录；CI 和目标机验证需分别执行。
 
 ## 标准容器下载受限时的源码构建
 
@@ -60,9 +64,10 @@ python bin/manage.py --project mls-p5-local restore C:/private/library-backup.sq
 
 - 2026-10-01：建立可追踪打包和 Windows 原生运维入口；本说明描述已实现命令，不预填 Windows 操作、发布或 P5 结果。
 
+- 2026-10-07：按用户确认的整理范围撤下旧计划、历史报告和交接材料链接。正文保留必要的历史来源标识；已登记的需求、设计与验收结论保持。
+
 ## 被引用信息
 
 - [工程验证入口](../../ENGINEERING.md)。
 
 - [当前形式化映射](../../formal/README.md)。
-- [本轮实际执行报告](../../artifacts/release-gates-20261001/REPORT.md)。

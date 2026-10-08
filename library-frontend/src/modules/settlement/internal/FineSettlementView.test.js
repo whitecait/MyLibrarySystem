@@ -128,6 +128,9 @@ describe('FineSettlementView', () => {
     await flushPromises()
 
     expect(calls.some((call) => call.operationId === 'listOccupiedOrders')).toBe(true)
+    expect(wrapper.find('[data-testid="order-panel-title"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="select-order-6002"]').trigger('click')
+    await flushPromises()
     expect(calls.find((call) => call.operationId === 'listOccupiedOrders').options.query)
       .toEqual({ cursor: undefined, limit: 20 })
     expect(wrapper.find('[data-testid="order-panel-title"]').text()).toContain('6002')

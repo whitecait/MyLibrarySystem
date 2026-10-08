@@ -1,158 +1,86 @@
 # MyLibrarySystem
 
-> 引用文档：
->
-> - [2026-10-04 P5 补齐冻结验证汇总](artifacts/p5-closeout-20261004/REPORT.md)
-> - [2026-10-04 P5 补齐任务与定向证据](artifacts/p5-closeout-20261004/DISPATCH.md)
-> - [2026-10-02 P5 通知关联修订与证据报告](artifacts/p5-notification-fix-20261002/REPORT.md)
-> - [2026-10-02 Windows 原生视觉续行](visual-review-20261002/WINDOWS-HANDOFF.md)
-> - [2026-10-03 Windows 页面视觉验证归档](visual-review-20261002/RUN-20261003.md)
-> - [本轮文档维护与独立审计入口](artifacts/doc-maintenance-20261001/REPORT.md)。
->
-> - [限定范围交付与 DevOps 阶段规则](docs/00-governance/MLS-DOC-GOV-0008.md)
->
-> - [工程文档唯一入口](docs/README.md)
-> - [当前交接记录](HANDOFF.md)
-> - [开发任务规划](TODO.md)
-> - [P4限定范围执行报告](artifacts/p4-delivery-20261001/RUN-REPORT.md)
-> - [M6 恢复批次执行报告](artifacts/m6-recovery-20260922/RUN-REPORT.md)
-> - [模块设计评审与基线记录](docs/04-module-design/reviews/MLS-DOC-REV-0005.md)
-> - [需求分析阶段工程化设计](docs/01-requirements/requirements/MLS-DOC-RA-0001.md)
-> - [系统需求主规格](docs/01-requirements/requirements/MLS-DOC-RA-0003.md)
-> - [Open 问题登记册](docs/01-requirements/requirements/MLS-DOC-RA-0007.md)
-> - [需求评审清单](docs/01-requirements/reviews/MLS-DOC-REV-0001.md)
-> - [需求基线记录](docs/01-requirements/reviews/MLS-DOC-REV-0002.md)
-> - [文档与需求变更控制](docs/00-governance/MLS-DOC-GOV-0004.md)
-> - [后端项目说明](library-server/README.md)
-> - [工程基础运行与验证](ENGINEERING.md)
-> - [前端项目说明](library-frontend/README.md)
+引用文档：
 
-MyLibrarySystem 是一个面向单一图书馆的工程学习项目，形态为**图书信息管理系统 + AI 助手**的综合系统：图书信息管理系统承载借阅、归还、逾期罚款等核心流通业务；对话式 AI 助手与业务系统一体运行，实现业务系统与 AI 能力的有机融合。项目以完整系统为验收对象，按照 V 模型依次开展需求分析、总体设计、详细设计和模块设计，并分别对应验收测试、系统测试、集成测试和单元测试。
+- [现代书目与阅读演示追加记录](artifacts/modern-demo-import-20261008/REPORT.md)
+- [日结自动恢复与本地运行更新](artifacts/closing-recovery-20261007/REPORT.md)
+- [当前交接记录](HANDOFF.md)
+- [两日冲刺待办](TODO.md)
+- [运行与验证说明](ENGINEERING.md)
+- [工程文档入口](docs/README.md)
+- [前端说明](library-frontend/README.md)
+- [后端说明](library-server/README.md)
+- [当前页面验证记录](artifacts/frontend-backdrop-close-20261007/REPORT.md)
+- [完整分类与随机图书修订](artifacts/frontend-catalog-discovery-20261007/REPORT.md)
+- [全文书籍语料](data/book-corpus/README.md)
+- [Issue #8](<https://github.com/whitecait/Mylibrary/issues/8>)
+- [PR #9](<https://github.com/whitecait/Mylibrary/pull/9>)
+- [推送 CI（五项已通过）](<https://github.com/whitecait/Mylibrary/actions/runs/37733077742>)
+- [PR CI（五项已通过）](<https://github.com/whitecait/Mylibrary/actions/runs/37733313686>)
+- [PR 合并提交 39c246b](<https://github.com/whitecait/Mylibrary/commit/39c246bc1773610a7a941dd2dc47d70e98856c75>)
+- [合并后 main CI（五项已通过）](<https://github.com/whitecait/Mylibrary/actions/runs/37766613941>)
+- [合并后 main CI 摘要](<artifacts/closing-recovery-20261007/evidence/remote-main-37766613941/verification-summary.md>)
 
-## 当前有效状态
+## 当前阶段
 
-本节是项目当前状态的唯一概述，更新至 2026-10-04 PR #5 合并、Windows 视觉复核与 AT-0026 补齐实现的定向验证。
+2026-10-07，用户确认项目进入**实机部署的页面微调阶段**。两日冲刺的目标是确定一个**可部署在阿里云 ECS 云服务器上的可发布版本**。该目标已确认，发布候选与 ECS 部署验证尚未完成。
 
-截至 2026-10-04，PR #5 已合并到 `main`，合并提交为 `c9e9413cf399f2568e906e841747f8ac82819d52`。PR head `47020dd4fc70ce22f05e89be85a2a3d447209cd8` 的 PR、push CI 及合并提交 CI 各有五项成功作业。合并树与获准候选树相同。P5 前端冻结源码为 `454f9471bb4d9528a5715dc11199d1027070ccb3`。
+当前页面采用 A 版背景页与事务模态。首页提供连续书目信息流。详情与共享 AI 助手在桌面按 2∶1 显示。顶部保留首页与个人信息，角色工作入口位于个人信息菜单。遮罩及面板间空白可以关闭模态。
 
-Windows Playwright/Chromium 已采集 17 个页面、两个视口，共 34 张 PNG；Windows 与 WSL 归档一致。通知页两种视口都显示“暂无通知”。本轮没有 Banner、关联通知内容、点击跳转或已读变化的证据。800×600 的管理员审计页时间列右侧被裁切；管理员账户页第七行部分位于视口下沿。该采集不构成 Chrome 专项验证，也不代表 P5 最终接受。
+首页分类与实际可借状态采用完整书库加载的陈列按钮，点击后立即筛选。快捷区域随机展示三本现有图书，并链接到详情。
 
-页面预览使用独立 worktree `47020dd` 的前端，API `18137` 仍为 `6e93a50`。当前没有同版部署结论。另已建立基于 clean `c9e9413` 的独立打包 worktree；它只是准备工件，当前没有新包或部署通过结论。用户已批准并完成本轮 AT-0026 的三页签与详情源码补齐，定向组件和真实 PostgreSQL/HTTP 回归已通过；完整状态时间轴仍移出本轮。Chrome 专项与 P5 最终接受也未完成。早先 e1 候选状态和先前提交行均为历史快照。Windows 操作入口见 [Windows 原生续行](visual-review-20261002/WINDOWS-HANDOFF.md)，证据见 [视觉验证归档](visual-review-20261002/RUN-20261003.md)。
+最近一次页面修订记录为 47 个测试文件、304 项前端测试通过，契约、架构、ESLint 与 HTTP 模式构建通过。上述结果对应本次首页修订。实机视觉与操作结果按实际执行另行登记。
 
-本轮实现分支为 `codex/p5-business-completion-20261004`，输入基线为 `c9e9413`。三页签分别查询当前借阅、预约候补和历史记录；详情显示创建时保证类型、预约日期、具体时段、副本及本人关联通知。创建来源写入 V14 可空列，候补分配成功后仍保留 WAITLIST，无法可靠还原的旧记录显示“未记录”。新预约使用 48 个同日半小时段，旧 AM/PM 保持兼容，时段不构成取书状态守卫。OpenAPI 2.2.0 与前端生成物已同步。完整冻结提交 `a1020a7` 已通过后端 227 项、前端 262 项及共享形式门禁 79 个模型用例。首个候选 `5e62e71` 的两处旧测试失败与诊断记录保留。b5dacd1 的独立初审确认 Standards 两项 P2 和三项 P3 可维护性判断，Spec 无发现。两项规范整改已完成并通过 18 项后端定向验证；整改冻结提交 5e274c3 的完整后端 51 类、234 项已通过；独立复审、当前 CI、同版部署及 Windows 实页验收尚未完成，不能复用 PR #5 的完成结论。具体记录见 [本轮分派记录](artifacts/p5-closeout-20261004/DISPATCH.md)。
+当前前端修改仍在未提交工作树中。现有 Compose 入口绑定本机环回地址；ECS 的访问入口、运行配置和同版启动验证列在冲刺待办中。当前工作区不等同于已封存的发布候选。
 
-用户已要求实施至 10-06 的实机交付与持续改进计划。独立文档审计完成并发现一项 P2；逐项验收适用清单已追加，原完整到馆统计目标保留为上线后首个整改项。TLA／CI 接合源码和 Windows 运维／打包入口已实现，本地共享模型回归通过，已建立 PR #4 并执行独立双轴审计；首轮 CI 四作业成功、观测失败，五项审计发现已修正源码并完成后端 214／214 及定向回归，增量复审又发现宿主打包、JDK 身份、公开契约及混合分页问题，已修订；七项真实 PG 回归和完整后端 215／215 通过。e1c7391 的五项 PR／push CI 均成功，两轴独立复审关闭全部发现；同提交候选包在 WSL 完成20项运行验证。这属于合并前历史候选验证，不代替 PR #5 的 Windows 页面验收或同版部署。目标为 Windows 本机环回访问及专用学习数据；同版部署和 P5 最终接受尚未完成。
+本地预览后端仍运行固定闭馆恢复提交 `19b77e70a46e2c30c342eb7bfe8f375d59285d2b` 的镜像；其文件内容与远程 main merge commit [`39c246bc1773610a7a941dd2dc47d70e98856c75`](https://github.com/whitecait/Mylibrary/commit/39c246bc1773610a7a941dd2dc47d70e98856c75) 一致，合并后未重新部署。PR [#9](https://github.com/whitecait/Mylibrary/pull/9) 已合并，Issue [#8](https://github.com/whitecait/Mylibrary/issues/8) 已关闭；推送、PR 与合并后 main CI 五项作业均通过。本地 `main` HEAD 仍为基线 `3a9f142f5427b950b211d8c7607660cda3a5c3b5`，`origin/main` 已刷新到 `39c246bc1773610a7a941dd2dc47d70e98856c75`；未提交页面修改仍保留且未推送。ECS 尚未更新，Windows 原生页面复核仍待用户执行。详见[日结恢复报告](artifacts/closing-recovery-20261007/REPORT.md)。
 
-M2 需求基线为 `v1.0 Approved`。前端与后端 B0～B5、匿名 AI 契约、V8/V9 迁移及自动化跨侧集成已合入 main；后端 127 项、前端 193 项、基础 Compose 三阶段和 B5 实际 HTTP 门禁已通过。2026-09-17 匿名 AI 契约差异获 lingzz 批准，REV-0004 v1.5、REV-0005 v1.2 与 OpenAPI 2.0 是该轮批准基线，OQ-0029 已关闭。验收探路（E2E-001、E2E-AI-001 真实模型、Grafana 实页、端点 S1–S6）已于 2026-09-20 完成。
-
-M6 恢复批次（2026-09-22）已执行 R0–R4，冻结候选为 `e8d0523`；AT-0016 缩减协议单轮通过，但不满足三轮最低重复要求，未作 p99 断言。R1a 登录 500 两轮诊断后的归因仍为**未归因**，正式恢复演练 AT-0018 C03/C04 因准入不满足未执行；A5 两次失败、A6–A7 未执行。R2 的 33 AT／47 检查点覆盖映射已交付，126 项 GAP 与 29 项阻断/待裁定项仍未处置。R5（Windows 原生 A~E 与 AT-0017 正式批次）、R6（观察窗口与收口复核）、R7（lingzz 签署）均未执行。详细执行与遗留责任见 [HANDOFF.md](HANDOFF.md) 和 [TODO.md](TODO.md)。
-
-2026-09-25，用户在 Windows 验证副本完成浏览器与真实 API 定向复测：两轮上下文追问、预约/借阅指引、13→17 条 AI 事件刷新与收起重开、回复标题/列表/表格、馆员和管理员窄屏导航及 364 px 事件表局部滚动均符合本次检查；真实模型端点 S1–S6 全部通过。复测时本地 `main` 与 Windows `wsl-local/main` 均为 `7eedf0b`，工作树干净，前端、后端与数据库健康运行。本次定向复测不构成完整 M6 验收。
-
-2026-10-01，P0–P4限定范围收尾已完成：本轮浏览器实测按用户决定跳过，管理员AI关闭支付单入口维持原范围；后端208/208、前端223/223（运行源码未变）及lint通过。单轮P95性能19067请求无非预期失败；恢复修复后14表一致、核心HTTP续行通过，RPO 7秒／RTO 20秒；独立交付包18项操作验证通过。性能来自局部恢复修复前镜像，用户明确批准影响复用并补支付／恢复实测。结果、交付包与限制见[P4执行报告](artifacts/p4-delivery-20261001/RUN-REPORT.md)。
-
-全部未完成工作以[开发任务规划](TODO.md)为准。P5最终交付接受与发布尚未执行；上述结论不声明完整M6验收、浏览器全量、P99达标或长期稳定性。
-
-### 当前工程状态
-
-| 项目             | 状态                                                      |
-| ---------------- | --------------------------------------------------------- |
-| 当前阶段 | P0–P4 已完成；P5 PR #5 已合并，PR head 与合并提交的五项 CI 均成功，34 张页面图已归档；AT-0026 三页签和详情已补齐并通过定向回归，a102 完整回归已通过；规范整改后完整后端 234 项已通过；复审、当前 CI、Chrome 专项与 P5 最终接受仍待完成 |
-| 工程文档唯一入口 | [docs/README.md](docs/README.md)                          |
-| 需求基线         | `v1.0 Approved`                                           |
-| 设计评审 | 历史基线保持；REV-0003 v1.4、REV-0004 v1.6、REV-0005 v1.3 登记本轮局部批准；原文档独立审计完成；P2 整改与交付 PR 审计另行核对 |
-| Open 问题        | 无                                                         |
-| 验收执行 | P4 性能／恢复／包验证保持原记录；P5 页面图来自 Playwright/Chromium，通知页为空态，通知行为未验证；800×600 审计页时间列右侧裁切，Chrome 专项未完成 |
-| 当前代码地位 | `main` 为 `c9e9413cf399f2568e906e841747f8ac82819d52`；PR head `47020dd` 与冻结源码 `454f947` 对应的实现树相同。Windows 预览 API `18137` 仍为 `6e93a50`，尚无同版部署 |
-| 工程基础         | B1-A/B1-B、C0~C4、G3/G4/G5 完成；修补轮与编码准备收尾完成 |
-
-需求分析阶段工程化设计（`MLS-DOC-RA-0001`）的 `v1.0 Approved` 表示阶段组织方案；最终需求基线由 `MLS-DOC-REV-0002 v1.0` 于 2026-09-11 激活。产品验收尚未完成，原型验证与迁移测试不替代系统验收。旧契约、旧计划和旧审计为非规范性历史参考。
+当前预览库包含 2,001 册书目：996 册 Gutenberg 全文、1,000 条现代开放获取元数据及 5 册阅读演示图书。5 册演示图书提供 PDF 提取文字的分页阅读。追加与备份验证已完成。
 
 ## 项目定位
 
-- **业务系统**：面向单一图书馆的图书信息管理系统，承载核心流通业务（借阅、归还等，完整范围以需求工件为准）。
-- **AI 助手**：内嵌于业务系统的对话式助手，围绕业务数据与业务规则提供服务。
-- **有机融合**：AI 助手与业务系统共用同一套数据、业务规则和权限体系，不是独立于业务系统之外的附加聊天界面。
+本项目面向单一图书馆，提供书目管理、预约、借阅、归还、罚款及相关管理功能。内嵌 AI 助手共用业务数据、规则和权限，并通过现有表单办理获准动作。
 
-## 学习目标：对照真实 ERP 的 AI 对话助手
+项目以真实 ERP 的 AI 对话助手为学习参照。重点是让对话助手遵守业务规则、权限和事务边界。
 
-本项目的业务规模是课程项目级，与真实 ERP 相差悬殊（见下表），但"AI 对话助手如何在业务数据、业务规则和权限约束下可靠工作"是两者共同的工程问题。项目以真实 ERP 的 AI 对话助手为参照，按下表逐维度对照学习：差距是学习切入点，不是缺陷。
+## 工作入口
 
-| 维度       | 图书管理系统           | 真实 ERP                                             |
-| ---------- | ---------------------- | ---------------------------------------------------- |
-| 业务广度   | 一个领域（借阅）       | 几十上百个模块（财务、供应链、生产、人力）跨模块联动 |
-| 流程深度   | 借书/还书几条规则      | 审批流、财务记账、MRP 物料计算等深层业务逻辑         |
-| 数据规模   | 课程项目级：千行数据   | 百万级事务、多组织并发写入                           |
-| 权限体系   | 可能只有一个管理员角色 | 按组织、岗位、数据行级的精细权限                     |
-| 集成复杂度 | 单体系统               | 与外部系统（银行、税务、物流）对接                   |
+| 事项 | 入口 |
+| --- | --- |
+| 当前实现、验证边界和交接 | [HANDOFF.md](HANDOFF.md) |
+| 两日冲刺与发布完成条件 | [TODO.md](TODO.md) |
+| 本地启动、构建及验证命令 | [ENGINEERING.md](ENGINEERING.md) |
+| 已登记的需求、设计与批准 | [docs/README.md](docs/README.md) |
+| 千册全文语料与导入约定 | [book-corpus README](data/book-corpus/README.md) |
 
-## 项目入口
-
-- [工程文档唯一入口](docs/README.md)
-- [工程基础运行与验证](ENGINEERING.md)
-- [后端项目与开发说明](library-server/README.md)
-- [前端项目与开发说明](library-frontend/README.md)
-
-## 参与需求评审
-
-1. 从[系统需求主规格](docs/01-requirements/requirements/MLS-DOC-RA-0003.md)进入当前需求工件。
-2. 在[Open 问题登记册](docs/01-requirements/requirements/MLS-DOC-RA-0007.md)核对关闭依据与决策人。当前无 Open 项；OQ-0029 的匿名 AI 契约批准与关闭依据登记于 2026-09-17 条目。
-3. 使用[需求评审清单](docs/01-requirements/reviews/MLS-DOC-REV-0001.md)记录可复现证据与评审发现。
-4. 只有[需求基线记录](docs/01-requirements/reviews/MLS-DOC-REV-0002.md)完成正式批准后，需求工件才可成为下一阶段输入；变更按[变更控制](docs/00-governance/MLS-DOC-GOV-0004.md)处理。
+旧计划、历史验收报告、快照和旧交接材料已移出工作区。清理记录与本地恢复位置见 HANDOFF.md。原型、当前页面记录、全文语料和运行工具仍保留。
 
 ## 修订记录
 
-- 2026-10-04：登记干净5e274c3的完整后端234项通过及未变输入桥接，保留复审、当前CI与Windows/P5未完成门禁。
+- 2026-10-08：登记 1,000 条现代书目与 5 册演示图书追加、ISBN 清洗、2,723 页 PDF 文字阅读、备份恢复及当前预览验证。
+- 2026-10-07：登记本地后端闭馆自动恢复、启动补结、再次重启不重复结算及仍未完成的 ECS／远端验证。
+- 2026-10-07：根据用户明确授权，登记修复分支已推送、Issue #8 已创建、PR #9 开放及两轮 CI 全部通过；页面修改仍未推送。
+- 2026-10-07：按用户确认的当前阶段精简项目入口，移出历史批次状态，登记阿里云 ECS 两日冲刺目标。
+- 2026-10-07：登记已完成的完整分类与状态筛选按钮、随机图书入口和最新前端验证结果。
+- 2026-10-08：登记 PR #9 合并、Issue #8 关闭、合并后 main CI 通过；origin/main 已刷新，本地 HEAD 与未提交页面内容保持不变。
+被引用文档：
 
-- 2026-10-04：登记限流断点恢复、独立初审与两项规范整改的定向结果；整改候选完整回归和复审未预填通过。
-
-- 2026-10-04：登记 5e62 旧测试失败、独立诊断与 a102 冻结完整回归通过；当前 CI、评审、同版运行与 P5 仍另行留证。
-
-- 2026-10-04：登记已完成的三页签、创建保证类型、完整只读详情、半小时输入和契约生成的定向结果；保留当前提交完整回归与实页交付未完成边界。
-
-- 2026-10-04：同步 PR #5 合并、候选与合并提交 CI、34 张 Windows 页面图及当前验收限制；登记用户批准补齐 AT-0026 保留能力，完整状态时间轴仍移出。
-
-- 2026-10-02：追加 P5 通知关联修订的冻结源码身份、本地验证和 Windows/PR/CI 待办；将此前交付候选状态明确为历史快照。
-
-- 2026-10-02：登记实际 PR、首轮 CI 与独立审计整改，本机上线和 P5 保持未完成。
-
-- 2026-10-01：登记独立文档审计报告与 P2 整改、形式化接合和 Windows 本机目标；远端 CI／PR／上线与 P5 未预填通过。
-
-
-- 2026-10-01：同步 A–E 及 D 追加要求、最新规范入口与未实施边界；P5 最终接受和独立审计未登记通过。
-- 2026-10-01：同步限定范围P0–P4实际完成、浏览器豁免、用户性能影响复用与运行包实证；保留旧M6历史，P5接受未执行。
-
-- 2026-09-25：登记 Windows 浏览器与真实 API 定向复测结果，更新当前状态和提交位置；清理三份已完成旧交接报告及失效引用，原文可从 Git 历史追溯。完整 M6 验收状态不变。
-
-- 2026-09-22（R0–R4 完整单次执行结果）：同步 M6 恢复批次最终结论——冻结候选 `e8d0523`（`main` 在其后追加本批 docs 登记提交 `79cc4b6`、`4cbb148`、`9b46563`、`adc4a2f` 及本次同步提交，工作树干净）、AT-0016 缩减协议单轮通过（注明单轮不满足三轮最低重复要求、无 p99 断言）、R1a 两轮诊断已执行且归因分类＝未归因致 C03/C04 演练执行行登记「未执行（准入不满足）」、R2 覆盖映射已交付且六项准备核验未达成项为无（AI 接线 `DERIVED`）而 126 项 GAP／29 项阻断未处置、R5–R7 未执行；刷新当前工程状态表三行。不新增未发生的批准或通过结论。
-
-- 2026-09-22（R0–R4 恢复批次执行后）：同步 M6 恢复批次实际结论——冻结候选 `e8d0523`（`main` 现为 `79cc4b6`、工作树干净）、AT-0016 缩减协议单轮通过（注明单轮不满足三轮最低重复要求、无 p99 断言）、R1a 受阻致 C03/C04 演练准入不满足、R2 覆盖映射已交付而 126 项 GAP／29 项阻断未处置、R5–R7 未执行；刷新当前工程状态表三行。不新增未发生的批准或通过结论。
-
-- 2026-09-22：同步已完成的 AT-0016 与 A5 失败事实，修正“正式验收未执行”的过时概述；当前未提交修改、新恢复规划及剩余责任见 TODO/HANDOFF，不新增通过或批准结论。
-
-- 2026-09-21：状态同步至 M6 验收整改执行中：当前冻结链 dbdf18c（产品树＝e4eb4ee＋DEF-M6-001/002/004/006 闭环修复，其上仅 docs 提交 5d79fcd）；验收探路（E2E-001、E2E-AI-001 真实模型、Grafana 实页、端点 S1–S6）已于 2026-09-20 完成，正式验收批次未执行。M6 复核整改的裁定与登记见 [HANDOFF.md](HANDOFF.md)。
-
-- 2026-09-19：状态文字定向澄清：前后端 B0～B5 与匿名 AI 成果已合入 main（候选 e4eb4ee），M6 验收准备中；仅引用既有批准记录 REV-0002 v1.3 与 DEC-0027，不新增批准结论，验收执行仍未开始。
-
-- 2026-09-18：同步前后端 B0～B5 与自动化跨侧集成完成事实；后端 127 项、前端 193 项、基础 Compose 三阶段和 B5 HTTP 门禁通过。Windows/真实端点/M6 验收仍未完成。
-
-- 2026-09-17：lingzz 明确批准匿名 AI 契约差异；REV-0004 v1.5、REV-0005 v1.2 与 OpenAPI 2.0 成为当前批准基线，OQ-0029 关闭。生成物与实现门禁仍未恢复。
-
-- 2026-09-17：同步前端 B0～B5、后端 B0～B4 的提交事实，登记 OQ-0029 与 REV-0004 v1.5/REV-0005 v1.2/OpenAPI 2.0 `In Review`；匿名实现、生成物同步和 CONTRACT-002 恢复仍未完成，不新增批准结论。
-
-- 2026-09-14：同步 H4/H5、8 图复核、AI `thinking=disabled`、OQ-0027 关闭及 M3/M4/模块设计基线 Approved。批准人：lingzz；业务实现与产品验收尚未完成。
-
-- 2026-09-13：登记模块 spec 候选材料、47 项功能覆盖与 REV-0005 `In Review`；正式模块基线、业务实现和产品验收状态不变。
-- 2026-09-13：执行全量交叉审计与维护。当前状态口径全库统一，合并重复的修订记录节，删除被取代的历史状态段；已完成事实收敛至 [HANDOFF.md](HANDOFF.md)，待办收敛至 [TODO.md](TODO.md)。
-- 2026-09-12：按 lingzz 后续补齐指令同步实证审计入口；登记 Docker 侧执行、迁移与罚款约束修复、OQ-0027 复开，不新增批准或产品验收结论。
-- 2026-09-11：登记 G3/G4/G5 按授权签署、质量协议与配置核对完成，需求基线 `v1.0 Approved` 激活。
-- 2026-09-10：同步最小骨架与 B1-A/B1-B 完成状态，新增工程运行与验证入口。
-
-> 被引用文档：
->
-> - [工程文档唯一入口](docs/README.md)
-> - [后端项目说明](library-server/README.md)
-> - [前端项目说明](library-frontend/README.md)
-> - [需求分析阶段工程化设计](docs/01-requirements/requirements/MLS-DOC-RA-0001.md)
->
-> - [本轮文档维护与独立审计入口](artifacts/doc-maintenance-20261001/REPORT.md)。
+- [日结自动恢复与本地运行更新](artifacts/closing-recovery-20261007/REPORT.md)
+- [完整分类与随机图书修订](artifacts/frontend-catalog-discovery-20261007/REPORT.md)
+- [ENGINEERING.md](ENGINEERING.md)
+- [HANDOFF.md](HANDOFF.md)
+- [TODO.md](TODO.md)
+- [artifacts/frontend-a-implementation-20261007/REPORT.md](artifacts/frontend-a-implementation-20261007/REPORT.md)
+- [artifacts/frontend-backdrop-close-20261007/REPORT.md](artifacts/frontend-backdrop-close-20261007/REPORT.md)
+- [artifacts/frontend-shared-modal-20261007/REPORT.md](artifacts/frontend-shared-modal-20261007/REPORT.md)
+- [artifacts/frontend-single-entry-20261007/REPORT.md](artifacts/frontend-single-entry-20261007/REPORT.md)
+- [docs/00-governance/MLS-DOC-GOV-0004.md](docs/00-governance/MLS-DOC-GOV-0004.md)
+- [docs/00-governance/MLS-DOC-GOV-0007.md](docs/00-governance/MLS-DOC-GOV-0007.md)
+- [docs/00-governance/MLS-DOC-GOV-0008.md](docs/00-governance/MLS-DOC-GOV-0008.md)
+- [docs/01-requirements/requirements/MLS-DOC-RA-0003.md](docs/01-requirements/requirements/MLS-DOC-RA-0003.md)
+- [docs/01-requirements/requirements/MLS-DOC-RA-0007.md](docs/01-requirements/requirements/MLS-DOC-RA-0007.md)
+- [docs/01-requirements/reviews/MLS-DOC-REV-0001.md](docs/01-requirements/reviews/MLS-DOC-REV-0001.md)
+- [docs/01-requirements/reviews/MLS-DOC-REV-0002.md](docs/01-requirements/reviews/MLS-DOC-REV-0002.md)
+- [docs/README.md](docs/README.md)
+- [library-frontend/README.md](library-frontend/README.md)
+- [library-server/README.md](library-server/README.md)

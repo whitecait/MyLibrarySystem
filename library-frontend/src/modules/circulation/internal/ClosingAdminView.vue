@@ -2,7 +2,7 @@
   <section class="closing-admin-view">
     <h1>闭馆与恢复</h1>
 
-    <div class="action-block">
+    <ActionPanel title="重开营业日" entry-id="closing-reopen" description="闭馆批次追平后，恢复指定营业日。">
       <h2>重开营业日</h2>
       <p class="note">
         闭馆批次由系统在计划钟点触发；隔离期内所有写操作会立即收到明确失败（而非无限等待）。
@@ -31,11 +31,12 @@
         description="请先完成失败批次的补结，再尝试重开。"
       />
       <ErrorAlert v-if="state.status === 'failure' && !notCaughtUp" :failure="state.failure" />
-    </div>
+    </ActionPanel>
   </section>
 </template>
 
 <script setup>
+import ActionPanel from '@/components/ActionPanel.vue'
 import { computed, ref } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'

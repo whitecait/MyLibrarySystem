@@ -75,7 +75,7 @@
     </div>
     <ErrorAlert v-if="occupiedListState.status === 'failure'" :failure="occupiedListState.failure" />
 
-    <div v-if="order" class="action-block">
+    <ActionPanel title="支付单详情" entry-id="fine-order" v-if="order" :active-key="selectionRequest">
       <h2 data-testid="order-panel-title">支付单 {{ order.orderId }}（{{ order.status }}）</h2>
       <p data-testid="order-amount">金额：{{ (order.amountCents / 100).toFixed(2) }} 元</p>
       <p class="note" data-testid="order-wait-note">
@@ -92,19 +92,22 @@
           关闭支付单
         </el-button>
       </div>
-    </div>
+      <ErrorAlert v-if="closeState.status === 'failure'" :failure="closeState.failure" />
+      <ErrorAlert v-if="queryState.status === 'failure'" :failure="queryState.failure" />
+    </ActionPanel>
     <ErrorAlert v-if="orderState.status === 'failure'" :failure="orderState.failure" />
-    <ErrorAlert v-if="closeState.status === 'failure'" :failure="closeState.failure" />
-    <ErrorAlert v-if="queryState.status === 'failure'" :failure="queryState.failure" />
   </section>
 </template>
 
 <script setup>
+import ActionPanel from '@/components/ActionPanel.vue'
 import { computed, ref } from 'vue'
 import { getRole } from '@/platform/auth/session'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { closeOrder, createOrder, getOrder, listFines, listOccupiedOrders } from '../index'
+
+const selectionRequest = ref(null)
 
 const fines = ref([])
 const nextCursor = ref(null)
@@ -127,6 +130,7 @@ function hasOccupiedOrder(fineId) {
 }
 
 function selectOccupiedOrder(value) {
+  selectionRequest.value = (selectionRequest.value ?? 0) + 1
   order.value = value
 }
 
@@ -155,6 +159,7 @@ async function createOrderFor(fine) {
   const envelope = await runOrder(() => createOrder({ fineId: fine.fineId }))
   if (envelope) {
     order.value = envelope.data
+    selectionRequest.value = (selectionRequest.value ?? 0) + 1
     rememberOrder(envelope.data)
   } else if (getRole() === 'READER') {
     await loadOccupiedOrders()
@@ -167,7 +172,6 @@ async function loadOccupiedOrders(cursor) {
   if (!envelope) return
   occupiedOrders.value = cursor ? [...occupiedOrders.value, ...envelope.data.items] : envelope.data.items
   occupiedOrdersCursor.value = envelope.data.nextCursor
-  if (!cursor && occupiedOrders.value.length) order.value = occupiedOrders.value[0]
 }
 
 async function refreshOrder() {

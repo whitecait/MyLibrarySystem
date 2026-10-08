@@ -42,7 +42,7 @@
     </template>
     <ErrorAlert v-if="listState.status === 'failure'" :failure="listState.failure" />
 
-    <template v-if="selected">
+    <ActionPanel title="账户办理" entry-id="account-action" v-if="selected" :active-key="selectionRequest">
       <h2 data-testid="selected-account">已选择：{{ selected.username }}（{{ selected.role }} / {{ selected.status }}）</h2>
 
       <div class="action-block">
@@ -118,15 +118,18 @@
         />
         <ErrorAlert v-if="readerState.status === 'failure'" :failure="readerState.failure" />
       </div>
-    </template>
+    </ActionPanel>
   </section>
 </template>
 
 <script setup>
+import ActionPanel from '@/components/ActionPanel.vue'
 import { ref } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { changeReaderStatus, listAccounts, requestAccountChange, resetPassword } from '../index'
+
+const selectionRequest = ref(null)
 
 const accounts = ref([])
 const nextCursor = ref(null)
@@ -164,6 +167,7 @@ async function load(cursor) {
 }
 
 function select(account) {
+  selectionRequest.value = (selectionRequest.value ?? 0) + 1
   selected.value = account
   changeResult.value = null
   resetResult.value = null

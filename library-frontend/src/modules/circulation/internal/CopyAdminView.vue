@@ -2,7 +2,7 @@
   <section class="copy-admin-view">
     <h1>副本维护</h1>
 
-    <div class="action-block">
+    <ActionPanel title="登记新副本" entry-id="copy-create" description="使用下方查询中的书目 ID 登记副本。">
       <h2>登记新副本</h2>
       <form data-testid="create-copy-form" @submit.prevent="submitCreate">
         <el-input v-model="newCopyNo" data-testid="create-copy-no" placeholder="副本编号（如 C-003）" class="inline-input" />
@@ -18,7 +18,7 @@
         :title="`已登记副本 ${createResult.copyNo}（${createResult.status}），待上架`"
       />
       <ErrorAlert v-if="createState.status === 'failure'" :failure="createState.failure" />
-    </div>
+    </ActionPanel>
 
     <div class="action-block">
       <h2>副本列表</h2>
@@ -58,7 +58,7 @@
       <ErrorAlert v-if="listState.status === 'failure'" :failure="listState.failure" />
     </div>
 
-    <div v-if="selected" class="action-block">
+    <ActionPanel title="副本办理" entry-id="copy-action" v-if="selected" :active-key="selectionRequest">
       <h2 data-testid="selected-copy">已选择：{{ selected.copyNo }}（{{ selected.status }} / 版本 {{ selected.version }}）</h2>
       <form data-testid="copy-action-form" @submit.prevent="submitAction">
         <select v-model="action" data-testid="copy-action" aria-label="副本动作">
@@ -77,15 +77,18 @@
         :title="`副本现为 ${actionResult.status}（版本 ${actionResult.version}）`"
       />
       <ErrorAlert v-if="actionState.status === 'failure'" :failure="actionState.failure" />
-    </div>
+    </ActionPanel>
   </section>
 </template>
 
 <script setup>
+import ActionPanel from '@/components/ActionPanel.vue'
 import { ref } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { changeCopyState, createCopy, listCopies } from '../index'
+
+const selectionRequest = ref(null)
 
 const newCopyNo = ref('')
 const createState = useApiRequest()
@@ -105,7 +108,10 @@ const actionResult = ref(null)
 
 async function submitCreate() {
   const envelope = await runCreate(() => createCopy({ titleId: filterTitleId.value, copyNo: newCopyNo.value }))
-  if (envelope) createResult.value = envelope.data
+  if (envelope) {
+    createResult.value = envelope.data
+    await load()
+  }
 }
 
 async function load(cursor) {
@@ -118,6 +124,7 @@ async function load(cursor) {
 }
 
 function selectCopy(copy) {
+  selectionRequest.value = (selectionRequest.value ?? 0) + 1
   selected.value = copy
   actionResult.value = null
 }
@@ -129,6 +136,7 @@ async function submitAction() {
   if (!envelope) return
   actionResult.value = envelope.data
   selected.value = envelope.data
+  await load()
 }
 </script>
 

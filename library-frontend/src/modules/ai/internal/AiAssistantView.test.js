@@ -31,8 +31,132 @@ describe('AiAssistantView', () => {
     installMockTransport({ fixtures: sharedFixtures })
     const wrapper = await mountAssistant()
 
+    expect(wrapper.find('h1').text()).toBe('AI 助手')
     expect(wrapper.find('[data-testid="ai-session-id"]').text()).toBe('7001')
     expect(wrapper.find('[data-testid="ai-quota-remaining"]').text()).toBe('10')
+  })
+
+  it('renders the compact chat without page metadata or the event stream', async () => {
+    installMockTransport({ fixtures: sharedFixtures })
+    const wrapper = await mountAssistant({ compact: true })
+
+    expect(wrapper.find('h1').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-session-id"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-role"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-quota"]').text()).toContain('今日剩余 10 次询问')
+    expect(wrapper.find('[data-testid="ai-messages"]').text()).toContain('想找什么书？也可以询问借阅和预约。')
+    expect(wrapper.find('[data-testid="ai-events-toggle"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-events-table"]').exists()).toBe(false)
+    expect(wrapper.find('.ai-assistant-view').classes()).toContain('compact')
+    expect(wrapper.find('[data-testid="ai-messages"]').classes()).toContain('messages-compact')
+    expect(wrapper.find('[data-testid="ai-composer"]').classes()).toContain('composer-compact')
+    expect(wrapper.find('[data-testid="ai-input"]').attributes('aria-label')).toBe('询问 AI')
+  })
+
+  it('labels a compact visitor quota as shared without exposing the role', async () => {
+    logout()
+    installMockTransport({
+      fixtures: {
+        startAiSession: {
+          code: 'MLS-AI-S001',
+          message: 'started',
+          data: { sessionId: '7001', role: 'VISITOR', quota: { remaining: 10 } },
+        },
+      },
+    })
+    const wrapper = await mountAssistant({ compact: true })
+
+    expect(wrapper.find('[data-testid="ai-quota"]').text()).toContain('今日剩余 10 次询问（访客共享）')
+    expect(wrapper.find('[data-testid="ai-role"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('VISITOR')
+  })
+
+  it('shows session creation failure and retries only after an explicit click', async () => {
+    const calls = []
+    setTransport({
+      mode: 'mock',
+      async request(operationId) {
+        calls.push(operationId)
+        if (calls.length === 1) throw new Error('session unavailable')
+        return sharedFixtures.startAiSession
+      },
+    })
+    const wrapper = await mountAssistant({ compact: true })
+
+    expect(calls).toEqual(['startAiSession'])
+    expect(wrapper.find('[data-testid="ai-session-error"]').text()).toContain('AI 会话创建失败，请重试')
+    expect(wrapper.find('[data-testid="error-alert"]').text()).toContain('session unavailable')
+    expect(wrapper.find('[data-testid="ai-session-retry"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="ai-session-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(calls).toEqual(['startAiSession', 'startAiSession'])
+    expect(wrapper.find('[data-testid="ai-session-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-quota"]').text()).toContain('10 次')
+  })
+
+  it('keeps the composer unavailable while session creation is pending', async () => {
+    let resolveSession
+    const calls = []
+    setTransport({
+      mode: 'mock',
+      request(operationId) {
+        calls.push(operationId)
+        if (operationId === 'startAiSession') return new Promise((resolve) => { resolveSession = resolve })
+        throw new Error(`Unexpected operation: ${operationId}`)
+      },
+    })
+    const wrapper = await mountAssistant({ compact: true })
+
+    expect(wrapper.find('[data-testid="ai-quota"]').text()).toContain('正在创建会话')
+    expect(wrapper.find('[data-testid="ai-input"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="ai-send"]').attributes('disabled')).toBeDefined()
+    await wrapper.find('[data-testid="ai-composer"]').trigger('submit')
+    await flushPromises()
+    expect(calls).toEqual(['startAiSession'])
+
+    resolveSession(sharedFixtures.startAiSession)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="ai-input"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('disables blank submissions and prevents concurrent sends', async () => {
+    let resolveSend
+    const calls = []
+    setTransport({
+      mode: 'mock',
+      request(operationId) {
+        calls.push(operationId)
+        if (operationId === 'startAiSession') return Promise.resolve(sharedFixtures.startAiSession)
+        if (operationId === 'sendAiMessage') return new Promise((resolve) => { resolveSend = resolve })
+        throw new Error(`Unexpected operation: ${operationId}`)
+      },
+    })
+    const wrapper = await mountAssistant({ compact: true })
+    const input = wrapper.find('[data-testid="ai-input"]')
+    const composer = wrapper.find('[data-testid="ai-composer"]')
+
+    expect(wrapper.find('[data-testid="ai-send"]').attributes('disabled')).toBeDefined()
+    await input.setValue('   ')
+    expect(wrapper.find('[data-testid="ai-send"]').attributes('disabled')).toBeDefined()
+    await composer.trigger('submit')
+    expect(calls).toEqual(['startAiSession'])
+
+    await input.setValue('查找一本书')
+    await composer.trigger('submit')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="ai-sending"]').text()).toContain('AI 正在回复')
+    expect(input.attributes('disabled')).toBeDefined()
+    await composer.trigger('submit')
+    await flushPromises()
+    expect(calls.filter((operationId) => operationId === 'sendAiMessage')).toHaveLength(1)
+    expect(wrapper.find('[data-testid="ai-messages"]').text()).toContain('查找一本书')
+
+    resolveSend(sharedFixtures.sendAiMessage)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="ai-sending"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-messages"]').text()).toContain('请核对后提交')
   })
 
   it('shows the server-issued VISITOR role and labels its quota as shared', async () => {
@@ -255,6 +379,50 @@ describe('AiAssistantView', () => {
 
     expect(wrapper.find('[data-testid="ai-quota-exhausted"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="ai-input"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="ai-quota-remaining"]').text()).toBe('0')
+  })
+
+  it('locks the composer when the server reports zero remaining at session start or after a turn', async () => {
+    installMockTransport({
+      fixtures: {
+        startAiSession: {
+          ...sharedFixtures.startAiSession,
+          data: { ...sharedFixtures.startAiSession.data, quota: { remaining: 0 } },
+        },
+      },
+    })
+    const emptySession = await mountAssistant({ compact: true })
+    expect(emptySession.find('[data-testid="ai-quota-exhausted"]').exists()).toBe(true)
+    expect(emptySession.find('[data-testid="ai-input"]').attributes('disabled')).toBeDefined()
+    expect(emptySession.find('[data-testid="ai-quota-remaining"]').text()).toBe('0')
+    emptySession.unmount()
+
+    const calls = []
+    setTransport({
+      mode: 'mock',
+      request(operationId) {
+        calls.push(operationId)
+        if (operationId === 'startAiSession') {
+          return {
+            ...sharedFixtures.startAiSession,
+            data: { ...sharedFixtures.startAiSession.data, quota: { remaining: 1 } },
+          }
+        }
+        return {
+          ...sharedFixtures.sendAiMessage,
+          data: { ...sharedFixtures.sendAiMessage.data, quota: { remaining: 0 } },
+        }
+      },
+    })
+    const drainedSession = await mountAssistant({ compact: true })
+    await sendMessage(drainedSession, '查询图书')
+
+    expect(drainedSession.find('[data-testid="ai-quota-exhausted"]').exists()).toBe(true)
+    expect(drainedSession.find('[data-testid="ai-quota-remaining"]').text()).toBe('0')
+    expect(drainedSession.find('[data-testid="ai-input"]').attributes('disabled')).toBeDefined()
+    await drainedSession.find('[data-testid="ai-composer"]').trigger('submit')
+    await flushPromises()
+    expect(calls.filter((operationId) => operationId === 'sendAiMessage')).toHaveLength(1)
   })
 
   it('renders L1 and L3 cards as non-submitting guidance', async () => {
@@ -425,5 +593,6 @@ describe('AiAssistantView', () => {
     const alert = wrapper.find('[data-testid="error-alert"]')
     expect(alert.text()).toContain('请先登录')
     expect(alert.text()).toContain('MLS-ID-001')
+    expect(wrapper.find('[data-testid="ai-messages"]').text()).toContain('查询开放馆藏')
   })
 })

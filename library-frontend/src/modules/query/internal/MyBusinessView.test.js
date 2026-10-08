@@ -33,6 +33,9 @@ describe('MyBusinessView', () => {
 
     await wrapper.find('[data-testid="renew-4001"]').trigger('click')
     await flushPromises()
+    expect(wrapper.find('[data-testid="renew-result"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="renew-modal-submit"]').trigger('click')
+    await flushPromises()
 
     const result = wrapper.find('[data-testid="renew-result"]')
     expect(result.exists()).toBe(true)
@@ -46,6 +49,9 @@ describe('MyBusinessView', () => {
     })
 
     await wrapper.find('[data-testid="renew-4001"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="renew-result"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="renew-modal-submit"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.find('[data-testid="renew-result"]').exists()).toBe(false)
@@ -86,6 +92,8 @@ describe('MyBusinessView', () => {
     await flushPromises()
 
     await wrapper.find('[data-testid="cancel-4003"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="cancel-confirm"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.find('[data-testid="my-business-empty"]').exists()).toBe(true)
@@ -147,6 +155,8 @@ describe('MyBusinessView', () => {
     const wrapper = await mountView(MyBusinessView)
     await flushPromises()
 
+    await wrapper.get('[data-testid="business-assistant-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="ai-input"]').setValue('帮我预填续借')
     await wrapper.find('[data-testid="ai-composer"]').trigger('submit')
     await flushPromises()
@@ -173,6 +183,8 @@ describe('MyBusinessView', () => {
       renewLoan: { status: 422, code: 'MLS-CIRC-012', message: '已被预约，无法续借', data: {} },
     })
 
+    await wrapper.get('[data-testid="business-assistant-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="ai-input"]').setValue('帮我预填续借')
     await wrapper.find('[data-testid="ai-composer"]').trigger('submit')
     await flushPromises()
@@ -211,6 +223,8 @@ describe('MyBusinessView', () => {
     const wrapper = await mountView(MyBusinessView)
     await flushPromises()
 
+    await wrapper.get('[data-testid="business-assistant-open"]').trigger('click')
+    await flushPromises()
     await wrapper.find('[data-testid="ai-input"]').setValue('帮我预填续借')
     await wrapper.find('[data-testid="ai-composer"]').trigger('submit')
     await flushPromises()

@@ -1,7 +1,10 @@
 <template>
-  <div class="app-shell">
-    <header class="app-header">
-      <RouterLink to="/" class="brand">MyLibrarySystem</RouterLink>
+  <div :class="['app-shell', { 'app-shell--home': isHome }]">
+    <header :class="['app-header', 'app-header--home']">
+      <RouterLink to="/" :class="['brand', 'brand--home']">
+        <span class="brand-mark">云图</span>
+        <strong>公共图书馆</strong>
+      </RouterLink>
       <button
         type="button"
         class="mobile-nav-toggle"
@@ -15,33 +18,34 @@
       </button>
       <nav
         id="app-nav"
-        class="app-nav"
+        :class="['app-nav', { 'app-nav--home': true, 'is-mobile-open': mobileNavOpen }]"
         data-testid="app-nav"
-        :class="{ 'is-mobile-open': mobileNavOpen }"
         aria-label="主导航"
         @click="closeMobileNav"
       >
         <RouterLink to="/">首页</RouterLink>
-        <RouterLink to="/catalog">书目检索</RouterLink>
-        <RouterLink to="/assistant" data-testid="assistant-link">AI 助手</RouterLink>
-        <template v-if="authenticated">
-          <RouterLink v-if="isReader" to="/me/business">我的业务</RouterLink>
-          <RouterLink v-if="isLibrarian" to="/walk-in">现场借阅</RouterLink>
-          <RouterLink v-if="isReader || isLibrarian" to="/fines">罚款支付</RouterLink>
-          <RouterLink v-if="isLibrarian" to="/admin/catalog">书目维护</RouterLink>
-          <RouterLink v-if="isLibrarian" to="/admin/copies">副本维护</RouterLink>
-          <RouterLink v-if="isLibrarian" to="/desk">馆员工作台</RouterLink>
-          <RouterLink v-if="isLibrarian" to="/review-requests">复核发起</RouterLink>
-          <RouterLink v-if="isLibrarian" to="/admin/dashboard">到馆看板</RouterLink>
-          <RouterLink v-if="isAdmin" to="/admin/reviews">复核决定</RouterLink>
-          <RouterLink v-if="isAdmin" to="/admin/closing">闭馆恢复</RouterLink>
-          <RouterLink v-if="isAdmin" to="/admin/simulator">模拟调度</RouterLink>
-          <RouterLink v-if="isLibrarian || isAdmin" to="/admin/audit">审计</RouterLink>
-          <RouterLink v-if="isAdmin" to="/admin/accounts">账户管理</RouterLink>
-          <RouterLink to="/notifications">通知</RouterLink>
-        </template>
+        <details v-if="authenticated" class="home-work-menu" data-testid="personal-info-menu" @click.stop>
+          <summary>个人信息</summary>
+          <div class="home-work-menu__panel" @click="closeMobileNav">
+            <RouterLink v-if="isReader" to="/me/business">我的业务</RouterLink>
+            <RouterLink v-if="isLibrarian" to="/walk-in">现场借阅</RouterLink>
+            <RouterLink v-if="isReader || isLibrarian" to="/fines">罚款支付</RouterLink>
+            <RouterLink v-if="isLibrarian" to="/admin/catalog">书目维护</RouterLink>
+            <RouterLink v-if="isLibrarian" to="/admin/copies">副本维护</RouterLink>
+            <RouterLink v-if="isLibrarian" to="/desk">馆员工作台</RouterLink>
+            <RouterLink v-if="isLibrarian" to="/review-requests">复核发起</RouterLink>
+            <RouterLink v-if="isLibrarian" to="/admin/dashboard">到馆看板</RouterLink>
+            <RouterLink v-if="isAdmin" to="/admin/reviews">复核决定</RouterLink>
+            <RouterLink v-if="isAdmin" to="/admin/closing">闭馆恢复</RouterLink>
+            <RouterLink v-if="isAdmin" to="/admin/simulator">模拟调度</RouterLink>
+            <RouterLink v-if="isLibrarian || isAdmin" to="/admin/audit">审计</RouterLink>
+            <RouterLink v-if="isAdmin" to="/admin/accounts">账户管理</RouterLink>
+            <RouterLink to="/notifications">通知</RouterLink>
+          </div>
+        </details>
+        <RouterLink v-else to="/login" data-testid="personal-info-link">个人信息</RouterLink>
       </nav>
-      <div class="session-area" data-testid="session-area">
+      <div :class="['session-area', 'session-area--home']" data-testid="session-area">
         <template v-if="authenticated">
           <span class="actor-role">{{ roleLabel }}</span>
           <el-button size="small" data-testid="logout-button" @click="onLogout">退出登录</el-button>
@@ -63,16 +67,39 @@
         关联事务 {{ unreadBusinessNotification.relatedTxId }} · 预约日期 {{ unreadBusinessNotification.reservationDate }}
       </RouterLink>
     </aside>
-    <main class="app-main">
-      <RouterView />
+    <main :class="['app-main', { 'app-main--home': isHome }]">
+      <RouterView :route="backgroundRoute" v-slot="{ Component }">
+        <component :is="Component" :key="backgroundRoute.path" />
+      </RouterView>
+      <BusinessDialog v-if="modalOpen" :open="modalOpen" :title="route.meta.title || '详情'" :assistant="route.name !== 'ai-assistant'" @close="closeRouteModal">
+        <RouterView v-slot="{ Component }"><component :is="Component" :key="route.fullPath" /></RouterView>
+      </BusinessDialog>
     </main>
+    <Teleport :to="workspace.triggerTarget.value || 'body'" :disabled="!workspace.triggerTarget.value">
+      <button
+        :ref="element => workspace.triggerElement.value = element"
+        v-show="showAssistantTrigger"
+        class="home-floating-ai"
+        type="button"
+        data-testid="home-assistant-trigger"
+        aria-haspopup="dialog"
+        :aria-expanded="workspace.assistantOpen.value"
+        aria-controls="home-ai-dialog"
+        @click="openAssistant"
+      >✦ 询问 AI</button>
+    </Teleport>
+    <ModalWorkspace :state="workspace" />
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, provide, ref, shallowRef, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
-import { getRole, isAuthenticated, logout } from '@/platform/auth/session'
+import { getRole, getSessionState, isAuthenticated, logout } from '@/platform/auth/session'
+import BusinessDialog from '@/components/BusinessDialog.vue'
+import ModalWorkspace from '@/components/ModalWorkspace.vue'
+import { createModalWorkspace, modalWorkspaceKey } from '@/components/modalWorkspace'
+import { backgroundModalKey, isModalRoute, modalBackgrounds } from '@/router/presentation'
 import { endCurrentSession } from '@/modules/identity'
 import {
   clearUnreadBusinessNotification,
@@ -83,6 +110,31 @@ import {
 
 const router = useRouter()
 const route = useRoute()
+const backgroundRoute = shallowRef(router.resolve(isModalRoute(route) ? modalBackgrounds[route.name] : route.fullPath))
+const modalOpen = computed(() => isModalRoute(route))
+const workspace = createModalWorkspace()
+const showAssistantTrigger = computed(() => !workspace.assistantOpen.value
+  && (!workspace.active.value || workspace.active.value.assistant))
+async function openAssistant() {
+  workspace.assistantOpen.value = true
+  await nextTick()
+  document.getElementById('home-ai-dialog')?.querySelector('button')?.focus({ preventScroll: true })
+}
+provide(modalWorkspaceKey, workspace)
+provide(backgroundModalKey, computed(() => modalOpen.value || workspace.open.value))
+watch(() => route.fullPath, () => {
+  if (!isModalRoute(route)) backgroundRoute.value = router.resolve(route.fullPath)
+}, { flush: 'sync' })
+watch(() => [getSessionState().token, getSessionState().actor?.accountId, getRole()], () => {
+  const meta = backgroundRoute.value.meta
+  if (meta.requiresAuth && (!isAuthenticated() || (meta.roles.length && !meta.roles.includes(getRole())))) {
+    backgroundRoute.value = router.resolve('/')
+  }
+}, { flush: 'sync' })
+const isHome = computed(() => backgroundRoute.value.name === 'home')
+function closeRouteModal() {
+  void router.push(backgroundRoute.value.fullPath)
+}
 const mobileNavOpen = ref(false)
 const authenticated = computed(() => isAuthenticated())
 const roleLabel = computed(() => getRole() ?? '')
@@ -127,6 +179,27 @@ async function onLogout() {
 </script>
 
 <style scoped>
+.home-floating-ai { position: fixed; right: 28px; bottom: 28px; z-index: 30; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 12px 22px; border: 0; border-radius: 999px; color: #fff; background: #3154c9; box-shadow: 0 10px 24px rgb(49 84 201 / 24%); cursor: pointer; font-family: inherit; }
+.home-floating-ai:focus-visible { outline: 3px solid #90a9ff; outline-offset: 3px; }
+@media (max-width: 640px) { .home-floating-ai { right: 16px; bottom: 16px; } }
+
+:global(body:has(.app-shell--home)) {
+  margin: 0;
+}
+
+:global(.app-shell--home),
+:global(.app-shell--home > .app-header--home),
+:global(.app-shell--home > .app-header--home *),
+:global(.app-shell--home > .app-header--home *::before),
+:global(.app-shell--home > .app-header--home *::after),
+:global(.app-shell--home > .notification-banner),
+:global(.app-shell--home > .notification-banner *),
+:global(.app-shell--home > .notification-banner *::before),
+:global(.app-shell--home > .notification-banner *::after),
+:global(.app-shell--home > .app-main--home) {
+  box-sizing: border-box;
+}
+
 .app-shell {
   min-height: 100vh;
   display: flex;
@@ -257,6 +330,308 @@ async function onLogout() {
 
   .actor-role {
     display: none;
+  }
+}
+
+.app-shell--home {
+  background: #f5f7fb;
+  color: #192238;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.app-header--home {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-wrap: nowrap;
+  gap: 0;
+  height: 72px;
+  box-sizing: border-box;
+  padding: 0 max(24px, calc((100vw - 1240px) / 2));
+  border-bottom-color: #e6eaf0;
+  background: rgb(255 255 255 / 94%);
+  backdrop-filter: blur(12px);
+}
+
+.app-header--home .mobile-nav-toggle {
+  display: none;
+}
+
+.brand--home {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  color: #17213a;
+  text-decoration: none;
+}
+
+.brand--home .brand-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: #2448bd;
+  color: #fff;
+  font-family: Georgia, serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.brand--home strong {
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-size: 20px;
+}
+
+.app-nav--home {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 5px;
+  height: 100%;
+  margin-left: 44px;
+}
+
+.app-nav--home a,
+.app-nav--home .home-work-menu > summary {
+  display: flex;
+  align-items: center;
+  min-height: 100%;
+  padding: 0 14px;
+  color: #667086;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.app-nav--home a:hover,
+.app-nav--home .home-work-menu > summary:hover,
+.app-nav--home .router-link-active {
+  color: #2448bd;
+}
+
+.home-work-menu {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.home-work-menu > summary {
+  list-style: none;
+}
+
+.home-work-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-work-menu > summary::after {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 9px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  content: "";
+  transform: rotate(45deg);
+}
+
+.home-work-menu[open] > summary::after {
+  margin-top: 3px;
+  transform: rotate(225deg);
+}
+
+.home-work-menu__panel {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 21;
+  display: grid;
+  width: max-content;
+  min-width: 190px;
+  max-height: min(70vh, 520px);
+  gap: 2px;
+  overflow-y: auto;
+  padding: 7px;
+  border: 1px solid #e1e6ef;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgb(31 43 78 / 14%);
+}
+
+.home-work-menu:not([open]) > .home-work-menu__panel {
+  display: none;
+}
+
+.home-work-menu__panel a {
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: #46516a;
+  white-space: nowrap;
+}
+
+.home-work-menu__panel a:hover {
+  background: #f2f5fc;
+}
+
+.session-area--home {
+  gap: 10px;
+  margin-left: auto;
+}
+
+.session-area--home [data-testid="login-link"] {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  padding: 0 13px;
+  border: 1px solid #2448bd;
+  border-radius: 9px;
+  background: #2448bd;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.app-main--home {
+  width: min(1240px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 0;
+}
+
+.app-shell--home .notification-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  width: min(1240px, calc(100% - 48px));
+  min-height: 70px;
+  box-sizing: border-box;
+  margin: 22px auto 0;
+  padding: 11px 17px;
+  border-color: #f1cc88;
+  border-radius: 12px;
+  background: #fff9ec;
+  box-shadow: 0 8px 22px rgb(91 68 27 / 7%);
+  color: #273550;
+}
+
+.app-shell--home .notification-banner-message {
+  font-size: 13px;
+}
+
+.app-shell--home .notification-banner a {
+  color: #a86613;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 900px) {
+  .app-header--home {
+    padding: 0 18px;
+  }
+
+  .brand--home strong {
+    display: none;
+  }
+
+  .app-nav--home {
+    margin-left: 20px;
+  }
+
+  .app-nav--home a,
+  .app-nav--home .home-work-menu > summary {
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-header--home {
+    height: auto;
+    min-height: 62px;
+    flex-wrap: wrap;
+    column-gap: 0.5rem;
+    padding: 9px 14px;
+  }
+
+  .app-shell--home .mobile-nav-toggle {
+    display: inline-flex;
+    order: 3;
+    margin-left: 0;
+    border-color: #e1e5ec;
+    border-radius: 9px;
+    color: #38445d;
+  }
+
+  .brand--home {
+    order: 1;
+  }
+
+  .session-area--home {
+    order: 2;
+  }
+
+  .app-nav--home {
+    display: none;
+    order: 4;
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    gap: 4px;
+    height: auto;
+    margin: 9px 0 0;
+    padding-top: 8px;
+    border-top: 1px solid #e6eaf0;
+  }
+
+  .app-nav--home.is-mobile-open {
+    display: flex;
+  }
+
+  .app-nav--home > a {
+    min-height: 38px;
+    flex: 1 1 9rem;
+    padding: 0 10px;
+  }
+
+  .app-nav--home .home-work-menu {
+    flex: 1 0 100%;
+    display: block;
+  }
+
+  .app-nav--home .home-work-menu > summary {
+    min-height: 38px;
+    padding: 0 10px;
+  }
+
+  .home-work-menu__panel {
+    position: static;
+    width: auto;
+    max-height: 50vh;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    margin: 2px 0 7px;
+    box-shadow: none;
+  }
+
+  .home-work-menu__panel a {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .app-main--home {
+    width: min(100% - 28px, 1240px);
+  }
+
+  .app-shell--home .notification-banner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    width: min(100% - 28px, 1240px);
+    min-height: 62px;
+    margin-top: 15px;
+    padding: 10px 13px;
   }
 }
 </style>

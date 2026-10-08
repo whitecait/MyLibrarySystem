@@ -55,6 +55,11 @@ onMounted(() => load(null))
   gap: 1rem;
 }
 
+.reading-pages p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .reading-pages section {
   margin-bottom: 1.25rem;
 }
