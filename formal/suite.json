@@ -19,7 +19,29 @@
       "ProbeNotAwaiting",
       "ProbeNotManual",
       "ProbeNotAdminFail",
-      "ProbeNotRetry"
+      "ProbeNotRetry",
+      "ProbeNotAutoReopen"
+    ],
+    "timeout_seconds": 180,
+    "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
+  },
+  {
+    "model": "ClosingRecovery",
+    "config": "ClosingRecovery.cfg",
+    "safety": [
+      "TypeOK",
+      "InvOrdered",
+      "InvSuccessfulDatesNotRepeated",
+      "InvOpenOnlyWhenCaughtUp",
+      "InvFailureKeepsIsolation",
+      "InvWritesAfterRecovery"
+    ],
+    "probes": [
+      "ProbeNotStartupCatchUp",
+      "ProbeNotTwoMissingDatesRecovered",
+      "ProbeNotRestartRecovery",
+      "ProbeNotPreservedSuccessfulDate",
+      "ProbeNotFailureIsolation"
     ],
     "timeout_seconds": 180,
     "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."

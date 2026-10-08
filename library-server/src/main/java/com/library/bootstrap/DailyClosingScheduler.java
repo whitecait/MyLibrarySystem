@@ -7,14 +7,15 @@ import com.library.circulation.contract.ClosingStatusQuery;
 import com.library.circulation.contract.model.BusinessDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** Deployment-controlled daily close trigger; reopening remains an explicit administrator action. */
+/** Check missed dates before startup completes and reopen only after every due batch succeeds. */
 @Component
 @ConditionalOnProperty(prefix = "library.closing", name = "daily-enabled", havingValue = "true")
-public final class DailyClosingScheduler {
+public final class DailyClosingScheduler implements SmartInitializingSingleton {
 
     private static final Logger log = LoggerFactory.getLogger(DailyClosingScheduler.class);
 
@@ -28,9 +29,15 @@ public final class DailyClosingScheduler {
         this.clock = clock;
     }
 
+    @Override
+    public void afterSingletonsInstantiated() {
+        log.info("Startup daily close check started");
+        closePreviousBusinessDate();
+    }
+
     @Scheduled(cron = "${library.closing.daily-cron:0 0 0 * * *}",
             zone = "${library.closing.time-zone:Asia/Shanghai}")
-    public void closePreviousBusinessDate() {
+    public synchronized void closePreviousBusinessDate() {
         var today = clock.today();
         var yesterday = today.minusDays(1);
         var next = status.firstUnclosedDateThrough(yesterday);
@@ -51,7 +58,12 @@ public final class DailyClosingScheduler {
             next = status.firstUnclosedDateThrough(yesterday);
         }
 
-        log.info("Scheduled daily close caught up through businessDate={}; administrator reopen is required",
-                yesterday);
+        var reopened = closing.reopen(new ClosingCommands.ReopenCommand(BusinessDate.of(yesterday)));
+        if (reopened instanceof ModuleResult.Rejected<ClosingCommands.ReopenedDate> rejected) {
+            log.error("Automatic reopen rejected throughBusinessDate={} code={} reasons={}; administrator recovery is available",
+                    yesterday, rejected.code(), rejected.reasons());
+            return;
+        }
+        log.info("Daily close caught up through businessDate={}; ordinary writes reopened automatically", yesterday);
     }
 }

@@ -5,7 +5,7 @@
 (* 时间抽象为相位（方案约定，不上实时时钟）：                               *)
 (*   OPEN      —— T 前，普通业务写入可正常提交                              *)
 (*   ISOLATED  —— T 起，普通写入隔离（迟到提交回滚、新请求拒绝）            *)
-(*   REOPENED  —— 恢复外部事务写入（SC-Q6 / SC-Q10 + 管理员开放）           *)
+(*   REOPENED  —— 恢复外部事务写入（2026-10-07 自动恢复与管理员后备开放）           *)
 (*                                                                         *)
 (* 三阶段整体提交或回滚（SC-Q5）抽象为单步原子动作（CloseBatchSucc 把       *)
 (* done[d] 一次性置 TRUE，无中间可观察态），与 SC-Q2/Q9 同风格。            *)
@@ -38,13 +38,13 @@ VARIABLES
   roundSettled, \* 全部到期批次已处理完毕（进入恢复决策）
   awaitingAdmin,\* 已追平待管理员显式开放（SC-Q10）
   adminAuth,    \* 管理员开放命令具备权限且当前仍追平（Init 非确定）
-  adminOpened,  \* 开放操作已记录（CL-D10）
+  opened,  \* 受控开放已记录（自动恢复或 CL-D10）
   adminFails,   \* 开放命令失败次数（CL-D11，有界计数）
   newWrites     \* 恢复后的新普通写入（SC-Q6，有界）
 
 vars == <<phase, due, done, curDate, retryLeft, manualReady, inFlight,
           committed, committedAtT, backlogRound, roundSettled,
-          awaitingAdmin, adminAuth, adminOpened, adminFails, newWrites>>
+          awaitingAdmin, adminAuth, opened, adminFails, newWrites>>
 
 PHASES == {"OPEN", "DRAINING", "ISOLATED", "REOPENED"}
 AllDone == \A d \in Dates : due[d] => done[d]
@@ -65,7 +65,7 @@ Init ==
   /\ roundSettled = FALSE
   /\ awaitingAdmin = FALSE
   /\ adminAuth \in BOOLEAN
-  /\ adminOpened = FALSE
+  /\ opened = FALSE
   /\ adminFails = 0
   /\ newWrites = 0
 
@@ -79,7 +79,7 @@ BeginWrite ==
   /\ inFlight' = inFlight + 1
   /\ UNCHANGED <<phase, due, done, curDate, retryLeft, manualReady,
                  committed, committedAtT, backlogRound, roundSettled,
-                 awaitingAdmin, adminAuth, adminOpened, adminFails, newWrites>>
+                 awaitingAdmin, adminAuth, opened, adminFails, newWrites>>
 
 CommitWrite ==
   /\ phase \in {"OPEN", "DRAINING"}
@@ -88,7 +88,7 @@ CommitWrite ==
   /\ committed' = committed + 1
   /\ UNCHANGED <<phase, due, done, curDate, retryLeft, manualReady,
                  committedAtT, backlogRound, roundSettled,
-                 awaitingAdmin, adminAuth, adminOpened, adminFails, newWrites>>
+                 awaitingAdmin, adminAuth, opened, adminFails, newWrites>>
 
 \* 请求隔离后不再发放本轮许可，等待已发许可的事务提交或回滚。
 RequestIsolation ==
@@ -96,7 +96,7 @@ RequestIsolation ==
   /\ phase' = "DRAINING"
   /\ UNCHANGED <<due, done, curDate, retryLeft, manualReady, inFlight,
                  committed, committedAtT, backlogRound, roundSettled,
-                 awaitingAdmin, adminAuth, adminOpened, adminFails, newWrites>>
+                 awaitingAdmin, adminAuth, opened, adminFails, newWrites>>
 
 AbortWrite ==
   /\ phase \in {"OPEN", "DRAINING"}
@@ -104,7 +104,7 @@ AbortWrite ==
   /\ inFlight' = inFlight - 1
   /\ UNCHANGED <<phase, due, done, curDate, retryLeft, manualReady,
                  committed, committedAtT, backlogRound, roundSettled,
-                 awaitingAdmin, adminAuth, adminOpened, adminFails, newWrites>>
+                 awaitingAdmin, adminAuth, opened, adminFails, newWrites>>
 
 \* 逻辑 T 是隔离提交；必须等待本轮共享许可事务全数结束，不是墙钟强制回滚。
 TCutoff ==
@@ -115,7 +115,7 @@ TCutoff ==
   /\ inFlight' = 0
   /\ backlogRound' = (Cardinality({d \in Dates : due[d] /\ ~done[d]}) > 1)
   /\ UNCHANGED <<due, done, curDate, retryLeft, manualReady, committed,
-                 roundSettled, awaitingAdmin, adminAuth, adminOpened,
+                 roundSettled, awaitingAdmin, adminAuth, opened,
                  adminFails, newWrites>>
 
 \* 当日三阶段整体提交成功（SC-Q5 原子；CL-D4/D8 路径）。
@@ -127,7 +127,7 @@ CloseBatchSucc ==
   /\ done' = [done EXCEPT ![curDate] = TRUE]
   /\ UNCHANGED <<phase, due, curDate, retryLeft, manualReady, inFlight,
                  committed, committedAtT, backlogRound, roundSettled,
-                 awaitingAdmin, adminAuth, adminOpened, adminFails, newWrites>>
+                 awaitingAdmin, adminAuth, opened, adminFails, newWrites>>
 
 \* 当日确定失败：整体回滚（done 不变），消耗一次自动重试额度（CL-D5/D6）。
 CloseBatchFail ==
@@ -137,7 +137,7 @@ CloseBatchFail ==
   /\ retryLeft' = retryLeft - 1
   /\ UNCHANGED <<phase, due, done, curDate, manualReady, inFlight,
                  committed, committedAtT, backlogRound, roundSettled,
-                 awaitingAdmin, adminAuth, adminOpened, adminFails, newWrites>>
+                 awaitingAdmin, adminAuth, opened, adminFails, newWrites>>
 
 \* 自动重试耗尽，转人工恢复（CL-D7）；人工恢复不跳过结算、不改判完成。
 ManualRepair ==
@@ -148,7 +148,7 @@ ManualRepair ==
   /\ manualReady' = TRUE
   /\ UNCHANGED <<phase, due, done, curDate, retryLeft, inFlight,
                  committed, committedAtT, backlogRound, roundSettled,
-                 awaitingAdmin, adminAuth, adminOpened, adminFails, newWrites>>
+                 awaitingAdmin, adminAuth, opened, adminFails, newWrites>>
 
 \* 当前批次成功且仍有到期未完成批次 → 推进到下一业务日（CL-D8，按日期先后）。
 AdvanceDate ==
@@ -158,21 +158,25 @@ AdvanceDate ==
   /\ curDate' = D2
   /\ UNCHANGED <<phase, due, done, retryLeft, manualReady, inFlight,
                  committed, committedAtT, backlogRound, roundSettled,
-                 awaitingAdmin, adminAuth, adminOpened, adminFails, newWrites>>
+                 awaitingAdmin, adminAuth, opened, adminFails, newWrites>>
 
 \* 全部到期批次处理完毕 → 恢复决策（CL-D4 vs CL-D9）：
-\*   正常路径（非补结轮）也保持隔离，等待管理员；
-\*   补结轮已追平 → 保持隔离，等待管理员显式开放（SC-Q10）。
+\*   正常轮和补结轮全部成功后自动开放；
+\*   自动开放失败时保持隔离，管理员开放作为后备（2026-10-07 批准）。
 SettleRound ==
   /\ phase = "ISOLATED"
   /\ ~roundSettled
   /\ AllDone
   /\ roundSettled' = TRUE
-  /\ awaitingAdmin' = TRUE
-  /\ phase' = phase
+  /\ \/ /\ phase' = "REOPENED"
+        /\ opened' = TRUE
+        /\ awaitingAdmin' = FALSE
+     \/ /\ phase' = phase
+        /\ opened' = opened
+        /\ awaitingAdmin' = TRUE
   /\ UNCHANGED <<due, done, curDate, retryLeft, manualReady, inFlight,
                  committed, committedAtT, backlogRound, adminAuth,
-                 adminOpened, adminFails, newWrites>>
+                 adminFails, newWrites>>
 
 \* 管理员开放命令：有权且当前仍已追平 → 记录开放并到达 R（CL-D10）。
 AdminOpen ==
@@ -180,7 +184,7 @@ AdminOpen ==
   /\ adminAuth
   /\ AllDone
   /\ phase' = "REOPENED"
-  /\ adminOpened' = TRUE
+  /\ opened' = TRUE
   /\ awaitingAdmin' = FALSE     \* 开放完成，"待开放"控制态随之结束
   /\ UNCHANGED <<due, done, curDate, retryLeft, manualReady, inFlight,
                  committed, committedAtT, backlogRound, roundSettled,
@@ -194,7 +198,7 @@ AdminOpenFail ==
   /\ adminFails' = adminFails + 1
   /\ UNCHANGED <<phase, due, done, curDate, retryLeft, manualReady, inFlight,
                  committed, committedAtT, backlogRound, roundSettled,
-                 awaitingAdmin, adminAuth, adminOpened, newWrites>>
+                 awaitingAdmin, adminAuth, opened, newWrites>>
 
 \* 恢复后的新普通写入按最新事实处理（SC-Q6），计数有界。
 NewWrite ==
@@ -204,7 +208,7 @@ NewWrite ==
   /\ committed' = committed + 1
   /\ UNCHANGED <<phase, due, done, curDate, retryLeft, manualReady, inFlight,
                  committedAtT, backlogRound, roundSettled,
-                 awaitingAdmin, adminAuth, adminOpened, adminFails>>
+                 awaitingAdmin, adminAuth, opened, adminFails>>
 
 Next ==
   \/ BeginWrite \/ CommitWrite \/ AbortWrite \/ RequestIsolation \/ TCutoff
@@ -223,7 +227,7 @@ TypeOK ==
   /\ inFlight \in Nat /\ committed \in Nat /\ committedAtT \in Nat
   /\ backlogRound \in BOOLEAN /\ roundSettled \in BOOLEAN
   /\ awaitingAdmin \in BOOLEAN /\ adminAuth \in BOOLEAN
-  /\ adminOpened \in BOOLEAN /\ adminFails \in Nat
+  /\ opened \in BOOLEAN /\ adminFails \in Nat
   /\ newWrites \in Nat
 
 \* 失败日期之后的日期不得越序先结算（§9.3 场景流约束）。
@@ -238,25 +242,27 @@ InvFreeze ==
 InvNoOldPermit == (phase \in {"ISOLATED", "REOPENED"}) => inFlight = 0
 
 \* SC-Q6 / SC-Q10（v0.6 修正）：REOPENED 只能来自
-\*   正常轮和补结轮均须追平且管理员显式开放（GOV-0008 §3）。
+\*   正常轮和补结轮均须追平且受控开放（自动恢复或管理员后备）。
 InvReopenGated ==
   (phase = "REOPENED") =>
-    (AllDone /\ adminOpened)
+    (AllDone /\ opened)
 
 \* 追平待开放态的合法性：正常轮或补结轮、全部追平、尚未恢复。
 InvAwaitGated ==
   awaitingAdmin =>
-    (phase = "ISOLATED" /\ roundSettled /\ AllDone /\ ~adminOpened)
+    (phase = "ISOLATED" /\ roundSettled /\ AllDone /\ ~opened)
 
 \* CL-D10：开放记录只出现在已追平的 REOPENED 状态。
 InvOpenCoherent ==
-  adminOpened => (phase = "REOPENED" /\ roundSettled /\ AllDone)
+  opened => (phase = "REOPENED" /\ roundSettled /\ AllDone)
 
 -----------------------------------------------------------------------------
 (****************** 可达性探针（期望 TLC 报 violated） **********************)
 (* 以下每条"不变量"取反写出：TLC 报告 violated 并给出轨迹，即为该出口的     *)
 (* 可达性证明（对应 CL-D6/D7/D10/D11 与正常路径 SC-Q6 的图可达性）。        *)
 -----------------------------------------------------------------------------
+ProbeNotAutoReopen == ~((phase = "REOPENED") /\ ~adminAuth)
+
 ProbeNotNormalAwaiting == ~(awaitingAdmin /\ ~backlogRound)
 ProbeNotBacklogAwaiting == ~(awaitingAdmin /\ backlogRound)
 

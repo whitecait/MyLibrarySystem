@@ -217,11 +217,13 @@ def CL():
         ])])
     f2, _ = run_table(
         "CL·补结批次推进（§9.2 D8~D10，当前批次成功且未发命令，正常轮与补结轮均适用）",
-        [("MORE", "还有到期闭馆批次"), ("WAITING", "已追平待管理员"), ("BACKLOG", "是否补结轮，正常轮同样等待管理员")],
+        [("MORE", "还有到期闭馆批次"), ("WAITING", "全部批次已追平"),
+         ("BACKLOG", "是否补结轮"), ("AUTO_OK", "自动开放成功")],
         [("推进二分（假设 A3）", lambda e: e["MORE"] != e["WAITING"])],
         [("批次推进", [
             ("CL-D8", lambda e: e["MORE"], "继续下一业务日"),
-            ("CL-D9", lambda e: e["WAITING"], "等待管理员，保持隔离"),
+            ("CL-D9", lambda e: e["WAITING"] and e["AUTO_OK"], "自动开放普通写入"),
+            ("CL-AUTO-FAIL", lambda e: e["WAITING"] and not e["AUTO_OK"], "保持隔离，管理员后备处置"),
         ])])
     f3, _ = run_table(
         "CL·失败后处置（§9.2 D5~D7，D5 为 D6/D7 前置）",

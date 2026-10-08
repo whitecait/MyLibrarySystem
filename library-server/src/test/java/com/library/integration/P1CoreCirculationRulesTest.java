@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -496,15 +497,12 @@ class P1CoreCirculationRulesTest {
         assertThat(jdbc.queryForObject("SELECT status FROM closing_batch WHERE business_date=?",
                 String.class, java.sql.Date.valueOf(closingDate))).isEqualTo("SUCCEEDED");
         assertThat(jdbc.queryForObject("SELECT draining FROM closing_admission WHERE scope='GLOBAL'", Boolean.class))
-                .isTrue();
-        assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/reservations"))).isFalse();
-        assertThat(closing.reopen(new ClosingCommands.ReopenCommand(BusinessDate.of(closingDate))))
-                .isInstanceOf(ModuleResult.Accepted.class);
+                .isFalse();
         assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/reservations"))).isTrue();
     }
 
     @Test
-    void deployedDailyCloseCatchesUpEachMissedDateAndWaitsForAdminReopen() {
+    void startupCatchesUpEachMissedDateAndAutomaticallyReopens() {
         var today = businessClock.today();
         var firstMissed = today.minusDays(2);
         var closingDate = today.minusDays(1);
@@ -517,7 +515,10 @@ class P1CoreCirculationRulesTest {
         var firstTx = confirmedForDate(firstMissed, "Catch-up first");
         var secondTx = confirmedForDate(closingDate, "Catch-up second");
 
-        dailyClosingScheduler.closePreviousBusinessDate();
+        try (var context = new GenericApplicationContext()) {
+            context.registerBean(DailyClosingScheduler.class, () -> dailyClosingScheduler);
+            context.refresh();
+        }
 
         assertThat(transactionStatus(firstTx)).isEqualTo("NOT_BORROWED");
         assertThat(transactionStatus(secondTx)).isEqualTo("NOT_BORROWED");
@@ -525,11 +526,12 @@ class P1CoreCirculationRulesTest {
                 Integer.class, java.sql.Date.valueOf(firstMissed), java.sql.Date.valueOf(closingDate))).isEqualTo(2);
         assertThat(jdbc.queryForObject("SELECT \"current_date\" FROM closing_control WHERE scope='GLOBAL'",
                 java.sql.Date.class).toLocalDate()).isEqualTo(closingDate);
-        assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/loans"))).isFalse();
-
-        var reopened = closing.reopen(new ClosingCommands.ReopenCommand(BusinessDate.of(closingDate)));
-        assertThat(reopened).isInstanceOf(ModuleResult.Accepted.class);
         assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/loans"))).isTrue();
+        assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/ai/sessions"))).isTrue();
+        dailyClosingScheduler.closePreviousBusinessDate();
+        assertThat(jdbc.queryForList("SELECT attempts FROM closing_batch WHERE business_date IN (?,?)",
+                Integer.class, java.sql.Date.valueOf(firstMissed), java.sql.Date.valueOf(closingDate)))
+                .containsOnly(1);
     }
 
     @Test
@@ -683,7 +685,8 @@ class P1CoreCirculationRulesTest {
     void failedDailyCloseRollsBackReleaseAssignmentAuditAndOutboxFacts() {
         var closingDate = businessClock.today().minusDays(4);
         resetClosingControl(closingDate, "OPEN", false);
-        jdbc.update("DELETE FROM closing_batch WHERE business_date=?", java.sql.Date.valueOf(closingDate));
+        jdbc.update("DELETE FROM closing_batch WHERE business_date BETWEEN ? AND ?",
+                java.sql.Date.valueOf(closingDate), java.sql.Date.valueOf(businessClock.today().minusDays(1)));
         jdbc.update("UPDATE closing_control SET retry_budget=1 WHERE scope='GLOBAL'");
         var confirmedReader = insertAccount("READER");
         var confirmedTitle = insertTitle("Failure release", 1000);
@@ -719,10 +722,13 @@ class P1CoreCirculationRulesTest {
                 FOR EACH ROW EXECUTE FUNCTION p1_fail_closing_success()
                 """);
         try {
-            var result = closing.closeBusinessDate(new ClosingCommands.ClosingCommand(BusinessDate.of(closingDate)));
+            dailyClosingScheduler.closePreviousBusinessDate();
 
-            assertThat(result).isInstanceOf(ModuleResult.Rejected.class);
-            assertThat(((ModuleResult.Rejected<?>) result).code()).isEqualTo("MLS-CIRC-014");
+            assertThat(unitOfWork.inTransaction(() -> admission.acquire("/api/v1/ai/sessions"))).isFalse();
+            assertThat(jdbc.queryForObject("SELECT draining FROM closing_admission WHERE scope='GLOBAL'", Boolean.class))
+                    .isTrue();
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM closing_batch WHERE business_date > ?",
+                    Integer.class, java.sql.Date.valueOf(closingDate))).isZero();
             assertThat(transactionStatus(confirmedTx)).isEqualTo("CONFIRMED");
             assertThat(copyStatus(reservedCopy)).isEqualTo("RESERVED");
             assertThat(transactionStatus(waitlistTx)).isEqualTo("WAITLIST");

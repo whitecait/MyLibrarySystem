@@ -29,7 +29,7 @@ class PaymentSpaceTest(unittest.TestCase):
 
 
 class ClosingCurrentPolicyTest(unittest.TestCase):
-    def test_normal_and_backlog_rounds_both_wait_for_admin(self):
+    def test_normal_and_backlog_rounds_auto_open_with_failure_fallback(self):
         calls=[];original=tables.run_table
         def capture(name,variables,constraints,stages,**kwargs):
             calls.append((name,constraints,stages));return [],0
@@ -38,9 +38,11 @@ class ClosingCurrentPolicyTest(unittest.TestCase):
         finally: tables.run_table=original
         _,constraints,stages=next(c for c in calls if '批次推进' in c[0])
         for backlog in (False,True):
-            e={'BACKLOG':backlog,'MORE':False,'WAITING':True}
-            self.assertTrue(all(f(e) for _,f in constraints))
-            hits=[(name,result) for name,f,result in stages[0][1] if f(e)]
-            self.assertEqual(hits,[('CL-D9','等待管理员，保持隔离')])
+            for auto_ok in (False,True):
+                e={'BACKLOG':backlog,'MORE':False,'WAITING':True,'AUTO_OK':auto_ok}
+                self.assertTrue(all(f(e) for _,f in constraints))
+                hits=[(name,result) for name,f,result in stages[0][1] if f(e)]
+                expected=('CL-D9','自动开放普通写入') if auto_ok else ('CL-AUTO-FAIL','保持隔离，管理员后备处置')
+                self.assertEqual(hits,[expected])
 
 if __name__ == '__main__': unittest.main()
