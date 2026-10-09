@@ -882,7 +882,7 @@ import datetime, json, os
 reservation_date = (datetime.date.today() + datetime.timedelta(days=2)).isoformat()
 print(json.dumps({"titleId": os.environ["RESERVE_TITLE_ID"],
                   "reservationDate": reservation_date,
-                  "pickupSlot": "PM", "channel": "ONLINE",
+                  "pickupSlot": "13:00-14:30", "channel": "ONLINE",
                   "confirmWaitlist": True}))
 PY
 scratch_file
