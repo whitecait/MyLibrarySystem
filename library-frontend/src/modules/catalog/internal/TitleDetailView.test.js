@@ -19,9 +19,11 @@ describe('TitleDetailView', () => {
     expect(wrapper.find('[data-testid="title-reading-entry"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('128.00 元')
     expect(wrapper.text()).toContain('不构成借阅承诺')
+    expect(wrapper.find('[data-testid="title-borrow-entry"]').text()).toBe('借阅')
+    expect(wrapper.find('[data-testid="reserve-form"]').exists()).toBe(false)
   })
 
-  it('labels missing optional metadata while retaining zero price and both navigation targets', async () => {
+  it('labels missing optional metadata while retaining zero price and reading/borrowing navigation targets', async () => {
     installMockTransport({
       fixtures: {
         getTitle: {
@@ -37,7 +39,7 @@ describe('TitleDetailView', () => {
     const values = Object.fromEntries(rows.map(row => [row.find('dt').text(), row.find('dd').text()]))
     expect(values).toMatchObject({ ISBN: '未提供', 出版社: '未提供', 出版年: '未提供', 定价: '0.00 元' })
     expect(wrapper.find('[data-testid="title-reading-entry"]').attributes('href')).toBe('/titles/2001/read')
-    expect(wrapper.find('[data-testid="title-calendar-entry"]').attributes('href')).toBe('/titles/2001/calendar')
+    expect(wrapper.find('[data-testid="title-borrow-entry"]').attributes('href')).toBe('/titles/2001/borrow')
   })
 
   it('hides the reading entry when the title has no reading content', async () => {

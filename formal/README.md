@@ -68,7 +68,15 @@ InvAcceptedSlotStoredVerbatim 检查新受理记录的值属于五段集合且�
 
 模型使用固定五段全集与有限非法样例，不证明所有输入解析、SQL 原子性或真实权限。实际 HTTP／PostgreSQL 回归由 CirculationScenarioContractTest、PickupSlotTest 和既有流通／查询用例承担。模型与实现结果分别登记。
 
+## 2026-10-09 借阅预填与页面导航的抽象边界
+
+Issue #10 的四条页面注释改变前端呈现。getReservationDefaults 计算上海时区明天及五段集合中的建议值；进入借阅页只读取书目，预填不触发 Reserve。用户编辑后点击提交仍走 ReservePanel 的原请求及服务端守卫。因此已提交 pickupSlot 继续映射到 BusinessReservationMetadata 的 ValidSlotInputs 与原值保存性质；历史、取书资格与候补分支不增加状态。
+
+详情、借阅、阅读层级及日历并列查询属于前端路由和只读呈现，不引入新的持久化业务迁移。模型不验证浏览器时间、日期建议算法、文字截断、路由重定向或 DOM 布局。reservationDefaults.test.js 覆盖上海午夜、块边界、午间、闭馆、跨年和闰日；ReservePanel.test.js 检查预填没有自动预约；TitleBorrowView.test.js 和 App.test.js 检查并列查询、同书目父级返回及背景／AI 保持。完整形式化回归与前端结果按修订提交分别登记。
+
 ## 修订记录
+
+- 2026-10-09：原因：四条页面注释新增预约预填及借阅／日历职责；提出人：lingzz／Codex；日期：2026-10-09；影响需求：既有线上预约交互；影响验收：默认值、无自动提交及路由返回；评审人：lingzz（交互反馈），技术复审另记；批准人：lingzz（本聊天明确答复）；结论：沿用元数据与业务守卫映射，日期及视觉行为由前端和原生页面验证。
 
 - 2026-10-08：更新 BusinessReservationMetadata 的五段新输入、历史回显和 16 个探针；共有安全性质及探针数量保持，执行结果按当前候选登记。
 

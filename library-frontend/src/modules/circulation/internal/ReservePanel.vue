@@ -74,11 +74,13 @@ import { ref, useId } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { PICKUP_SLOTS, reserveTitle } from '../index'
+import { getReservationDefaults } from './reservationDefaults'
 
 const props = defineProps({ titleId: { type: String, required: true } })
 
-const reservationDate = ref('')
-const pickupSlot = ref('')
+const defaults = getReservationDefaults()
+const reservationDate = ref(defaults.reservationDate)
+const pickupSlot = ref(defaults.pickupSlot)
 const fieldId = useId()
 const dateInputId = fieldId + '-date'
 const slotInputId = fieldId + '-slot'
@@ -112,18 +114,18 @@ function onSubmit() {
 </script>
 
 <style scoped>
-.reserve-panel { border: 1px solid var(--detail-line, #dbe4ee); border-radius: 16px; padding: 20px; background: var(--detail-surface, #f7f9fd); }
+.reserve-panel { container: reservation / inline-size; border: 1px solid var(--detail-line, #e2e6d9); border-radius: 16px; padding: 20px; background: var(--detail-surface, #fafbf6); }
 .reserve-heading { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
-.reserve-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--detail-tint, #edf2ff); color: var(--detail-accent, #3458c8); font-size: 22px; }
+.reserve-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--detail-tint, #eef1e7); color: var(--detail-accent, #52634a); font-size: 22px; }
 h2 { margin: 0 0 5px; font-size: 16px; }
-.reserve-heading p { margin: 0; color: var(--detail-muted, #526274); font-size: 12px; }
+.reserve-heading p { margin: 0; color: var(--detail-muted, #68715f); font-size: 12px; }
 .reserve-panel form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: end; margin-bottom: 16px; }
-.reserve-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: var(--detail-muted, #526274); font-size: 12px; }
+.reserve-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: var(--detail-muted, #68715f); font-size: 12px; }
 .inline-input, .slot-input { min-width: 0; width: 100%; }
-.slot-input { min-height: 40px; border-color: var(--detail-line, #dbe4ee); color: var(--detail-ink, #192238); }
-.reserve-panel :deep(.el-input__wrapper) { min-height: 40px; box-shadow: 0 0 0 1px var(--detail-line, #dbe4ee) inset; border-radius: 9px; }
-.reserve-submit { grid-column: 1 / -1; min-height: 42px; margin: 0; background: var(--detail-accent, #3458c8); border-color: var(--detail-accent, #3458c8); border-radius: 9px; }
-.reserve-submit:hover, .reserve-submit:focus-visible { background: var(--detail-accent, #3458c8); border-color: var(--detail-accent, #3458c8); filter: brightness(1.08); }
-.note { margin: 14px 0 0; color: var(--detail-muted, #526274); font-size: 11px; line-height: 1.8; }
-@container title-detail (max-width: 370px) { .reserve-panel form { grid-template-columns: minmax(0, 1fr); } }
+.slot-input { min-height: 40px; border-color: var(--detail-line, #e2e6d9); color: var(--detail-ink, #273128); }
+.reserve-panel :deep(.el-input__wrapper) { min-height: 40px; box-shadow: 0 0 0 1px var(--detail-line, #e2e6d9) inset; border-radius: 9px; }
+.reserve-submit { grid-column: 1 / -1; min-height: 42px; margin: 0; background: var(--detail-accent, #52634a); border-color: var(--detail-accent, #52634a); border-radius: 9px; }
+.reserve-submit:hover, .reserve-submit:focus-visible { background: var(--detail-accent, #52634a); border-color: var(--detail-accent, #52634a); filter: brightness(1.08); }
+.note { margin: 14px 0 0; color: var(--detail-muted, #68715f); font-size: 11px; line-height: 1.8; }
+@container reservation (max-width: 370px) { .reserve-panel form { grid-template-columns: minmax(0, 1fr); } }
 </style>

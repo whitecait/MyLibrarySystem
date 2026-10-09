@@ -58,6 +58,7 @@ export function reopenBusinessDate({ businessDate }, options = {}) {
 }
 
 export { default as CopyAdminView } from './internal/CopyAdminView.vue'
+export { default as TitleBorrowView } from './internal/TitleBorrowView.vue'
 export { default as ReservationCalendarView } from './internal/ReservationCalendarView.vue'
 export { default as ReservePanel } from './internal/ReservePanel.vue'
 export { default as WalkInLoansView } from './internal/WalkInLoansView.vue'

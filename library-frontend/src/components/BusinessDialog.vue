@@ -10,6 +10,7 @@ import { createModalWorkspace, modalWorkspaceKey } from './modalWorkspace'
 const props = defineProps({
   open: { type: Boolean, default: false },
   title: { type: String, required: true },
+  breadcrumbs: { type: Array, default: () => [] },
   assistant: { type: Boolean, default: true },
 })
 const emit = defineEmits(['close'])
@@ -22,6 +23,7 @@ watch(() => props.open, open => {
   if (open) workspace.show({
     id,
     get title() { return props.title },
+    get breadcrumbs() { return props.breadcrumbs },
     // The application shell owns the assistant. An isolated form has no second assistant.
     get assistant() { return Boolean(shared) && props.assistant },
     render: () => [slots.default?.(), slots.footer?.()],

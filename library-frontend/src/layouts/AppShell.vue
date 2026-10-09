@@ -71,7 +71,7 @@
       <RouterView :route="backgroundRoute" v-slot="{ Component }">
         <component :is="Component" :key="backgroundRoute.path" />
       </RouterView>
-      <BusinessDialog v-if="modalOpen" :open="modalOpen" :title="route.meta.title || '详情'" :assistant="route.name !== 'ai-assistant'" @close="closeRouteModal">
+      <BusinessDialog v-if="modalOpen" :open="modalOpen" :title="route.meta.title || '详情'" :breadcrumbs="modalBreadcrumbs" :assistant="route.name !== 'ai-assistant'" @close="closeRouteModal">
         <RouterView v-slot="{ Component }"><component :is="Component" :key="route.fullPath" /></RouterView>
       </BusinessDialog>
     </main>
@@ -99,7 +99,7 @@ import { getRole, getSessionState, isAuthenticated, logout } from '@/platform/au
 import BusinessDialog from '@/components/BusinessDialog.vue'
 import ModalWorkspace from '@/components/ModalWorkspace.vue'
 import { createModalWorkspace, modalWorkspaceKey } from '@/components/modalWorkspace'
-import { backgroundModalKey, isModalRoute, modalBackgrounds } from '@/router/presentation'
+import { backgroundModalKey, getModalBreadcrumbs, isModalRoute, modalBackgrounds } from '@/router/presentation'
 import { endCurrentSession } from '@/modules/identity'
 import {
   clearUnreadBusinessNotification,
@@ -112,6 +112,7 @@ const router = useRouter()
 const route = useRoute()
 const backgroundRoute = shallowRef(router.resolve(isModalRoute(route) ? modalBackgrounds[route.name] : route.fullPath))
 const modalOpen = computed(() => isModalRoute(route))
+const modalBreadcrumbs = computed(() => getModalBreadcrumbs(route, router))
 const workspace = createModalWorkspace()
 const showAssistantTrigger = computed(() => !workspace.assistantOpen.value
   && (!workspace.active.value || workspace.active.value.assistant))

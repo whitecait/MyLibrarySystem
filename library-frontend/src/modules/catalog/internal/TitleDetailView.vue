@@ -30,9 +30,9 @@
               data-testid="title-reading-entry"
             >开始阅读 <span aria-hidden="true">↗</span></RouterLink>
             <RouterLink
-              :to="`/titles/${detail.titleId}/calendar`"
-              data-testid="title-calendar-entry"
-            >预约日历</RouterLink>
+              :to="`/titles/${detail.titleId}/borrow`"
+              data-testid="title-borrow-entry"
+            >借阅</RouterLink>
           </div>
         </div>
       </header>
@@ -42,7 +42,6 @@
           <div v-for="item in metadata" :key="item.label"><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
         </dl>
       </section>
-      <ReservePanel :title-id="detail.titleId" data-testid="title-reserve-panel" />
     </template>
     <ErrorAlert v-if="state.status === 'failure' && !notFound" :failure="state.failure" />
   </section>
@@ -53,7 +52,6 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { FailureKind, useApiRequest } from '@/platform/http'
-import { ReservePanel } from '../../circulation'
 import { getTitle } from '../index'
 
 const props = defineProps({ titleId: { type: String, required: true } })
@@ -97,14 +95,16 @@ onMounted(async () => {
 }
 .detail-topline { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--detail-line); color: var(--detail-muted); font-size: 10px; letter-spacing: 2px; }
 .detail-hero { display: grid; grid-template-columns: minmax(0, .76fr) minmax(0, 1.24fr); gap: 30px; align-items: center; padding: 30px 0; }
-.book-graphic { min-width: 0; min-height: 250px; padding: 23px 22px; border-left: 8px solid #d6ddc8; border-radius: 2px 10px 10px 2px; background: #e8eddf; box-shadow: 8px 10px 0 #f1f3eb; display: flex; flex-direction: column; gap: 20px; }
+.book-graphic { min-width: 0; height: 300px; box-sizing: border-box; padding: 23px 22px; border-left: 8px solid #d6ddc8; border-radius: 2px 10px 10px 2px; background: #e8eddf; box-shadow: 8px 10px 0 #f1f3eb; display: flex; flex-direction: column; gap: 14px; }
 .book-imprint { font-size: 10px; letter-spacing: 3px; color: #627056; }
-.book-graphic strong { font-family: 'Noto Serif CJK SC', 'Songti SC', SimSun, serif; font-size: 26px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
-.book-author, .book-category { color: #65725d; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.book-graphic strong { min-height: 0; font-family: 'Noto Serif CJK SC', 'Songti SC', SimSun, serif; font-size: 26px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.book-author, .book-category { color: #65725d; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.book-author { -webkit-line-clamp: 1; }
+.book-imprint, .book-author, .book-rule, .book-category { flex-shrink: 0; }
 .book-rule { width: 32px; height: 1px; margin-top: auto; background: #65725d; }
 .hero-copy { min-width: 0; }
 .title-category { display: block; color: var(--detail-muted); font-size: 11px; line-height: 1.7; margin-bottom: 12px; overflow-wrap: anywhere; }
-h1 { margin: 0; font-family: 'Noto Serif CJK SC', 'Songti SC', SimSun, serif; font-size: clamp(24px, 5cqi, 34px); font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+h1 { margin: 0; font-family: 'Noto Serif CJK SC', 'Songti SC', SimSun, serif; font-size: clamp(20px, 3.6cqi, 26px); font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
 .title-authors { margin: 14px 0 20px; color: var(--detail-muted); font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
 .title-availability { display: inline-block; border: 1px solid #dbe2cd; border-radius: 20px; padding: 5px 10px; background: #f0f4e9; color: #536743; font-size: 12px; }
 .title-availability.is-unavailable, .title-availability.is-unknown { background: #f5f3ee; color: #786950; border-color: #e7e0d1; }
@@ -124,7 +124,7 @@ h2 { margin: 0 0 4px; font-size: 15px; font-weight: 500; }
 .title-links a:focus-visible { outline-color: var(--detail-accent); }
 @container title-detail (max-width: 430px) {
   .detail-hero { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .book-graphic { min-height: 170px; padding: 18px 20px; }
+  .book-graphic { height: 230px; padding: 18px 20px; }
   .book-graphic strong { font-size: 22px; }
   .book-category { display: none; }
 }

@@ -5,10 +5,26 @@ export const modalBackgrounds = {
   register: '/',
   'title-detail': '/',
   'title-reading': '/',
-  'title-calendar': '/',
+  'title-borrow': '/',
   'my-business-detail': '/me/business',
   'ai-assistant': '/',
 }
 export function isModalRoute(route) {
   return Object.hasOwn(modalBackgrounds, route.name ?? '')
+}
+
+// Book steps derive parent links from the route, including when opened directly.
+export function getModalBreadcrumbs(route, router) {
+  const ancestors = {
+    'title-borrow': ['title-detail'],
+    'title-reading': ['title-detail'],
+  }[route.name]
+  if (!ancestors) return []
+  return [
+    ...ancestors.map(name => {
+      const parent = router.resolve({ name, params: { titleId: route.params.titleId } })
+      return { title: parent.meta.title, to: parent.fullPath }
+    }),
+    { title: route.meta.title },
+  ]
 }

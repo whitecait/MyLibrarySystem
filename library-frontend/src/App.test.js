@@ -69,7 +69,7 @@ describe('application shell', () => {
 
 // Verify the actual router keeps the background component alive across modal routes.
 describe('background and modal navigation', () => {
-  it('keeps home results and filters while detail, calendar and login change inside the modal', async () => {
+  it('keeps home results, filters and assistant while navigating detail, borrowing and login', async () => {
     const { flushPromises } = await import('@vue/test-utils')
     const { createMockTransport } = await import('./platform/http/mock/mockAdapter')
     const calls = []
@@ -99,9 +99,27 @@ describe('background and modal navigation', () => {
     expect(wrapper.findAll('#home-ai-dialog')).toHaveLength(1)
     expect(wrapper.findAll('[data-testid="business-panel"]')).toHaveLength(1)
 
+    const assistant = wrapper.get('#home-ai-dialog').element
+    await wrapper.get('[data-testid="ai-input"]').setValue('层级切换保留草稿')
+    await wrapper.get('[data-testid="title-borrow-entry"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/titles/2001/borrow')
+    expect(wrapper.get('[data-testid="calendar-form"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="reserve-form"]').exists()).toBe(true)
+    const breadcrumb = wrapper.get('[data-testid="business-breadcrumbs"]')
+    expect(breadcrumb.get('a').attributes('href')).toBe('/titles/2001')
+    expect(breadcrumb.get('[aria-current="page"]').text()).toBe('借阅')
+    expect(wrapper.get('#home-ai-dialog').element).toBe(assistant)
+    expect(wrapper.get('[data-testid="ai-input"]').element.value).toBe('层级切换保留草稿')
+    await breadcrumb.get('a').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/titles/2001')
+    expect(wrapper.find('[data-testid="reserve-form"]').exists()).toBe(false)
     await router.push('/titles/2001/calendar')
     await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/titles/2001/borrow')
     expect(wrapper.get('[data-testid="calendar-form"]').exists()).toBe(true)
+    expect(calls.filter(id => id === 'startAiSession')).toHaveLength(1)
     await router.push('/login')
     await flushPromises()
     expect(wrapper.get('.home').element).toBe(background)
@@ -270,4 +288,26 @@ it('keeps forms open for inside clicks and drags from a card into empty space', 
   expect(router.currentRoute.value.fullPath).toBe('/titles/2001')
   expect(wrapper.get('.el-overlay').element.style.display).not.toBe('none')
   expect(input.element.value).toBe('保留草稿')
+})
+
+it('shows the correct parent for direct borrowing and reading routes', async () => {
+  const { flushPromises } = await import('@vue/test-utils')
+  const { createMockTransport } = await import('./platform/http/mock/mockAdapter')
+  setTransport(createMockTransport({ fixtures: sharedFixtures }))
+  const router = createAppRouter({ history: createMemoryHistory() })
+  await router.push('/titles/2001/borrow')
+  await router.isReady()
+  const wrapper = mount(App, { global: { plugins: [router, ElementPlus] } })
+  mountedWrappers.add(wrapper)
+  await flushPromises()
+  expect(wrapper.get('[data-testid="business-breadcrumbs"] a').attributes('href')).toBe('/titles/2001')
+  await router.push('/titles/2001/read')
+  await flushPromises()
+  expect(wrapper.get('[data-testid="business-breadcrumbs"] [aria-current="page"]').text()).toBe('阅读')
+  await wrapper.get('[data-testid="business-breadcrumbs"] a').trigger('click')
+  await flushPromises()
+  expect(router.currentRoute.value.fullPath).toBe('/titles/2001')
+  await wrapper.get('[data-testid="business-close"]').trigger('click')
+  await flushPromises()
+  expect(router.currentRoute.value.fullPath).toBe('/')
 })

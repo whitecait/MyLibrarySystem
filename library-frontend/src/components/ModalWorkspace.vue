@@ -15,7 +15,16 @@
     <div class="modal-workspace__panels" :class="{ 'is-assistant-only': !active, 'without-assistant': active && !active.assistant }">
       <section v-for="entry in entries" v-show="entry.id === active?.id" :key="entry.id" class="business-panel" data-testid="business-panel">
         <header class="modal-panel-header">
-          <h2>{{ entry.title }}</h2>
+          <nav v-if="entry.breadcrumbs?.length" class="modal-breadcrumbs" aria-label="页面层级" data-testid="business-breadcrumbs">
+            <ol>
+              <li v-for="(step, index) in entry.breadcrumbs" :key="index">
+                <span v-if="index" class="breadcrumb-separator" aria-hidden="true">›</span>
+                <RouterLink v-if="step.to" :to="step.to">{{ step.title }}</RouterLink>
+                <span v-else aria-current="page">{{ step.title }}</span>
+              </li>
+            </ol>
+          </nav>
+          <h2 v-else>{{ entry.title }}</h2>
           <button type="button" class="modal-panel-close" data-testid="business-close" :aria-label="`关闭${entry.title}`" @click="state.closePrimary">×</button>
         </header>
         <div class="business-dialog__content"><PanelContent :entry="entry" /></div>
@@ -31,6 +40,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { ElDialog } from 'element-plus'
+import { RouterLink } from 'vue-router'
 import HomeAiDialog from './HomeAiDialog.vue'
 const props = defineProps({ state: { type: Object, required: true } })
 const { entries, active, open, assistantOpen } = props.state
@@ -81,6 +91,13 @@ function requestClose(done) {
 .business-panel { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; }
 .modal-panel-header { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; border-bottom: 1px solid #e5eaff; background: linear-gradient(120deg, #f6f8ff, #fff 68%); }
 .modal-panel-header h2 { margin: 0; color: #203b9d; font-size: 18px; }
+.modal-breadcrumbs { min-width: 0; }
+.modal-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.modal-breadcrumbs li { display: flex; align-items: center; gap: 8px; color: #203b9d; font-size: 18px; font-weight: 600; }
+.modal-breadcrumbs a { color: #647394; text-decoration: none; }
+.modal-breadcrumbs a:hover { color: #203b9d; text-decoration: underline; }
+.modal-breadcrumbs a:focus-visible { outline: 3px solid #90a9ff; outline-offset: 3px; }
+.breadcrumb-separator { color: #8d99b5; font-weight: 400; }
 .modal-panel-close { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; border: 1px solid #dbe4ff; border-radius: 10px; background: #fff; color: #3154d9; font-size: 24px; line-height: 1; cursor: pointer; }
 .modal-panel-close:focus-visible { outline: 3px solid #90a9ff; outline-offset: 2px; }
 .business-dialog__content { min-width: 0; min-height: 0; flex: 1; overflow: auto; padding: 24px; }

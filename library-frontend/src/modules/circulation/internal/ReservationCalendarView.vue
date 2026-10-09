@@ -1,9 +1,16 @@
 <template>
   <section class="reservation-calendar-view">
-    <h1>预约日历</h1>
+    <h2>预约日历</h2>
+    <p class="calendar-note">查询日期范围内的预约保障</p>
     <form class="range-form" data-testid="calendar-form" @submit.prevent="load">
-      <el-input v-model="from" data-testid="calendar-from" placeholder="开始日（YYYY-MM-DD）" class="date-input" />
-      <el-input v-model="to" data-testid="calendar-to" placeholder="结束日（YYYY-MM-DD）" class="date-input" />
+      <div class="calendar-field">
+        <label :for="fieldId + '-from'">开始日</label>
+        <el-input :id="fieldId + '-from'" v-model="from" type="date" required data-testid="calendar-from" class="date-input" />
+      </div>
+      <div class="calendar-field">
+        <label :for="fieldId + '-to'">结束日</label>
+        <el-input :id="fieldId + '-to'" v-model="to" type="date" required data-testid="calendar-to" class="date-input" />
+      </div>
       <el-button type="primary" native-type="submit" data-testid="calendar-submit">查询</el-button>
     </form>
 
@@ -26,19 +33,18 @@
       </table>
     </template>
     <ErrorAlert v-if="state.status === 'failure'" :failure="state.failure" />
-    <p><RouterLink :to="`/titles/${titleId}`">返回书目详情</RouterLink></p>
   </section>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, useId } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { getReservationCalendar } from '../index'
 
 const props = defineProps({ titleId: { type: String, required: true } })
 
+const fieldId = useId()
 const from = ref('')
 const to = ref('')
 const days = ref([])
@@ -60,32 +66,15 @@ async function load() {
 </script>
 
 <style scoped>
-.reservation-calendar-view {
-  max-width: 40rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.range-form {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.date-input {
-  min-width: 14rem;
-}
-
-.calendar-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.calendar-table th,
-.calendar-table td {
-  text-align: left;
-  padding: 0.4rem 0.6rem;
-  border-bottom: 1px solid #e2eaf0;
-}
+.reservation-calendar-view { min-width: 0; border: 1px solid #e2e6d9; border-radius: 16px; padding: 20px; background: #fafbf6; }
+.reservation-calendar-view h2 { margin: 0 0 5px; font-size: 16px; }
+.calendar-note { margin: 0 0 20px; font-size: 12px; color: #68715f; line-height: 1.8; }
+.reservation-calendar-view .range-form { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
+.calendar-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: #68715f; font-size: 12px; }
+.date-input { min-width: 0; width: 100%; }
+.reservation-calendar-view :deep(.el-input__wrapper) { min-height: 40px; box-shadow: 0 0 0 1px #e2e6d9 inset; border-radius: 9px; }
+.range-form .el-button { min-height: 42px; margin: 0; color: #52634a; border-color: #d9dfcf; border-radius: 9px; background: #fff; }
+.calendar-table { width: 100%; margin-top: 20px; border-collapse: collapse; font-size: 12px; }
+.calendar-table th, .calendar-table td { text-align: left; padding: 8px 0; border-bottom: 1px solid #e2e6d9; }
+.calendar-table th { color: #68715f; font-weight: 500; }
 </style>

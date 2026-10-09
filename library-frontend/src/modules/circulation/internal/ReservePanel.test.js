@@ -1,12 +1,12 @@
 import { flushPromises } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { setTransport } from '@/platform/http'
 import { installMockTransport, mountView } from '../../../tests/helpers'
 import { formatPickupSlot } from '../index'
 import ReservePanel from './ReservePanel.vue'
 
-afterEach(() => setTransport(null))
+afterEach(() => { setTransport(null); vi.useRealTimers() })
 
 async function mountPanel() {
   const wrapper = await mountView(ReservePanel, { props: { titleId: '2001' } })
@@ -22,6 +22,22 @@ async function submitReservation(wrapper) {
 }
 
 describe('ReservePanel', () => {
+  it('prefills tomorrow and the suggested block without making a reservation', async () => {
+    vi.setSystemTime(new Date('2026-10-09T04:30:00Z'))
+    const calls = []
+    setTransport({ mode: 'mock', async request(operationId, options) {
+      calls.push({ operationId, options })
+      return { code: 'MLS-CIRC-S005', message: 'ok', data: { txId: '4002', outcome: 'CONFIRMED' } }
+    } })
+    const wrapper = await mountPanel()
+    expect(wrapper.get('[data-testid="reserve-date"]').element.value).toBe('2026-10-10')
+    expect(wrapper.get('[data-testid="reserve-slot"]').element.value).toBe('13:00-14:30')
+    expect(calls).toHaveLength(0)
+    await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
+    await flushPromises()
+    expect(calls[0].options.body).toMatchObject({ reservationDate: '2026-10-10', pickupSlot: '13:00-14:30', channel: 'ONLINE', confirmWaitlist: false })
+  })
+
   it('offers five opening-hour pickup blocks and only online reservation', async () => {
     const wrapper = await mountPanel()
     const options = wrapper.find('[data-testid="reserve-slot"]').findAll('option')
@@ -39,7 +55,7 @@ describe('ReservePanel', () => {
     expect(formatPickupSlot(null)).toBe('未知')
   })
 
-  it('does not submit until a concrete interval is selected', async () => {
+  it('does not submit after the selected interval is cleared', async () => {
     const calls = []
     setTransport({
       mode: 'mock',
@@ -49,7 +65,7 @@ describe('ReservePanel', () => {
       },
     })
     const wrapper = await mountPanel()
-    await wrapper.find('[data-testid="reserve-date"]').setValue('2026-09-15')
+    await wrapper.find('[data-testid="reserve-slot"]').setValue('')
 
     await wrapper.find('[data-testid="reserve-form"]').trigger('submit')
     await flushPromises()
