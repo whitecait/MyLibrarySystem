@@ -177,7 +177,7 @@ class ITDefM6012NotificationChainTest {
     private ReservationCommands.Reservation reserve(ActorContext readerActor, long reader, long title,
                                                     LocalDate date, boolean confirmWaitlist) {
         var result = loans.reserve(readerActor, new ReservationCommands.ReservationCommand(
-                reader, TitleId.of(title), BusinessDate.of(date), "AM", "ONLINE", confirmWaitlist,
+                reader, TitleId.of(title), BusinessDate.of(date), "09:00-10:30", "ONLINE", confirmWaitlist,
                 readerActor));
         return ((ModuleResult.Accepted<ReservationCommands.Reservation>) result).value();
     }

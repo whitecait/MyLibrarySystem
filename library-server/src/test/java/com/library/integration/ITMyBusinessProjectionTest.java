@@ -68,7 +68,7 @@ class ITMyBusinessProjectionTest {
 
         var directTitle = seedTitle("my-business-direct-" + suffix);
         var directCopy = seedCopy(directTitle, "DIRECT-" + suffix, "SHELF_READY");
-        var direct = reserve(ownerToken, directTitle, reservationDate, "PM", false, suffix + "-direct");
+        var direct = reserve(ownerToken, directTitle, reservationDate, "13:00-14:30", false, suffix + "-direct");
         assertThat(direct.path("outcome").asText()).isEqualTo("CONFIRMED");
         var directTxId = Long.parseLong(direct.path("txId").asText());
         assertThat(jdbc.queryForObject("SELECT guarantee_type FROM borrow_transaction WHERE id=?",
@@ -76,7 +76,7 @@ class ITMyBusinessProjectionTest {
 
         var waitingTitle = seedTitle("my-business-waiting-" + suffix);
         var waitingCopy = seedCopy(waitingTitle, "WAIT-" + suffix, "PENDING_SHELVING");
-        var waiting = reserve(ownerToken, waitingTitle, reservationDate.plusDays(1), "AM", true,
+        var waiting = reserve(ownerToken, waitingTitle, reservationDate.plusDays(1), "09:00-10:30", true,
                 suffix + "-waiting");
         assertThat(waiting.path("outcome").asText()).isEqualTo("WAITLIST_ENQUEUED");
         var waitingTxId = Long.parseLong(waiting.path("txId").asText());
@@ -164,7 +164,7 @@ class ITMyBusinessProjectionTest {
         assertThat(directItem.path("guaranteeType").asText()).isEqualTo("DIRECT_CONFIRMATION");
         assertThat(directItem.path("reservationDate").asText()).isEqualTo(reservationDate.toString());
         assertThat(directItem.path("reservationDate").isTextual()).isTrue();
-        assertThat(directItem.path("pickupSlot").asText()).isEqualTo("PM");
+        assertThat(directItem.path("pickupSlot").asText()).isEqualTo("13:00-14:30");
         assertThat(directItem.path("copyId").asText()).isEqualTo(Long.toString(directCopy));
         assertThat(directItem.path("copyId").isTextual()).isTrue();
         assertThat(directItem.path("notifications")).hasSize(1);
@@ -179,7 +179,7 @@ class ITMyBusinessProjectionTest {
         assertThat(waitingItem.path("status").asText()).isEqualTo("CONFIRMED");
         assertThat(waitingItem.path("guaranteeType").asText()).isEqualTo("WAITLIST");
         assertThat(waitingItem.path("copyId").asText()).isEqualTo(Long.toString(waitingCopy));
-        assertThat(waitingItem.path("pickupSlot").asText()).isEqualTo("AM");
+        assertThat(waitingItem.path("pickupSlot").asText()).isEqualTo("09:00-10:30");
         assertThat(waitingItem.path("notifications")).isEmpty();
         var unknownOldItem = byId(reservations, awaiting);
         assertThat(unknownOldItem.has("guaranteeType")).isTrue();

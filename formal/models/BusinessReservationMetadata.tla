@@ -2,26 +2,25 @@
 (***************************************************************************)
 (* AT-0026 detail metadata contract: write guarantee type from the creation *)
 (* source, keep it on waitlist promotion, and preserve bounded slot values.  *)
-(* Slot strings are finite boundary samples, not an exhaustive parser model. *)
+(* New inputs are the exact five blocks; old period rows remain readable.    *)
 (* Create actions abstract the write contract; they do not prove SQL storage. *)
 (* Legacy rows with no reliable source begin with NoField.                    *)
 (***************************************************************************)
 EXTENDS Naturals, FiniteSets, TLC
 
 CONSTANTS
-  LegacySlots, HalfHourSamples, InvalidSlotSamples,
+  LegacySlots, PickupBlocks, InvalidSlotSamples,
   NoField, NoTitle, NoBusinessDate
 
 LegacySlotsExpected == {"AM", "PM"}
-HalfHourSamplesExpected == {"00:00-00:30", "12:30-13:00", "23:30-24:00"}
-InvalidSlotSamplesExpected == {"00:00-00:29", "00:00-00:31", "12:15-12:45",
-                               "23:30-00:00", "24:00-24:30", "not-a-slot"}
+PickupBlocksExpected == {"09:00-10:30", "10:30-12:00", "13:00-14:30", "14:30-16:00", "16:00-17:00"}
+InvalidSlotSamplesExpected == {"AM", "PM", "00:00-00:30", "08:00-09:00", "12:00-13:00", "17:00-18:00", "18:00-19:00", "09:00-09:30", "14:00-14:30", "23:30-00:00", "24:00-24:30", "not-a-slot"}
 
 LegacyId == "tx-legacy"
 DirectId == "9007199254740993"
 WaitlistId == "tx-b3"
 ReservationIds == {DirectId, WaitlistId, LegacyId}
-ValidSlotInputs == LegacySlots \cup HalfHourSamples
+ValidSlotInputs == PickupBlocks
 AllSlotInputs == ValidSlotInputs \cup InvalidSlotSamples
 GuaranteeValues == {NoField, "DIRECT_CONFIRMATION", "WAITLIST"}
 Statuses == {"ABSENT", "WAITLIST", "CONFIRMED"}
@@ -57,16 +56,16 @@ LegacyRow == Row(LegacyId, "CONFIRMED", "title-legacy", "opaque-business-date-le
 SlotIsValid(slot) == slot \in ValidSlotInputs
 
 SlotEventTag(slot) ==
-  IF slot = "AM" THEN "LegacyAMAccepted"
-  ELSE IF slot = "PM" THEN "LegacyPMAccepted"
-  ELSE IF slot = "00:00-00:30" THEN "FirstHalfHourAccepted"
-  ELSE IF slot = "12:30-13:00" THEN "InteriorHalfHourAccepted"
-  ELSE IF slot = "23:30-24:00" THEN "LastHalfHourAccepted"
-  ELSE IF slot = "00:00-00:29" THEN "Rejected29MinuteSlot"
-  ELSE IF slot = "00:00-00:31" THEN "Rejected31MinuteSlot"
-  ELSE IF slot = "12:15-12:45" THEN "RejectedOffBoundarySlot"
-  ELSE IF slot = "23:30-00:00" THEN "RejectedCrossDaySlot"
-  ELSE IF slot = "24:00-24:30" THEN "Rejected24StartSlot"
+  IF slot = "09:00-10:30" THEN "Block1Accepted"
+  ELSE IF slot = "10:30-12:00" THEN "Block2Accepted"
+  ELSE IF slot = "13:00-14:30" THEN "Block3Accepted"
+  ELSE IF slot = "14:30-16:00" THEN "Block4Accepted"
+  ELSE IF slot = "16:00-17:00" THEN "Block5Accepted"
+  ELSE IF slot \in LegacySlots THEN "RejectedLegacyPeriod"
+  ELSE IF slot \in {"00:00-00:30", "08:00-09:00", "17:00-18:00", "18:00-19:00"} THEN "RejectedOutsideOpening"
+  ELSE IF slot = "12:00-13:00" THEN "RejectedLunch"
+  ELSE IF slot \in {"09:00-09:30", "14:00-14:30"} THEN "RejectedUnlistedOpeningInterval"
+  ELSE IF slot \in {"23:30-00:00", "24:00-24:30"} THEN "RejectedCrossDay"
   ELSE "RejectedMalformedSlot"
 
 PickupEligible(row, slot) == row.status = "CONFIRMED" /\ row.copyId # NoField
@@ -75,14 +74,7 @@ VARIABLES records, submittedSlots, tags
 
 vars == <<records, submittedSlots, tags>>
 
-EventTags == {
-  "DirectSourceStored", "WaitlistSourceStored", "WaitlistPromotionRetainedSource",
-  "SameStatusDifferentSources", "LegacyRowPreserved", "PickupSlotNotGuard",
-  "LegacyAMAccepted", "LegacyPMAccepted", "FirstHalfHourAccepted",
-  "InteriorHalfHourAccepted", "LastHalfHourAccepted", "Rejected29MinuteSlot",
-  "Rejected31MinuteSlot", "RejectedOffBoundarySlot", "RejectedCrossDaySlot",
-  "Rejected24StartSlot", "RejectedMalformedSlot"
-}
+EventTags == {"DirectSourceStored", "WaitlistSourceStored", "WaitlistPromotionRetainedSource", "SameStatusDifferentSources", "LegacyRowPreserved", "PickupSlotNotGuard", "Block1Accepted", "Block2Accepted", "Block3Accepted", "Block4Accepted", "Block5Accepted", "RejectedLegacyPeriod", "RejectedOutsideOpening", "RejectedLunch", "RejectedUnlistedOpeningInterval", "RejectedCrossDay", "RejectedMalformedSlot"}
 
 Init ==
   /\ records = [id \in ReservationIds |->
@@ -162,7 +154,7 @@ TypeOK == RecordsTypeOK /\ SubmittedSlotsTypeOK /\ TagsTypeOK
 
 InvSlotInputBoundary ==
   /\ LegacySlots = LegacySlotsExpected
-  /\ HalfHourSamples = HalfHourSamplesExpected
+  /\ PickupBlocks = PickupBlocksExpected
   /\ InvalidSlotSamples = InvalidSlotSamplesExpected
 
 InvCreationSourcePersisted ==
@@ -187,7 +179,7 @@ InvLegacyRowPreserved ==
 
 InvPickupEligibilityIgnoresSlot ==
   \A id \in ReservationIds :
-    \A first, second \in ValidSlotInputs :
+    \A first, second \in (ValidSlotInputs \cup LegacySlots) :
       PickupEligible(records[id], first) = PickupEligible(records[id], second)
 
 ProbeNotDirectSourceStored == "DirectSourceStored" \notin tags
@@ -195,16 +187,16 @@ ProbeNotWaitlistPromotionRetainedSource == "WaitlistPromotionRetainedSource" \no
 ProbeNotSameStatusDifferentSources == "SameStatusDifferentSources" \notin tags
 ProbeNotLegacyRowPreserved == "LegacyRowPreserved" \notin tags
 ProbeNotPickupSlotNotGuard == "PickupSlotNotGuard" \notin tags
-ProbeNotLegacyAMAccepted == "LegacyAMAccepted" \notin tags
-ProbeNotLegacyPMAccepted == "LegacyPMAccepted" \notin tags
-ProbeNotFirstHalfHourAccepted == "FirstHalfHourAccepted" \notin tags
-ProbeNotInteriorHalfHourAccepted == "InteriorHalfHourAccepted" \notin tags
-ProbeNotLastHalfHourAccepted == "LastHalfHourAccepted" \notin tags
-ProbeNotRejected29MinuteSlot == "Rejected29MinuteSlot" \notin tags
-ProbeNotRejected31MinuteSlot == "Rejected31MinuteSlot" \notin tags
-ProbeNotRejectedOffBoundarySlot == "RejectedOffBoundarySlot" \notin tags
-ProbeNotRejectedCrossDaySlot == "RejectedCrossDaySlot" \notin tags
-ProbeNotRejected24StartSlot == "Rejected24StartSlot" \notin tags
+ProbeNotBlock1Accepted == "Block1Accepted" \notin tags
+ProbeNotBlock2Accepted == "Block2Accepted" \notin tags
+ProbeNotBlock3Accepted == "Block3Accepted" \notin tags
+ProbeNotBlock4Accepted == "Block4Accepted" \notin tags
+ProbeNotBlock5Accepted == "Block5Accepted" \notin tags
+ProbeNotRejectedLegacyPeriod == "RejectedLegacyPeriod" \notin tags
+ProbeNotRejectedOutsideOpening == "RejectedOutsideOpening" \notin tags
+ProbeNotRejectedLunch == "RejectedLunch" \notin tags
+ProbeNotRejectedUnlistedOpeningInterval == "RejectedUnlistedOpeningInterval" \notin tags
+ProbeNotRejectedCrossDay == "RejectedCrossDay" \notin tags
 ProbeNotRejectedMalformedSlot == "RejectedMalformedSlot" \notin tags
 
 =============================================================================

@@ -5,36 +5,24 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class PickupSlotTest {
-
     @Test
-    void acceptsLegacyPeriodsAndAllFortyEightHalfHourIntervals() {
-        assertThat(PickupSlot.isValid("AM")).isTrue();
-        assertThat(PickupSlot.isValid("PM")).isTrue();
-
-        int accepted = 0;
-        for (int start = 0; start < 24 * 60; start += 30) {
-            var interval = time(start) + "-" + time(start + 30);
-            assertThat(PickupSlot.isValid(interval)).as(interval).isTrue();
-            accepted++;
+    void acceptsTheFiveOpeningHourPickupBlocks() {
+        for (var slot : new String[]{
+                "09:00-10:30", "10:30-12:00", "13:00-14:30", "14:30-16:00", "16:00-17:00"}) {
+            assertThat(PickupSlot.isValid(slot)).as(slot).isTrue();
         }
-
-        assertThat(accepted).isEqualTo(48);
-        assertThat(PickupSlot.isValid("23:30-24:00")).isTrue();
     }
 
     @Test
-    void rejectsMalformedMisalignedWrongDurationAndCrossDayIntervals() {
+    void rejectsClosedLunchBufferLegacyAndUnlistedInputs() {
         assertThat(PickupSlot.isValid(null)).isFalse();
         for (var invalid : new String[]{
-                "", "am", "PM ", "14:15-14:45", "14:00-15:00", "14:00-14:15",
-                "23:30-00:00", "24:00-24:30", "24:00-24:00", "00:00-24:00",
-                "1:00-01:30", "14:00–14:30", "14:00-14:30 ", "14:00:00-14:30:00",
-                "２３:３０-２４:００"}) {
+                "", "AM", "PM", "00:00-00:30", "08:00-09:00", "12:00-13:00",
+                "12:30-13:00", "17:00-18:00", "18:00-19:00", "23:30-24:00",
+                "09:00-09:30", "14:00-14:30", "09:00-12:00", "14:15-14:45",
+                "23:30-00:00", "24:00-24:30", "09:00–10:30", "09:00-10:30 ",
+                "9:00-10:30", "０９:００-１０:３０"}) {
             assertThat(PickupSlot.isValid(invalid)).as(invalid).isFalse();
         }
-    }
-
-    private static String time(int minutes) {
-        return "%02d:%02d".formatted(minutes / 60, minutes % 60);
     }
 }

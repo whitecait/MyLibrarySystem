@@ -116,7 +116,7 @@ class P1CoreCirculationRulesTest {
 
         var reservation = accepted(loans.reserve(reader, new ReservationCommands.ReservationCommand(
                 readerId, TitleId.of(titleId), BusinessDate.of(today.plusDays(1)),
-                "AM", "ONLINE", true, reader)));
+                "09:00-10:30", "ONLINE", true, reader)));
         assertThat(reservation.outcome()).isEqualTo("CONFIRMED");
         assertThat(reservation.txId()).isNotNull();
         assertThat(jdbc.queryForObject("SELECT copy_id FROM borrow_transaction WHERE id=?", Long.class,
@@ -249,7 +249,7 @@ class P1CoreCirculationRulesTest {
 
         var reservation = accepted(loans.reserve(reader, new ReservationCommands.ReservationCommand(
                 readerId, TitleId.of(queuedTitle), BusinessDate.of(businessClock.today().plusDays(1)),
-                "AM", "ONLINE", true, reader)));
+                "09:00-10:30", "ONLINE", true, reader)));
 
         assertThat(reservation.outcome()).isEqualTo("WAITLIST_ENQUEUED");
         assertThat(jdbc.queryForObject("""
@@ -307,21 +307,21 @@ class P1CoreCirculationRulesTest {
         insertCopy(availableTitle, "SHELF_READY");
         var onlineToday = loans.reserve(reader, new ReservationCommands.ReservationCommand(
                 readerId, TitleId.of(availableTitle), BusinessDate.of(businessClock.today()),
-                "AM", "ONLINE", true, reader));
+                "09:00-10:30", "ONLINE", true, reader));
         assertRejected(onlineToday, "MLS-CIRC-001");
 
         var reservedTitle = insertTitle("No reservable copies", 1000);
         insertCopy(reservedTitle, "RESERVED");
         var unavailable = loans.reserve(reader, new ReservationCommands.ReservationCommand(
                 readerId, TitleId.of(reservedTitle), BusinessDate.of(businessClock.today().plusDays(1)),
-                "AM", "ONLINE", true, reader));
+                "09:00-10:30", "ONLINE", true, reader));
         assertRejected(unavailable, "MLS-CIRC-011");
 
         var deskTitle = insertTitle("Same-day desk waitlist", 1000);
         insertCopy(deskTitle, "LENT");
         var deskSameDay = accepted(loans.reserve(reader, new ReservationCommands.ReservationCommand(
                 readerId, TitleId.of(deskTitle), BusinessDate.of(businessClock.today()),
-                "AM", "DESK", false, reader)));
+                "09:00-10:30", "DESK", false, reader)));
         assertThat(deskSameDay.outcome()).isEqualTo("WAITLIST_ENQUEUED");
         assertThat(jdbc.queryForObject("SELECT status FROM borrow_transaction WHERE id=?", String.class,
                 deskSameDay.txId().value())).isEqualTo("WAITLIST");
@@ -330,7 +330,7 @@ class P1CoreCirculationRulesTest {
         var deskAvailableCopy = insertCopy(deskAvailableTitle, "SHELF_READY");
         var deskConfirmed = accepted(loans.reserve(librarian, new ReservationCommands.ReservationCommand(
                 readerId, TitleId.of(deskAvailableTitle), BusinessDate.of(businessClock.today()),
-                "PM", "DESK", false, librarian)));
+                "13:00-14:30", "DESK", false, librarian)));
         assertThat(deskConfirmed.outcome()).isEqualTo("CONFIRMED");
         assertThat(jdbc.queryForObject("SELECT status FROM borrow_transaction WHERE id=?", String.class,
                 deskConfirmed.txId().value())).isEqualTo("CONFIRMED");
@@ -455,7 +455,7 @@ class P1CoreCirculationRulesTest {
                 awaitLatch(releaseReservation);
                 return accepted(loans.reserve(reservationReader,
                         new ReservationCommands.ReservationCommand(reservationReaderId, TitleId.of(titleId),
-                                BusinessDate.of(reservationDate), "AM", "ONLINE", true, reservationReader)));
+                                BusinessDate.of(reservationDate), "09:00-10:30", "ONLINE", true, reservationReader)));
             }), workers);
             assertThat(lockHeld.await(5, TimeUnit.SECONDS)).isTrue();
 

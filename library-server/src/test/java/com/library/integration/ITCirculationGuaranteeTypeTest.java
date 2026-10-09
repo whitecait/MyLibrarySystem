@@ -125,7 +125,7 @@ class ITCirculationGuaranteeTypeTest {
     private ReservationCommands.ReservationCommand command(long readerId, long titleId,
                                                             java.time.LocalDate date, ActorContext actor) {
         return new ReservationCommands.ReservationCommand(readerId, TitleId.of(titleId),
-                BusinessDate.of(date), "AM", "DESK", false, actor);
+                BusinessDate.of(date), "09:00-10:30", "DESK", false, actor);
     }
 
     private long seedAccount(String roleName, String suffix, String role) {

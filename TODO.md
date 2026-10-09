@@ -2,6 +2,8 @@
 
 引用文档：
 
+- [书目详情布局改进登记](artifacts/title-details-layout-20261008/REPORT.md)
+- [书目详情布局 Issue #10](https://github.com/whitecait/Mylibrary/issues/10)
 - [本轮本地修改源码提交 3a03a4d](https://github.com/whitecait/Mylibrary/commit/3a03a4da58dcd0b76ca31bdef2fc29fc53f5e91f)
 - [本轮源码 CI（四项通过，Compose 失败）](https://github.com/whitecait/Mylibrary/actions/runs/37771624213)
 - [现代书目与阅读演示追加记录](artifacts/modern-demo-import-20261008/REPORT.md)
@@ -90,7 +92,25 @@
 - [x] 将 5 册演示书目及 2,723 页 PDF 提取文字接入现有在线阅读；保留页号、换行与缩进，全部实际阅读接口哈希检查通过。原 PDF 图像和版式仍在本地文件中。
 - [ ] 决定 `data/book-scans/`（Internet Archive 古籍选书脚本，无下载产物）去留；现代中文书元数据补充渠道（DOAB 中文稀少）未定。
 
+## 本轮书目详情布局 PR：本机环境
+
+2026-10-08，用户明确本轮先修订书目详情布局；ECS 部署在本轮修订之后进行。AI 模态设计形成独立 PR。本节记录本次详情改进，不扩大下列既有发布任务的完成结论。
+
+- [x] 登记 [Issue #10](https://github.com/whitecait/Mylibrary/issues/10)，明确本机交付和 AI 独立 PR 边界。
+- [x] 建立三种本地布局原型，完成构建及 HTTP／模块转换检查；证据见[登记报告](artifacts/title-details-layout-20261008/REPORT.md)。
+- [x] 用户选择 A，并明确线上渠道、五块数量与开馆／午间受理区间。
+- [ ] 在 Windows Chrome 验收正式产品候选，记录实际视口和结果。
+- [x] 在 codex/title-details-layout 分支写入 A 布局、线上表单、五段新输入及契约／模型传导。
+- [x] 完成实现工作树的前端 305 项、后端 250 项、契约／架构／ESLint 与 HTTP 构建。
+- [ ] 完成固定候选的形式化检查和真实页面回归，记录版本对应。
+- [ ] 建立详情页独立 PR，完成当前提交 CI、独立评审和发现处理。
+- [ ] 完成 PR 合并、合并提交 CI 及对应版本的本机页面验收，按实际结果关闭 Issue #10。
+
 ## 修订记录
+
+- 2026-10-08：登记 A 选择与五段／线上实施，保留完整候选验证、PR 和正式页面验收待办。
+
+- 2026-10-08：登记本轮书目详情布局、本机交付边界、AI 独立 PR、Issue #10 及三方案原型实际检查；设计与产品验收未完成。
 
 - 2026-10-08：登记本轮页面、书目导入工具和文档整理提交至 3a03a4d 并同步 GitHub main。304 项前端、12 项导入脚本及文档结构检查通过。ECS 部署与 Windows 实页复核仍未完成。
 - 2026-10-08：登记 1,000 条现代书目与 5 册演示图书追加、ISBN 清洗、2,723 页 PDF 文字阅读、备份恢复及当前预览验证。

@@ -83,7 +83,7 @@ class ITDefM6011AuditTrailTest {
         var librarianActor = actor(librarian, Role.LIBRARIAN);
 
         var reserved = accepted(loans.reserve(readerActor, new ReservationCommands.ReservationCommand(
-                reader, TitleId.of(title), BusinessDate.of(businessClock.today().plusDays(1)), "AM",
+                reader, TitleId.of(title), BusinessDate.of(businessClock.today().plusDays(1)), "09:00-10:30",
                 "ONLINE", true, readerActor)));
         var txId = reserved.txId().value();
         assertAudit("RESERVATION_DECIDED", txId, reader, "CONFIRMED");
@@ -199,7 +199,7 @@ class ITDefM6011AuditTrailTest {
         var librarianActor = actor(librarian, Role.LIBRARIAN);
 
         var reserved = accepted(loans.reserve(readerActor, new ReservationCommands.ReservationCommand(
-                reader, TitleId.of(title), BusinessDate.of(businessClock.today().plusDays(1)), "AM",
+                reader, TitleId.of(title), BusinessDate.of(businessClock.today().plusDays(1)), "09:00-10:30",
                 "ONLINE", true, readerActor)));
         accepted(loans.cancel(readerActor, new ReservationCommands.CancelReservation(
                 reserved.txId(), "改期", readerActor)));

@@ -21,6 +21,25 @@ describe('TitleDetailView', () => {
     expect(wrapper.text()).toContain('不构成借阅承诺')
   })
 
+  it('labels missing optional metadata while retaining zero price and both navigation targets', async () => {
+    installMockTransport({
+      fixtures: {
+        getTitle: {
+          code: 'MLS-CAT-S002',
+          message: 'ok',
+          data: { ...sharedFixtures.getTitle.data, isbn: null, publisher: null, publishYear: null, priceCents: 0 },
+        },
+      },
+    })
+    const wrapper = await mountView(TitleDetailView, { props: { titleId: '2001' } })
+    await flushPromises()
+    const rows = wrapper.find('[data-testid="title-metadata"]').findAll('div')
+    const values = Object.fromEntries(rows.map(row => [row.find('dt').text(), row.find('dd').text()]))
+    expect(values).toMatchObject({ ISBN: '未提供', 出版社: '未提供', 出版年: '未提供', 定价: '0.00 元' })
+    expect(wrapper.find('[data-testid="title-reading-entry"]').attributes('href')).toBe('/titles/2001/read')
+    expect(wrapper.find('[data-testid="title-calendar-entry"]').attributes('href')).toBe('/titles/2001/calendar')
+  })
+
   it('hides the reading entry when the title has no reading content', async () => {
     installMockTransport({
       fixtures: {

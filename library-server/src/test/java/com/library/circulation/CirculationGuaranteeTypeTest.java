@@ -90,7 +90,7 @@ class CirculationGuaranteeTypeTest {
 
     private ReservationCommands.Reservation reserve(TitleId title, ActorContext actor, boolean confirmWaitlist) {
         var result = module.reserve(new ReservationCommands.ReservationCommand(
-                actor.accountId().value(), title, BusinessDate.of(TODAY), "AM", "DESK", confirmWaitlist, actor));
+                actor.accountId().value(), title, BusinessDate.of(TODAY), "09:00-10:30", "DESK", confirmWaitlist, actor));
         assertThat(result).isInstanceOf(ModuleResult.Accepted.class);
         return ((ModuleResult.Accepted<ReservationCommands.Reservation>) result).value();
     }

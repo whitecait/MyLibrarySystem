@@ -12,7 +12,7 @@ describe('circulation module facade', () => {
     const envelope = await circulation.reserveTitle({
       titleId: '2001',
       reservationDate: '2026-09-15',
-      pickupSlot: 'AM',
+      pickupSlot: '09:00-10:30',
       channel: 'ONLINE',
     })
     expect(envelope.code).toBe('MLS-CIRC-S001')
@@ -88,11 +88,11 @@ describe('circulation module facade', () => {
         return { code: 'MLS-T-S001', message: 'ok', data: {} }
       },
     })
-    await circulation.reserveTitle({ titleId: '2001', reservationDate: '2026-09-16', pickupSlot: 'AM', channel: 'ONLINE' })
+    await circulation.reserveTitle({ titleId: '2001', reservationDate: '2026-09-16', pickupSlot: '09:00-10:30', channel: 'ONLINE' })
     await circulation.reserveTitle({
       titleId: '2001',
       reservationDate: '2026-09-16',
-      pickupSlot: 'AM',
+      pickupSlot: '09:00-10:30',
       channel: 'ONLINE',
       confirmWaitlist: true,
     })

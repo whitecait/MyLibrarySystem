@@ -1,18 +1,23 @@
 <template>
   <div class="reserve-panel">
-    <h2>预约此书</h2>
+    <header class="reserve-heading">
+      <span class="reserve-mark" aria-hidden="true">↗</span>
+      <div><h2>线上预约</h2><p>选择预约日期与取书时段</p></div>
+    </header>
     <form data-testid="reserve-form" @submit.prevent="onSubmit">
-      <el-input v-model="reservationDate" data-testid="reserve-date" placeholder="预约日期（YYYY-MM-DD）" class="inline-input" />
-      <select v-model="pickupSlot" class="slot-input" required data-testid="reserve-slot" aria-label="取书时段">
-        <option disabled value="">请选择具体时段</option>
-        <option v-for="slot in PICKUP_SLOTS" :key="slot" :value="slot">{{ slot }}</option>
-      </select>
-      <select v-model="channel" data-testid="reserve-channel" aria-label="预约渠道">
-        <option value="ONLINE">线上</option>
-        <option value="DESK">到台</option>
-      </select>
-      <el-button type="primary" native-type="submit" data-testid="reserve-submit" :loading="state.status === 'loading'">
-        提交预约
+      <div class="reserve-field">
+        <label :for="dateInputId">预约日期</label>
+        <el-input :id="dateInputId" v-model="reservationDate" type="date" required data-testid="reserve-date" class="inline-input" />
+      </div>
+      <div class="reserve-field">
+        <label :for="slotInputId">取书时段</label>
+        <select :id="slotInputId" v-model="pickupSlot" class="slot-input" required data-testid="reserve-slot" aria-label="取书时段">
+          <option disabled value="">请选择时段</option>
+          <option v-for="slot in PICKUP_SLOTS" :key="slot" :value="slot">{{ slot }}</option>
+        </select>
+      </div>
+      <el-button class="reserve-submit" type="primary" native-type="submit" data-testid="reserve-submit" :loading="state.status === 'loading'">
+        提交线上预约
       </el-button>
     </form>
 
@@ -65,7 +70,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, useId } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { PICKUP_SLOTS, reserveTitle } from '../index'
@@ -74,19 +79,21 @@ const props = defineProps({ titleId: { type: String, required: true } })
 
 const reservationDate = ref('')
 const pickupSlot = ref('')
-const channel = ref('ONLINE')
+const fieldId = useId()
+const dateInputId = fieldId + '-date'
+const slotInputId = fieldId + '-slot'
 const result = ref(null)
 const { state, run } = useApiRequest()
 
 async function submit(confirm = false) {
-  if (!pickupSlot.value) return
+  if (!reservationDate.value || !PICKUP_SLOTS.includes(pickupSlot.value)) return
 
   const envelope = await run(() =>
     reserveTitle({
       titleId: props.titleId,
       reservationDate: reservationDate.value,
       pickupSlot: pickupSlot.value,
-      channel: channel.value,
+      channel: 'ONLINE',
       confirmWaitlist: confirm,
     }),
   )
@@ -105,32 +112,18 @@ function onSubmit() {
 </script>
 
 <style scoped>
-.reserve-panel {
-  border: 1px solid #e2eaf0;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.reserve-panel form {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.inline-input {
-  min-width: 14rem;
-}
-
-.slot-input {
-  min-width: 13rem;
-}
-
-.note {
-  color: #526274;
-  font-size: 0.85rem;
-}
+.reserve-panel { border: 1px solid var(--detail-line, #dbe4ee); border-radius: 16px; padding: 20px; background: var(--detail-surface, #f7f9fd); }
+.reserve-heading { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
+.reserve-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--detail-tint, #edf2ff); color: var(--detail-accent, #3458c8); font-size: 22px; }
+h2 { margin: 0 0 5px; font-size: 16px; }
+.reserve-heading p { margin: 0; color: var(--detail-muted, #526274); font-size: 12px; }
+.reserve-panel form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: end; margin-bottom: 16px; }
+.reserve-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: var(--detail-muted, #526274); font-size: 12px; }
+.inline-input, .slot-input { min-width: 0; width: 100%; }
+.slot-input { min-height: 40px; border-color: var(--detail-line, #dbe4ee); color: var(--detail-ink, #192238); }
+.reserve-panel :deep(.el-input__wrapper) { min-height: 40px; box-shadow: 0 0 0 1px var(--detail-line, #dbe4ee) inset; border-radius: 9px; }
+.reserve-submit { grid-column: 1 / -1; min-height: 42px; margin: 0; background: var(--detail-accent, #3458c8); border-color: var(--detail-accent, #3458c8); border-radius: 9px; }
+.reserve-submit:hover, .reserve-submit:focus-visible { background: var(--detail-accent, #3458c8); border-color: var(--detail-accent, #3458c8); filter: brightness(1.08); }
+.note { margin: 14px 0 0; color: var(--detail-muted, #526274); font-size: 11px; line-height: 1.8; }
+@container title-detail (max-width: 370px) { .reserve-panel form { grid-template-columns: minmax(0, 1fr); } }
 </style>

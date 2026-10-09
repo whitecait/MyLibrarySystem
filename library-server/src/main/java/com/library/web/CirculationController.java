@@ -202,7 +202,7 @@ public class CirculationController {
         ReservationCommands.ReservationCommand command;
         try {
             if (!PickupSlot.isValid(body.pickupSlot())) {
-                return fieldError("/api/v1/reservations", "pickupSlot 必须是 AM、PM 或一个有效的半小时时段");
+                return fieldError("/api/v1/reservations", "pickupSlot 必须是开馆受理时间内的五个预约块之一");
             }
             command = new ReservationCommands.ReservationCommand(
                     onBehalfOfId(body.onBehalfOf()), TitleId.of(Long.parseLong(body.titleId())),

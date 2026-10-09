@@ -312,7 +312,7 @@ class ITCirculationCoreTest {
         var titleId = jdbc.queryForObject(
                 "SELECT title_id FROM book_copy WHERE id = ?", Long.class, copyId);
         var reservationResult = loans.reserve(reader, new ReservationCommands.ReservationCommand(
-                readerId, TitleId.of(titleId), BusinessDate.of(today), "AM", "DESK", false, reader));
+                readerId, TitleId.of(titleId), BusinessDate.of(today), "09:00-10:30", "DESK", false, reader));
         if (!(reservationResult instanceof ModuleResult.Accepted<ReservationCommands.Reservation> accepted)) {
             throw new AssertionError("same-day desk request should wait while the copy is pending inspection: "
                     + reservationResult);
@@ -431,7 +431,7 @@ class ITCirculationCoreTest {
         var reservationReaderId = seedReader("itcirc013-shelve-reserve");
         var reservationActor = new ActorContext(AccountId.of(reservationReaderId), Role.READER, businessClock.now());
         var reservationResult = loans.reserve(reservationActor, new ReservationCommands.ReservationCommand(
-                reservationReaderId, TitleId.of(titleId), BusinessDate.of(today), "AM", "DESK", false,
+                reservationReaderId, TitleId.of(titleId), BusinessDate.of(today), "09:00-10:30", "DESK", false,
                 reservationActor));
         var reservation = ((ModuleResult.Accepted<ReservationCommands.Reservation>) reservationResult).value();
         assertThat(reservation.outcome()).isEqualTo("CONFIRMED");
@@ -538,7 +538,7 @@ class ITCirculationCoreTest {
         var readerId = seedReader("itcirc013-bound-manual-reader");
         var actor = new ActorContext(AccountId.of(readerId), Role.READER, businessClock.now());
         var reservationResult = loans.reserve(actor, new ReservationCommands.ReservationCommand(
-                readerId, TitleId.of(titleId), BusinessDate.of(today.plusDays(1)), "AM", "ONLINE", false, actor));
+                readerId, TitleId.of(titleId), BusinessDate.of(today.plusDays(1)), "09:00-10:30", "ONLINE", false, actor));
         var reservation = ((ModuleResult.Accepted<ReservationCommands.Reservation>) reservationResult).value();
         assertThat(reservation.outcome()).isEqualTo("CONFIRMED");
 
@@ -577,7 +577,7 @@ class ITCirculationCoreTest {
         var readerId = seedReader("itcirc013-cancel-reader");
         var actor = new ActorContext(AccountId.of(readerId), Role.READER, businessClock.now());
         var reservationResult = loans.reserve(actor, new ReservationCommands.ReservationCommand(
-                readerId, TitleId.of(titleId), BusinessDate.of(today), "AM", "DESK", false, actor));
+                readerId, TitleId.of(titleId), BusinessDate.of(today), "09:00-10:30", "DESK", false, actor));
         var reservation = ((ModuleResult.Accepted<ReservationCommands.Reservation>) reservationResult).value();
         assertThat(reservation.outcome()).isEqualTo("CONFIRMED");
         assertThat(loans.cancel(actor, new ReservationCommands.CancelReservation(

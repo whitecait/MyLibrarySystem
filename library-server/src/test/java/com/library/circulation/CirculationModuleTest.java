@@ -207,7 +207,7 @@ class CirculationModuleTest {
         var copyId = shelvedCopy("C-30");
         var reserved = ((ModuleResult.Accepted<ReservationCommands.Reservation>) module.reserve(
                 new ReservationCommands.ReservationCommand(reader.accountId().value(), title,
-                        BusinessDate.of(TODAY), "AM", "DESK", false, reader))).value();
+                        BusinessDate.of(TODAY), "09:00-10:30", "DESK", false, reader))).value();
         // 绑定不一致的副本 → 004
         assertThat(codeOf(module.claim(new LoanCommands.ClaimPickup(reserved.txId(),
                 CopyId.of(999999), librarian)))).isEqualTo("MLS-CIRC-004");
@@ -371,12 +371,12 @@ class CirculationModuleTest {
     private ReservationCommands.ReservationCommand command(ActorContext actor, TitleId titleId,
                                                            boolean confirmWaitlist) {
         return new ReservationCommands.ReservationCommand(actor.accountId().value(), titleId,
-                BusinessDate.of(TODAY.plusDays(1)), "AM", "ONLINE", confirmWaitlist, actor);
+                BusinessDate.of(TODAY.plusDays(1)), "09:00-10:30", "ONLINE", confirmWaitlist, actor);
     }
 
     private ReservationCommands.ReservationCommand sameDayDeskCommand(ActorContext actor, TitleId titleId) {
         return new ReservationCommands.ReservationCommand(actor.accountId().value(), titleId,
-                BusinessDate.of(TODAY), "AM", "DESK", false, actor);
+                BusinessDate.of(TODAY), "09:00-10:30", "DESK", false, actor);
     }
 
     private ActorContext readerOf(long id) {

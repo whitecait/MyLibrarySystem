@@ -80,14 +80,14 @@ describe('isolation period presentation', () => {
     await flushPromises()
 
     await wrapper.find('[data-testid="reserve-date"]').setValue('2026-09-16')
-    await wrapper.find('[data-testid="reserve-slot"]').setValue('14:00-14:30')
+    await wrapper.find('[data-testid="reserve-slot"]').setValue('13:00-14:30')
     await wrapper.find('[data-testid="reserve-form"]').trigger('submit')
     await flushPromises()
 
     expect(request).toHaveBeenCalledOnce()
     expect(request.mock.calls[0][0]).toBe('reserveTitle')
     expect(getOperation(request.mock.calls[0][0]).method).toBe('POST')
-    expect(request.mock.calls[0][1].body.pickupSlot).toBe('14:00-14:30')
+    expect(request.mock.calls[0][1].body.pickupSlot).toBe('13:00-14:30')
 
     const alert = wrapper.find('[data-testid="error-alert"]')
     expect(alert.exists()).toBe(true)

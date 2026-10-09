@@ -113,29 +113,27 @@ class CirculationScenarioContractTest {
     }
 
     @Test
-    void reservationPickupSlotContractListsLegacyValuesAndEveryHalfHourInterval() {
+    void reservationPickupSlotContractListsOnlyFiveOpeningHourBlocks() {
         var pickupSlotRef = contract.root()
                 .at("/components/schemas/ReservationRequest/properties/pickupSlot/$ref").asText();
         assertThat(pickupSlotRef).isEqualTo("#/components/schemas/PickupSlot");
         var pickupSlotSchema = contract.root().at("/components/schemas/PickupSlot/enum");
-        var expected = new HashSet<>(Set.of("AM", "PM"));
-        for (int start = 0; start < 24 * 60; start += 30) {
-            expected.add(time(start) + "-" + time(start + 30));
-        }
+        var expected = Set.of("09:00-10:30", "10:30-12:00", "13:00-14:30", "14:30-16:00", "16:00-17:00");
 
         var actual = new HashSet<String>();
         pickupSlotSchema.forEach(value -> actual.add(value.asText()));
-        assertThat(actual).hasSize(50).isEqualTo(expected);
+        assertThat(actual).hasSize(5).isEqualTo(expected);
     }
 
     @Test
-    void halfHourPickupSlotIsValidatedPersistedAndReturnedUnchanged() throws Exception {
+    void pickupBlocksRejectClosedHoursAndArePersistedAndReturnedUnchanged() throws Exception {
         var token = registerAndLogin("pickup-slot");
-        var titleId = seedTitleWithCopies("half-hour-pickup-" + UUID.randomUUID(), 1);
+        var titleId = seedTitleWithCopies("pickup-block-" + UUID.randomUUID(), 1);
         var reservationDate = businessClock.today().plusDays(1).toString();
         var invalidSlots = java.util.List.of(
-                "14:15-14:45", "14:00-15:00", "23:30-00:00", "24:00-24:30",
-                "14:00–14:30", "14:00-14:30 ");
+                "AM", "PM", "00:00-00:30", "08:00-09:00", "12:00-13:00", "17:00-18:00",
+                "09:00-09:30", "14:00-14:30", "14:15-14:45", "23:30-00:00", "24:00-24:30",
+                "09:00–10:30", "09:00-10:30 ");
 
         for (var invalidSlot : invalidSlots) {
             var invalid = post("/api/v1/reservations", token, key(), """
@@ -148,7 +146,7 @@ class CirculationScenarioContractTest {
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM borrow_transaction WHERE title_id = ?", Integer.class, titleId)).isZero();
 
-        var slot = "14:00-14:30";
+        var slot = "13:00-14:30";
         var created = post("/api/v1/reservations", token, key(), """
                 {"titleId":"%d","reservationDate":"%s","pickupSlot":"%s","channel":"ONLINE"}
                 """.formatted(titleId, reservationDate, slot));
@@ -191,7 +189,7 @@ class CirculationScenarioContractTest {
         jdbc.update("UPDATE book_copy SET status = 'LENT' WHERE id = ?", heldCopyId);
 
         var body = """
-                {"titleId":"%d","reservationDate":"%s","pickupSlot":"AM",
+                {"titleId":"%d","reservationDate":"%s","pickupSlot":"09:00-10:30",
                  "channel":"ONLINE","confirmWaitlist":false}
                 """.formatted(emptyTitle, futureDate);
         var response = post("/api/v1/reservations", readerToken, key(), body);
@@ -211,7 +209,7 @@ class CirculationScenarioContractTest {
 
         var confirm = post("/api/v1/reservations", readerToken, key(),
                 "{\"titleId\":\"" + emptyTitle + "\",\"reservationDate\":\"" + futureDate + "\","
-                        + "\"pickupSlot\":\"AM\",\"channel\":\"ONLINE\",\"confirmWaitlist\":true}");
+                        + "\"pickupSlot\":\"09:00-10:30\",\"channel\":\"ONLINE\",\"confirmWaitlist\":true}");
         var confirmed = json.readTree(confirm.getBody());
         assertThat(confirmed.at("/data/outcome").asText())
                 .as("确认响应: %s", confirm.getBody()).isEqualTo("WAITLIST_ENQUEUED");

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { setTransport } from '@/platform/http'
 import { installMockTransport, mountView } from '../../../tests/helpers'
-import { formatPickupSlot, PICKUP_SLOTS } from '../index'
+import { formatPickupSlot } from '../index'
 import ReservePanel from './ReservePanel.vue'
 
 afterEach(() => setTransport(null))
@@ -16,22 +16,20 @@ async function mountPanel() {
 
 async function submitReservation(wrapper) {
   await wrapper.find('[data-testid="reserve-date"]').setValue('2026-09-15')
-  await wrapper.find('[data-testid="reserve-slot"]').setValue('14:00-14:30')
+  await wrapper.find('[data-testid="reserve-slot"]').setValue('13:00-14:30')
   await wrapper.find('[data-testid="reserve-form"]').trigger('submit')
   await flushPromises()
 }
 
 describe('ReservePanel', () => {
-  it('renders every half-hour interval through the final 23:30-24:00 interval', async () => {
-    expect(PICKUP_SLOTS).toHaveLength(48)
-    expect(PICKUP_SLOTS[0]).toBe('00:00-00:30')
-    expect(PICKUP_SLOTS).toContain('14:00-14:30')
-    expect(PICKUP_SLOTS[47]).toBe('23:30-24:00')
-    expect(new Set(PICKUP_SLOTS).size).toBe(48)
-
+  it('offers five opening-hour pickup blocks and only online reservation', async () => {
     const wrapper = await mountPanel()
     const options = wrapper.find('[data-testid="reserve-slot"]').findAll('option')
-    expect(options.slice(1).map((option) => option.element.value)).toEqual(PICKUP_SLOTS)
+    expect(options.slice(1).map(option => option.element.value)).toEqual([
+      '09:00-10:30', '10:30-12:00', '13:00-14:30', '14:30-16:00', '16:00-17:00',
+    ])
+    expect(wrapper.find('[data-testid="reserve-channel"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('线上预约')
   })
 
   it('keeps legacy slot meanings and exact half-hour values distinct', () => {
@@ -77,7 +75,7 @@ describe('ReservePanel', () => {
     expect(calls[0].options.body).toMatchObject({
       titleId: '2001',
       reservationDate: '2026-09-15',
-      pickupSlot: '14:00-14:30',
+      pickupSlot: '13:00-14:30',
       channel: 'ONLINE',
       confirmWaitlist: false,
     })
@@ -118,7 +116,7 @@ describe('ReservePanel', () => {
     expect(calls).toHaveLength(1)
     expect(calls[0].options.body).toMatchObject({
       reservationDate: '2026-09-15',
-      pickupSlot: '14:00-14:30',
+      pickupSlot: '13:00-14:30',
       confirmWaitlist: false,
     })
     const pending = wrapper.find('[data-testid="reserve-waitlist-pending"]')
@@ -132,7 +130,8 @@ describe('ReservePanel', () => {
     expect(calls).toHaveLength(2)
     expect(calls[1].options.body).toMatchObject({
       reservationDate: '2026-09-15',
-      pickupSlot: '14:00-14:30',
+      pickupSlot: '13:00-14:30',
+      channel: 'ONLINE',
       confirmWaitlist: true,
     })
     expect(wrapper.find('[data-testid="reserve-confirmed"]').exists()).toBe(true)

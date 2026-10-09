@@ -40,7 +40,7 @@ result.json 记录实际检出提交、PR head 提交、工作树是否存在未
 | 注册、每日开馆、上架与最早外借日期、RESTORE 例外 | 这两组共享模型不直接覆盖这些独立规则 | RegistrationContractProbeTest、P1CoreCirculationRulesTest、V13MigrationTest；这是覆盖边界，不能以共享模型通过代替这些测试或未来新增能力的专属映射 |
 | 读者对象归属、订单关闭角色、同键降权重放、AI 草稿确认与权限 | 模型动作只抽象已通过入口鉴权的合法业务事件；Closing 的 adminAuth 是当前命令权限与追平的合取，不证明动态权限存储 | SettlementControllerTest、ITID002PermissionAndInvisibilityTest、前端 guard／草稿测试及 Windows 核心冒烟；真实鉴权与重放守卫仍需对应结果 |
 | 通知产生、互斥与持久化归属；审计、看板及原三组混合验收 | 不声明形式化覆盖 | ITDefM6012NotificationChainTest、ITDefM6011AuditTrailTest 及 AT-0002 逐项执行状态。原完整统计、时间轴和 Banner 堆叠按适用清单分别处理 |
-| AT-0026／AT-0002 §2.26 保留的三组本人业务页签、分页、完整只读详情及关联通知；完整状态时间轴移出范围 | BusinessTabs、BusinessReservationMetadata、BusinessDetail：8 个页签安全不变量和 13 个页签反取反 probe 检查分组映射：CURRENT_LOANS=(LOAN,LENT)，RESERVATIONS=(RESERVATION,AWAIT／CONFIRMED／MANUAL_HANDLING／WAITLIST)，HISTORY=(RESERVATION或LOAN,RETURNED／RETURN_ABNORMAL／NOT_BORROWED)；并检查 FINE／ORDER 排除、独立游标、最多两个在途响应下的页签／账号／请求代次竞态，以及取消后清空 RESERVATIONS／HISTORY 缓存、重置列表代次、按当前页签立即重查和丢弃旧响应。模型保留一条旧 HISTORY 或 RESERVATIONS 请求；探针证明当前 HISTORY 结果先渲染后旧 HISTORY 响应到达仍被丢弃，也覆盖当前 RESERVATIONS 立即重查和历史页惰性重查。请求代次与取消前后快照对应 MyBusinessView 的 requestId 保护。取消路径仅抽象一条 CONFIRMED 预约转 NOT_BORROWED；它不扩大完整状态时间轴。6 个元数据安全不变量和 16 个反取反 probe 检查创建来源写入、候补转 CONFIRMED 后仍保留 WAITLIST、旧行缺来源时显示未知、AM／PM 兼容、半小时首段／中间／末段样本与非法边界样本拒绝，并检查时段不进入抽象取书资格条件。5 个详情安全不变量和 10 个反取反 probe 检查本人 RESERVATION／LOAN 精确字符串 ID、同号 FINE／ORDER、通知父事务、缺失字段、外来／缺失详情及“新结果先渲染、旧路由／账号响应后到” | MyBusinessTabs.test.js、MyBusinessDetailView.test.js、ITReleaseAuditRegressionTest 提供前端请求／呈现和本人投影的对应检查。页签与详情模型把本人过滤后的业务事实、分页页内容和按读者／类型／父 ID 预关联的通知当作外部快照；元数据模型则显式抽象创建写入与候补分配迁移，但不把模型状态当成 SQL 持久化证明。时段模型仅枚举首段 00:00-00:30、中间样本 12:30-13:00、末段 23:30-24:00 和六个非法样本；它不穷举全部 48 段，也不解析任意字符串。必须由独立 Java／HTTP 测试核对全部 48 段、旧客户端输入和格式异常。模型不证明真实 SQL、HTTP 鉴权、分页游标实现、前端 DOM、浏览器呈现、通知关联持久化或活性，也不覆盖已移出的完整状态时间轴。
+| AT-0026／AT-0002 §2.26 保留的三组本人业务页签、分页、完整只读详情及关联通知；完整状态时间轴移出范围 | BusinessTabs、BusinessReservationMetadata、BusinessDetail：8 个页签安全不变量和 13 个页签反取反 probe 检查分组映射：CURRENT_LOANS=(LOAN,LENT)，RESERVATIONS=(RESERVATION,AWAIT／CONFIRMED／MANUAL_HANDLING／WAITLIST)，HISTORY=(RESERVATION或LOAN,RETURNED／RETURN_ABNORMAL／NOT_BORROWED)；并检查 FINE／ORDER 排除、独立游标、最多两个在途响应下的页签／账号／请求代次竞态，以及取消后清空 RESERVATIONS／HISTORY 缓存、重置列表代次、按当前页签立即重查和丢弃旧响应。模型保留一条旧 HISTORY 或 RESERVATIONS 请求；探针证明当前 HISTORY 结果先渲染后旧 HISTORY 响应到达仍被丢弃，也覆盖当前 RESERVATIONS 立即重查和历史页惰性重查。请求代次与取消前后快照对应 MyBusinessView 的 requestId 保护。取消路径仅抽象一条 CONFIRMED 预约转 NOT_BORROWED；它不扩大完整状态时间轴。6 个元数据安全不变量和 16 个反取反 probe 检查创建来源写入、候补转 CONFIRMED 后仍保留 WAITLIST、旧行缺来源时显示未知、五段新输入逐项受理、AM／PM 历史行保留和六类非法输入拒绝，并检查时段不进入抽象取书资格条件。5 个详情安全不变量和 10 个反取反 probe 检查本人 RESERVATION／LOAN 精确字符串 ID、同号 FINE／ORDER、通知父事务、缺失字段、外来／缺失详情及“新结果先渲染、旧路由／账号响应后到” | MyBusinessTabs.test.js、MyBusinessDetailView.test.js、ITReleaseAuditRegressionTest 提供前端请求／呈现和本人投影的对应检查。页签与详情模型把本人过滤后的业务事实、分页页内容和按读者／类型／父 ID 预关联的通知当作外部快照；元数据模型则显式抽象创建写入与候补分配迁移，但不把模型状态当成 SQL 持久化证明。时段模型完整枚举五个新预约块和有限非法样例；它不解析任意字符串。独立 Java／HTTP 测试检查五段受理、闭馆／午间／旧输入拒绝、真实持久化和原值回显。模型不证明真实 SQL、HTTP 鉴权、分页游标实现、前端 DOM、浏览器呈现、通知关联持久化或活性，也不覆盖已移出的完整状态时间轴。
 | 单条未读 Banner 的最近预约日期选择、关联事务点击、成功标记已读后的推进／隐藏；中心列表分页不清空 Banner 来源；会话或路由变化后丢弃旧响应。GOV-0008／AT-0002 §1.44 保留单条呈现，明确不覆盖已移出范围的堆叠卡片和“另有 N 条”计数 | NotificationNavigation：类型、单个或无 Banner、最近日期候选、Banner 来源账号、关联 ID 保持、本人业务详情类型／ID／状态；12 个独立反取反 probe 给出成功路径的可达轨迹 | AppShell.test.js、DeliveryViews.test.js、MyBusinessDetailView.test.js、ITDefM6012NotificationChainTest 和 ITReleaseAuditRegressionTest 分别覆盖呈现、前端请求边界、通知持久化关联，以及服务端本人业务投影的类型筛选／分页／同号行。模型将成功响应抽象为一步，假定通知查询和本人业务投影已经由服务端按当前读者过滤；只将相关 ID 作为路由事务 ID，再从 RESERVATION／LOAN 投影解析类型。有限样本显式含同号 FINE／ORDER、他人唯一事务和不存在事务。模型不证明 HTTP 鉴权、数据库查询／提交、DOM、浏览器、游标算法、通知生产／互斥或活性；同日通知没有规定先后 |
 | 交付停写备份与新项目恢复 | Closing 的隔离／追平思想仅作为关联抽象，不是运维脚本的证明 | delivery/manage.py 的故障拒绝测试与独立 Docker 操作验证；Windows 原生运行、恢复数据及核心写入分别取证 |
 
@@ -60,7 +60,17 @@ ClosingRecovery 对应 DailyClosingScheduler 的启动检查和共用恢复流�
 
 实现回归为 DailyClosingSchedulerTest 与 P1CoreCirculationRulesTest：实际 Spring 启动生命周期、真实 PostgreSQL 多日补结、重复执行、跨午夜、持久化 MANUAL 或 attempts 超预算不再自动重试、预算内 FAILED 恢复、自动开放失败、控制行锁等待后的最新范围复查、失败状态独立事务提交，以及外层 UOW 回滚后的 draining 保留。外层回滚用例验证业务与 Outbox 回滚、失败次数和 MANUAL 状态保留、scheduler 不重试 MANUAL、普通 AI 写入仍被拒绝。真实 SQL 锁与事务行为由这些 PostgreSQL 回归验证；有限模型不证明控制行锁或 SQL 事务实现。模型结果与实现结果分别记录，不作完整活性证明。
 
+## 2026-10-08 五段取书块与历史元数据映射
+
+Issue #10 的时段校准对应 PickupSlot、OpenAPI PickupSlot 请求枚举和 BusinessReservationMetadata。PickupBlocks 常量完整列出五个新预约块；ValidSlotInputs 仅取这些值。无效输入有限样例包含旧 AM／PM、旧半小时、午间、缓冲、闭馆、跨日和格式错误。拒绝分支保留记录和已提交值。
+
+InvAcceptedSlotStoredVerbatim 检查新受理记录的值属于五段集合且原样保存。InvLegacyRowPreserved 保留旧 PM 记录；InvPickupEligibilityIgnoresSlot 检查新块和旧周期值均不成为实际取书守卫。五个块各有独立受理探针；六个拒绝分类各有探针，另保留创建来源、候补晋级、历史保留及取书独立性探针，共 16 个。
+
+模型使用固定五段全集与有限非法样例，不证明所有输入解析、SQL 原子性或真实权限。实际 HTTP／PostgreSQL 回归由 CirculationScenarioContractTest、PickupSlotTest 和既有流通／查询用例承担。模型与实现结果分别登记。
+
 ## 修订记录
+
+- 2026-10-08：更新 BusinessReservationMetadata 的五段新输入、历史回显和 16 个探针；共有安全性质及探针数量保持，执行结果按当前候选登记。
 
 - 2026-10-07：按用户批准追加启动恢复规则、模型及实现映射；补充控制行锁、锁内最新范围、真实预算和外层回滚后的 draining 保留由 PostgreSQL 回归覆盖，有限模型不证明数据库锁或 SQL 事务；七个模型保持 43 项安全性质和 80 个探针。
 
@@ -82,3 +92,5 @@ ClosingRecovery 对应 DailyClosingScheduler 的启动检查和共用恢复流�
 - [工程验证入口](../ENGINEERING.md)。
 - [事务边界、并发与恢复规则](../docs/03-detailed-design/MLS-DOC-DD-0004.md)。
 - [交付运维入口](../scripts/delivery/README.md)。
+
+- [书目详情布局与预约校准 Issue #10](https://github.com/whitecait/Mylibrary/issues/10)

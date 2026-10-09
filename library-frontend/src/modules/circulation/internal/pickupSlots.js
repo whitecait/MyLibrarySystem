@@ -1,13 +1,11 @@
-function formatTime(minutes) {
-  const hours = String(Math.floor(minutes / 60)).padStart(2, '0')
-  const remainder = String(minutes % 60).padStart(2, '0')
-  return `${hours}:${remainder}`
-}
-
-export const PICKUP_SLOTS = Array.from({ length: 48 }, (_, index) => {
-  const start = index * 30
-  return `${formatTime(start)}-${formatTime(start + 30)}`
-})
+// Current reservation input values. Historical values remain readable via formatPickupSlot.
+export const PICKUP_SLOTS = Object.freeze([
+  '09:00-10:30',
+  '10:30-12:00',
+  '13:00-14:30',
+  '14:30-16:00',
+  '16:00-17:00',
+])
 
 export function formatPickupSlot(value) {
   if (value === 'AM') return '上午（AM）'
