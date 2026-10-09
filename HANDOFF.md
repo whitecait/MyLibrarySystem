@@ -4,6 +4,7 @@
 
 - [书目详情布局改进登记](artifacts/title-details-layout-20261008/REPORT.md)
 - [书目详情布局 Issue #10](https://github.com/whitecait/Mylibrary/issues/10)
+- [书目详情与借阅 Draft PR #11](https://github.com/whitecait/Mylibrary/pull/11)
 - [本轮本地修改源码提交 3a03a4d](https://github.com/whitecait/Mylibrary/commit/3a03a4da58dcd0b76ca31bdef2fc29fc53f5e91f)
 - [本轮源码 CI（四项通过，Compose 失败）](https://github.com/whitecait/Mylibrary/actions/runs/37771624213)
 - [现代书目与阅读演示追加记录](artifacts/modern-demo-import-20261008/REPORT.md)
@@ -165,6 +166,8 @@ lingzz 通过本机书目 68 的四条注释要求限制书目文字图形长度
 当前修订的本地完整前端结果为 49 文件、325 项测试通过；契约、模块边界、ESLint 与 HTTP 构建通过。新候选的独立复审、远端 CI 及预览绑定结果由本轮报告另按实际执行登记，不复用旧提交的通过结论。需求、验收及形式化抽象边界已追加本次修订；后端与模型迁移没有改变。
 
 ## 修订记录
+
+- 2026-10-09：按独立规范复审补登记正文已引用的 Draft PR #11；不改变页面或业务实现。
 
 - 2026-10-09：登记四条页面注释、默认值与日历并列答复、已实现交互及当前前端验证；修订候选和最终产品验收另记。
 
