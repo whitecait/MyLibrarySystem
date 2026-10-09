@@ -8,7 +8,7 @@
       <button class="home-ai-panel__close modal-panel-close" type="button" aria-label="关闭 AI 助手" @click="emit('close')">×</button>
     </header>
     <div v-if="hasOpened" class="home-ai-panel__body">
-      <AiAssistantView :key="assistantKey" compact />
+      <AiAssistantView :session-revision="assistantRevision" :active="open" compact />
     </div>
   </section>
 </template>
@@ -20,15 +20,14 @@ import { getSessionState } from '@/platform/auth/session'
 const props = defineProps({ open: { type: Boolean, default: false } })
 const emit = defineEmits(['close'])
 const hasOpened = ref(false)
-const assistantKey = ref(0)
+const assistantRevision = ref(0)
 const session = getSessionState()
 const componentId = useId()
 const titleId = `home-ai-dialog-title-${componentId}`
 const descriptionId = `home-ai-dialog-description-${componentId}`
 watch(() => props.open, open => { if (open) hasOpened.value = true }, { immediate: true })
 watch(() => [session.token, session.actor?.accountId, session.actor?.role], () => {
-  assistantKey.value += 1
-  if (!props.open) hasOpened.value = false
+  assistantRevision.value += 1
 }, { flush: 'sync' })
 </script>
 

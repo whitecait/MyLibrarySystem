@@ -38,11 +38,11 @@ import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { getReservationCalendar } from '../index'
 import { calendarMonth, moveCalendarMonth } from './calendarMonth'
-import { getLibraryDate, getReservationDefaults } from './reservationDefaults'
+import { getLibraryDate } from './reservationDefaults'
 
 const props = defineProps({ titleId: { type: String, required: true }, refreshKey: { type: Number, default: 0 } })
 const today = getLibraryDate()
-const month = ref(getReservationDefaults().reservationDate.slice(0, 7))
+const month = ref(today.slice(0, 7))
 const range = computed(() => calendarMonth(month.value))
 const days = ref([])
 const dayByDate = computed(() => new Map(days.value.map(day => [day.businessDate, day])))

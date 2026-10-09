@@ -342,6 +342,7 @@ async function mountBorrowingAuthentication({ expired = false } = {}) {
   await flushPromises()
   await wrapper.get('[data-testid="reserve-date"]').setValue('2026-10-20')
   await wrapper.get('[data-testid="reserve-slot"]').setValue('16:00-17:00')
+  await wrapper.get('[data-testid="ai-input"]').setValue('保留这条未发送草稿')
   return { wrapper, calls }
 }
 
@@ -353,7 +354,7 @@ it('keeps the borrowing form frozen under login and requires another explicit su
   try {
     const { wrapper, calls } = await mountBorrowingAuthentication()
     const borrowed = wrapper.get('.title-borrow-view').element
-    const assistant = wrapper.get('#home-ai-dialog').element
+    const assistant = wrapper.getComponent({ name: 'AiAssistantView' }).vm.$.uid
     const titleReads = calls.filter(call => call.operationId === 'getTitle').length
     await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
     await flushPromises()
@@ -372,7 +373,8 @@ it('keeps the borrowing form frozen under login and requires another explicit su
     await flushPromises()
     expect(wrapper.get('.app-shell').attributes('inert')).toBeUndefined()
     expect(wrapper.get('.title-borrow-view').element).toBe(borrowed)
-    expect(wrapper.get('#home-ai-dialog').element).toBe(assistant)
+    expect(wrapper.getComponent({ name: 'AiAssistantView' }).vm.$.uid).toBe(assistant)
+    expect(wrapper.get('[data-testid="ai-input"]').element.value).toBe('保留这条未发送草稿')
     expect(wrapper.get('[data-testid="reserve-date"]').element.value).toBe('2026-10-20')
     expect(wrapper.get('[data-testid="reserve-slot"]').element.value).toBe('16:00-17:00')
     expect(calls.filter(call => call.operationId === 'getTitle')).toHaveLength(titleReads)
@@ -391,6 +393,7 @@ it('keeps the borrowing form frozen under login and requires another explicit su
 it('preserves the fields when an expired reservation session is reauthenticated without replaying the write', async () => {
   const { flushPromises } = await import('@vue/test-utils')
   const { wrapper, calls } = await mountBorrowingAuthentication({ expired: true })
+  const assistant = wrapper.getComponent({ name: 'AiAssistantView' }).vm.$.uid
   await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
   await flushPromises()
   expect(wrapper.vm.$router.currentRoute.value.fullPath).toBe('/titles/2001/borrow')
@@ -400,6 +403,8 @@ it('preserves the fields when an expired reservation session is reauthenticated 
   await form.get('[data-testid="login-form"]').trigger('submit')
   await flushPromises()
   expect(calls.filter(call => call.operationId === 'reserveTitle')).toHaveLength(1)
+  expect(wrapper.getComponent({ name: 'AiAssistantView' }).vm.$.uid).toBe(assistant)
+  expect(wrapper.get('[data-testid="ai-input"]').element.value).toBe('保留这条未发送草稿')
   expect(wrapper.get('[data-testid="reserve-date"]').element.value).toBe('2026-10-20')
   await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
   await flushPromises()

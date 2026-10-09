@@ -83,6 +83,10 @@ export async function executeRequest({
   }
 
   const rawText = await response.text()
+  // The caller may change identity while the response body is still arriving.
+  if (signal?.aborted) {
+    throw new RequestFailure({ kind: FailureKind.CANCELLED, message: 'request cancelled' })
+  }
   let parsedBody
   if (rawText.length > 0) {
     try {

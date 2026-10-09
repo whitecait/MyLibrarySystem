@@ -116,7 +116,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { FailureKind } from '@/platform/http'
@@ -127,6 +127,8 @@ import SafeMarkdown from './SafeMarkdown'
 const props = defineProps({
   canApplyPrefill: { type: Boolean, default: false },
   compact: { type: Boolean, default: false },
+  sessionRevision: { type: Number, default: 0 },
+  active: { type: Boolean, default: true },
 })
 const emit = defineEmits(['prefill'])
 const router = useRouter()
@@ -147,8 +149,44 @@ const eventsRequestVersion = ref(0)
 const eventsSessionId = ref(null)
 const eventsState = reactive({ status: 'idle', failure: null })
 
-const { state: sessionRequestState, run: runSession } = useApiRequest()
-const { state: sendState, run: runSend } = useApiRequest()
+const sessionRequestState = reactive({ status: 'idle', envelope: null, failure: null })
+const sendState = reactive({ status: 'idle', envelope: null, failure: null })
+let identityVersion = 0
+let identityController = new AbortController()
+
+// Each request owns its state so an earlier identity cannot overwrite the current one.
+async function runCurrentRequest(state, executor) {
+  const version = identityVersion
+  const request = useApiRequest()
+  const pending = request.run(() => executor({ signal: identityController.signal }))
+  Object.assign(state, request.state)
+  const envelope = await pending
+  if (version !== identityVersion) return null
+  Object.assign(state, request.state)
+  return envelope
+}
+
+watch(() => props.sessionRevision, () => {
+  identityVersion++
+  identityController.abort()
+  identityController = new AbortController()
+  sessionId.value = role.value = quota.value = null
+  turns.value = []
+  sending.value = false
+  events.value = []
+  eventsVisible.value = false
+  eventsCursor.value = eventsSessionId.value = null
+  eventsRequestVersion.value++
+  eventsLoading.value = false
+  Object.assign(eventsState, { status: 'idle', failure: null })
+  for (const state of [sessionRequestState, sendState]) {
+    Object.assign(state, { status: 'idle', envelope: null, failure: null })
+  }
+  // Keep the unsent draft and component; identity-owned conversation facts are cleared.
+  if (props.active) void createSession()
+}, { flush: 'sync' })
+watch(() => props.active, active => { if (active) void createSession() })
+onBeforeUnmount(() => { identityVersion++; identityController.abort(); eventsRequestVersion.value++ })
 
 const quotaExhausted = computed(
   () => quota.value === 0 || (sendState.status === 'failure' && sendState.failure?.kind === FailureKind.QUOTA_EXHAUSTED),
@@ -159,12 +197,12 @@ const submitDisabled = computed(
 )
 
 onMounted(() => {
-  void createSession()
+  if (props.active) void createSession()
 })
 
 async function createSession() {
   if (sessionId.value || sessionRequestState.status === 'loading') return
-  const envelope = await runSession(() => startAiSession())
+  const envelope = await runCurrentRequest(sessionRequestState, options => startAiSession(options))
   if (!envelope) return
   sessionId.value = envelope.data.sessionId
   role.value = envelope.data.role
@@ -177,13 +215,17 @@ async function send() {
   const message = draft.value.trim()
   if (!message || !sessionId.value || sessionRequestState.status !== 'success') return
 
+  const version = identityVersion
+  const currentSessionId = sessionId.value
   sending.value = true
   followMessages.value = true
   turns.value.push({ role: 'user', text: message })
   draft.value = ''
   await scrollMessagesToBottom()
   try {
-    const envelope = await runSend(() => sendAiMessage({ sessionId: sessionId.value, message }))
+    if (version !== identityVersion) return
+    const envelope = await runCurrentRequest(sendState, options => sendAiMessage({ sessionId: currentSessionId, message }, options))
+    if (version !== identityVersion) return
     if (!envelope) {
       if (quotaExhausted.value) quota.value = sendState.failure?.data?.remaining ?? 0
       return
@@ -193,7 +235,7 @@ async function send() {
     if (props.compact && followMessages.value) await scrollMessagesToBottom()
     if (eventsVisible.value) await refreshEvents()
   } finally {
-    sending.value = false
+    if (version === identityVersion) sending.value = false
   }
 }
 
@@ -264,7 +306,7 @@ async function refreshEvents() {
       requestedCursors.add(cursorKey)
 
       const eventRequest = useApiRequest()
-      const envelope = await eventRequest.run(() => listAiEvents({ sessionId: currentSessionId, cursor: cursor ?? undefined, limit: 20 }))
+      const envelope = await eventRequest.run(() => listAiEvents({ sessionId: currentSessionId, cursor: cursor ?? undefined, limit: 20 }, { signal: identityController.signal }))
       if (requestVersion !== eventsRequestVersion.value || currentSessionId !== sessionId.value || !eventsVisible.value) return
       if (!envelope) {
         eventsState.status = 'failure'

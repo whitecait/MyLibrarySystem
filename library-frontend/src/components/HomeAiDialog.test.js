@@ -5,11 +5,12 @@ import HomeAiDialog from './HomeAiDialog.vue'
 
 const assistantState = vi.hoisted(() => ({ mounts: 0, unmounts: 0 }))
 vi.mock('@/modules/ai', async () => {
-  const { defineComponent, h, onBeforeUnmount, onMounted, ref } = await import('vue')
+  const { defineComponent, h, onBeforeUnmount, onMounted, ref, watch } = await import('vue')
   return { AiAssistantView: defineComponent({
-    props: { compact: Boolean },
-    setup() {
+    props: { compact: Boolean, sessionRevision: Number, active: Boolean },
+    setup(props) {
       const turns = ref(0)
+      watch(() => props.sessionRevision, () => { turns.value = 0 })
       onMounted(() => { assistantState.mounts += 1 })
       onBeforeUnmount(() => { assistantState.unmounts += 1 })
       return () => h('button', { 'data-testid': 'mock-ai-turn', onClick: () => { turns.value += 1 } }, `对话 ${turns.value}`)
@@ -47,16 +48,17 @@ it('clears the old conversation on identity change, including while collapsed', 
   await flushPromises()
   login({ accessToken: 'first-token', actor: { accountId: '1001', role: 'READER' } })
   await flushPromises()
-  expect(assistantState.mounts).toBe(2)
-  expect(assistantState.unmounts).toBe(1)
+  expect(assistantState.mounts).toBe(1)
+  expect(assistantState.unmounts).toBe(0)
+  expect(wrapper.text()).toContain('对话 0')
   await wrapper.setProps({ open: false })
   logout()
   await flushPromises()
-  expect(assistantState.unmounts).toBe(2)
-  expect(assistantState.mounts).toBe(2)
+  expect(assistantState.unmounts).toBe(0)
+  expect(assistantState.mounts).toBe(1)
   expect(document.body.innerHTML).not.toContain('first-token')
   await wrapper.setProps({ open: true })
-  expect(assistantState.mounts).toBe(3)
+  expect(assistantState.mounts).toBe(1)
 })
 it('ignores an expansion that is cancelled before rendering', async () => {
   const wrapper = mountPanel()

@@ -204,6 +204,54 @@ describe('AiAssistantView', () => {
     expect(wrapper.text()).toContain('访客会话不能查询本人借阅')
   })
 
+  it('ignores a session start from the prior identity after the new session is ready', async () => {
+    let completeOldStart
+    let oldSignal
+    let starts = 0
+    setTransport({ mode: 'test', request(operationId, options) {
+      expect(operationId).toBe('startAiSession')
+      if (++starts === 1) {
+        oldSignal = options.signal
+        return new Promise(resolve => { completeOldStart = resolve })
+      }
+      return Promise.resolve({ code: 'MLS-AI-S001', message: 'ok', data: { sessionId: '7002', role: 'READER', quota: { remaining: 10 } } })
+    } })
+    const wrapper = await mountAssistant()
+    await wrapper.setProps({ sessionRevision: 1 })
+    await flushPromises()
+    completeOldStart({ code: 'MLS-AI-S001', message: 'old', data: { sessionId: '7001', role: 'LIBRARIAN', quota: { remaining: 0 } } })
+    await flushPromises()
+    expect(oldSignal.aborted).toBe(true)
+    expect(wrapper.get('[data-testid="ai-session-id"]').text()).toBe('7002')
+    expect(wrapper.get('[data-testid="ai-role"]').text()).toBe('READER')
+    expect(wrapper.get('[data-testid="ai-quota-remaining"]').text()).toBe('10')
+    wrapper.unmount()
+  })
+
+  it('keeps the draft but clears identity-owned turns and discards a late prior answer', async () => {
+    let completeOldTurn
+    let starts = 0
+    setTransport({ mode: 'test', request(operationId) {
+      if (operationId === 'startAiSession') return Promise.resolve({ code: 'MLS-AI-S001', message: 'ok', data: { sessionId: String(7000 + ++starts), role: 'READER', quota: { remaining: 10 } } })
+      return new Promise(resolve => { completeOldTurn = resolve })
+    } })
+    const wrapper = await mountAssistant()
+    await wrapper.get('[data-testid="ai-input"]').setValue('旧账户问题')
+    await wrapper.get('[data-testid="ai-composer"]').trigger('submit')
+    await flushPromises()
+    await wrapper.setProps({ sessionRevision: 1 })
+    await flushPromises()
+    await wrapper.get('[data-testid="ai-input"]').setValue('未发送的新草稿')
+    completeOldTurn({ code: 'MLS-AI-S001', message: 'old', data: { messageId: 'old', answer: '旧账户私有结果', citations: [], actions: [], quota: { remaining: 0 } } })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('旧账户私有结果')
+    expect(wrapper.text()).not.toContain('旧账户问题')
+    expect(wrapper.get('[data-testid="ai-input"]').element.value).toBe('未发送的新草稿')
+    expect(wrapper.get('[data-testid="ai-send"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-testid="ai-quota-remaining"]').text()).toBe('10')
+    wrapper.unmount()
+  })
+
   it('renders answers, citations and the L2 card, updating the quota', async () => {
     installMockTransport({ fixtures: sharedFixtures })
     const wrapper = await mountAssistant()

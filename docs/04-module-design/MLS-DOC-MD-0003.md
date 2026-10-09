@@ -203,6 +203,8 @@ CirculationStore.calendarFacts 使用一次 SQL 语句读取当前副本与日�
 
 借阅提交给 executeRequest 提供本次请求的 onUnauthorizedResponse，收到 401 时清除过期会话并打开 AppShell 提供的登录层，避免全局登录路由替换该页面。其他请求沿用全局处理。LoginForm 复用会话创建和保存，错误留在表单；成功通知外层关闭登录层。ReservePanel 不重放请求，下一次点击重新构造请求并携带当前会话。
 
+HomeAiDialog 在身份变化时更新会话修订号，保留已挂载的 AiAssistantView 及未发送草稿。AiAssistantView 清除旧会话 ID、角色、额度、消息和事件，取消旧身份请求；当前面板展开时创建新身份会话，折叠时留待展开。请求版本阻止迟到结果覆盖新会话，响应体到达后也检查调用方取消信号，过期 401 不触发新会话的全局登录处理。该调整不改变 AI 视觉或服务端会话归属。
+
 ## 修订记录
 
 2026-10-09，v0.14：直接月历与独立登录修订。

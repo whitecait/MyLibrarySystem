@@ -80,7 +80,7 @@ CalendarProjection 对应 CirculationStore.calendarFacts、CalendarDisplayState.
 
 BorrowingLogin 对应 AppShell 的独立登录层、ReservePanel 及 executeRequest 的局部 401 回调。有限草稿有两天和两个时段。Submit 在匿名或过期状态打开登录层；登录失败、取消和成功均保留草稿及写入计数。成功只关闭登录层，下一次 Submit 才写入。六项安全性质及六个独立探针检查冻结、草稿保留、无自动写入、路由保持和提交认证，并覆盖匿名、过期、失败、取消及成功后的明确二次提交。
 
-当前清单含九个模型、55 项安全性质、92 个可达性探针，共 101 个模型执行用例。模型只验证有限状态及有界可达性。日历事实和登录响应作为外部输入；模型不证明真实 SQL 快照、实际密码验证、HTTP 权限、DOM、焦点或浏览器视觉。CirculationScenarioContractTest 用真实 PostgreSQL／HTTP 验证主状态、到期／归还、旧保障字段和公共响应边界；App.test.js、CirculationViews.test.js 检查真实请求层的局部 401、草稿保留、无重放及旧月响应丢弃。两组实现测试与 Windows 产品验收分开登记。
+当前清单含九个模型、55 项安全性质、92 个可达性探针，共 101 个模型执行用例。模型只验证有限状态及有界可达性。日历事实和登录响应作为外部输入；模型不证明真实 SQL 快照、实际密码验证、HTTP 权限、DOM、焦点或浏览器视觉。CirculationScenarioContractTest 用真实 PostgreSQL／HTTP 验证主状态、到期／归还、旧保障字段和公共响应边界；App.test.js、CirculationViews.test.js 检查真实请求层的局部 401、草稿保留、无重放及旧月响应丢弃。登录完成时保留实际 AI 组件和未发送草稿；身份变化使原会话数据失效。该异步身份边界由 App.test.js、AiAssistantView.test.js 和 request.test.js 覆盖组件实例、草稿、旧会话／回答丢弃及取消后的 401；BorrowingLogin 不证明 AI 归属或请求取消实现。两组实现测试与 Windows 产品验收分开登记。
 
 ## 修订记录
 

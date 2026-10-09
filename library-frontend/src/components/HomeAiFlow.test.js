@@ -88,6 +88,7 @@ describe('Home AI flow', () => {
     expect(sends()[0].options).toEqual({
       params: { sessionId: '7001' },
       body: { message: '推荐一本有关图书馆的书' },
+      signal: expect.any(AbortSignal),
     })
     expect(wrapper.get('#home-ai-dialog').element?.textContent).toContain('这是真实 AI 视图展示的回答。')
 

@@ -66,6 +66,28 @@ describe('http request core', () => {
     expect(failure.data).toEqual({ fineId: '5001' })
   })
 
+  it('ignores an old unauthorized response cancelled while its body is arriving', async () => {
+    const controller = new AbortController()
+    let completeBody
+    let bodyStarted
+    const started = new Promise(resolve => { bodyStarted = resolve })
+    const listener = vi.fn()
+    const unsubscribe = onUnauthorized(listener)
+    try {
+      const request = executeRequest({ operationId: 'listNotifications', signal: controller.signal,
+        fetchImpl: async () => ({ ok: false, status: 401, text: () => {
+          bodyStarted()
+          return new Promise(resolve => { completeBody = resolve })
+        } }),
+      }).catch(error => error)
+      await started
+      controller.abort()
+      completeBody(JSON.stringify({ code: 'MLS-ID-001', message: 'old identity', data: {} }))
+      expect((await request).kind).toBe(FailureKind.CANCELLED)
+      expect(listener).not.toHaveBeenCalled()
+    } finally { unsubscribe() }
+  })
+
   it('notifies unauthorized listeners exactly once on 401', async () => {
     stubFetch(() => jsonResponse(401, { code: 'MLS-ID-001', message: 'sign in required', data: {} }))
     const listener = vi.fn()

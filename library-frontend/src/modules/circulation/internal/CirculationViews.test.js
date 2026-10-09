@@ -22,6 +22,20 @@ describe('ReservationCalendarView', () => {
     expect(wrapper.get('[data-date="2026-09-18"]').attributes('aria-label')).toContain('已借出')
   })
 
+  it('opens the current Shanghai month even when the reservation default is next month', async () => {
+    vi.setSystemTime(new Date('2026-09-30T15:00:00Z'))
+    const queries = []
+    setTransport({ mode: 'test', async request(_operationId, options) {
+      queries.push(options.query)
+      return { code: 'MLS-CIRC-S004', message: 'ok', data: { items: [] } }
+    } })
+    const wrapper = await mountView(ReservationCalendarView, { props: { titleId: '2001' } })
+    await flushPromises()
+    expect(wrapper.get('[data-testid="calendar-month"]').text()).toBe('2026年09月')
+    expect(queries).toEqual([{ from: '2026-09-01', to: '2026-09-30' }])
+    wrapper.unmount()
+  })
+
   it('does not reinterpret legacy guarantee values as copy states', async () => {
     installMockTransport({ fixtures: { getReservationCalendar: { code: 'MLS-CIRC-S006', message: 'ok', data: { items: [{ businessDate: '2026-09-18', availability: 'UNAVAILABLE' }] } } } })
     const wrapper = await mountView(ReservationCalendarView, { props: { titleId: '2001' } })
