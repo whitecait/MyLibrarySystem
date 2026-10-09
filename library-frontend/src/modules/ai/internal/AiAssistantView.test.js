@@ -228,6 +228,26 @@ describe('AiAssistantView', () => {
     wrapper.unmount()
   })
 
+  it('does not publish the old session when identity changes between async continuations', async () => {
+    const starts = []
+    setTransport({ mode: 'test', request(operationId) {
+      expect(operationId).toBe('startAiSession')
+      return new Promise(resolve => starts.push(resolve))
+    } })
+    const wrapper = await mountAssistant()
+    starts[0]({ code: 'MLS-AI-S001', message: 'old', data: { sessionId: '7001', role: 'LIBRARIAN', quota: { remaining: 0 } } })
+    void Promise.resolve().then(() => wrapper.setProps({ sessionRevision: 1 }))
+    await flushPromises()
+    expect(starts).toHaveLength(2)
+    expect(wrapper.get('[data-testid="ai-session-id"]').text()).not.toBe('7001')
+    expect(wrapper.get('[data-testid="ai-role"]').text()).not.toBe('LIBRARIAN')
+    starts[1]({ code: 'MLS-AI-S001', message: 'new', data: { sessionId: '7002', role: 'READER', quota: { remaining: 10 } } })
+    await flushPromises()
+    expect(wrapper.get('[data-testid="ai-session-id"]').text()).toBe('7002')
+    expect(wrapper.get('[data-testid="ai-role"]').text()).toBe('READER')
+    wrapper.unmount()
+  })
+
   it('keeps the draft but clears identity-owned turns and discards a late prior answer', async () => {
     let completeOldTurn
     let starts = 0

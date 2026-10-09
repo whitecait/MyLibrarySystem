@@ -202,8 +202,9 @@ onMounted(() => {
 
 async function createSession() {
   if (sessionId.value || sessionRequestState.status === 'loading') return
+  const version = identityVersion
   const envelope = await runCurrentRequest(sessionRequestState, options => startAiSession(options))
-  if (!envelope) return
+  if (!envelope || version !== identityVersion) return
   sessionId.value = envelope.data.sessionId
   role.value = envelope.data.role
   quota.value = envelope.data.quota.remaining
