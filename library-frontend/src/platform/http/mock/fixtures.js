@@ -121,9 +121,9 @@ export const fixtures = {
     message: 'ok',
     data: {
       items: [
-        { businessDate: '2026-09-16', availability: 'GUARANTEED' },
-        { businessDate: '2026-09-17', availability: 'NOT_GUARANTEED' },
-        { businessDate: '2026-09-18', availability: 'UNAVAILABLE' },
+        { businessDate: '2026-09-16', availability: 'GUARANTEED', displayState: 'AVAILABLE' },
+        { businessDate: '2026-09-17', availability: 'NOT_GUARANTEED', displayState: 'RESERVED' },
+        { businessDate: '2026-09-18', availability: 'NOT_GUARANTEED', displayState: 'LENT' },
       ],
     },
   },

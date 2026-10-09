@@ -104,7 +104,7 @@ describe('background and modal navigation', () => {
     await wrapper.get('[data-testid="title-borrow-entry"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/titles/2001/borrow')
-    expect(wrapper.get('[data-testid="calendar-form"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="calendar-grid"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="reserve-form"]').exists()).toBe(true)
     const breadcrumb = wrapper.get('[data-testid="business-breadcrumbs"]')
     expect(breadcrumb.get('a').attributes('href')).toBe('/titles/2001')
@@ -118,7 +118,7 @@ describe('background and modal navigation', () => {
     await router.push('/titles/2001/calendar')
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/titles/2001/borrow')
-    expect(wrapper.get('[data-testid="calendar-form"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="calendar-grid"]').exists()).toBe(true)
     expect(calls.filter(id => id === 'startAiSession')).toHaveLength(1)
     await router.push('/login')
     await flushPromises()
@@ -310,4 +310,118 @@ it('shows the correct parent for direct borrowing and reading routes', async () 
   await wrapper.get('[data-testid="business-close"]').trigger('click')
   await flushPromises()
   expect(router.currentRoute.value.fullPath).toBe('/')
+})
+
+async function mountBorrowingAuthentication({ expired = false } = {}) {
+  const { createMockTransport } = await import('./platform/http/mock/mockAdapter')
+  const { executeRequest } = await import('./platform/http/request')
+  const { getToken } = await import('./platform/auth/session')
+  const mock = createMockTransport({ fixtures: sharedFixtures })
+  const calls = []
+  let firstReservation = true
+  if (expired) login({ accessToken: 'expired-token', actor: { accountId: '1001', role: 'READER' } })
+  setTransport({ mode: 'test', request(operationId, options = {}) {
+    if (!['createSession', 'reserveTitle'].includes(operationId)) { calls.push({ operationId }); return mock.request(operationId, options) }
+    return executeRequest({ operationId, getToken, ...options, fetchImpl: async (_url, init) => {
+      const body = JSON.parse(init.body)
+      calls.push({ operationId, body, token: init.headers.get('Authorization'), key: init.headers.get('Idempotency-Key') })
+      let status = 200
+      let envelope
+      if (operationId === 'createSession') {
+        if (body.password === 'wrong') { status = 401; envelope = { code: 'MLS-ID-004', message: '用户名或密码不正确', data: {} } }
+        else envelope = { code: 'MLS-ID-S002', message: 'ok', data: { accessToken: 'fresh-reader-token', actor: { accountId: '1001', role: 'READER' } } }
+      } else if (expired && firstReservation) {
+        firstReservation = false; status = 401; envelope = { code: 'MLS-ID-001', message: 'session expired', data: {} }
+      } else envelope = { code: 'MLS-CIRC-S005', message: 'ok', data: { txId: '4002', outcome: 'CONFIRMED' } }
+      return new Response(JSON.stringify(envelope), { status, headers: { 'Content-Type': 'application/json' } })
+    } })
+  } })
+  const wrapper = await mountApp()
+  await wrapper.vm.$router.push('/titles/2001/borrow')
+  const { flushPromises } = await import('@vue/test-utils')
+  await flushPromises()
+  await wrapper.get('[data-testid="reserve-date"]').setValue('2026-10-20')
+  await wrapper.get('[data-testid="reserve-slot"]').setValue('16:00-17:00')
+  return { wrapper, calls }
+}
+
+it('keeps the borrowing form frozen under login and requires another explicit submit', async () => {
+  const { flushPromises } = await import('@vue/test-utils')
+  const { onUnauthorized } = await import('./platform/http/request')
+  const globalFailures = []
+  const unsubscribe = onUnauthorized(failure => globalFailures.push(failure))
+  try {
+    const { wrapper, calls } = await mountBorrowingAuthentication()
+    const borrowed = wrapper.get('.title-borrow-view').element
+    const assistant = wrapper.get('#home-ai-dialog').element
+    const titleReads = calls.filter(call => call.operationId === 'getTitle').length
+    await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
+    await flushPromises()
+    expect(calls.filter(call => call.operationId === 'reserveTitle')).toHaveLength(0)
+    expect(wrapper.get('.app-shell').attributes('inert')).toBeDefined()
+    const form = wrapper.getComponent({ name: 'LoginForm' })
+    await form.get('[data-testid="login-username"]').setValue('reader01')
+    await form.get('[data-testid="login-password"]').setValue('wrong')
+    await form.get('[data-testid="login-form"]').trigger('submit')
+    await flushPromises()
+    expect(form.get('[data-testid="error-alert"]').text()).toContain('MLS-ID-004')
+    expect(globalFailures).toHaveLength(0)
+    expect(wrapper.vm.$router.currentRoute.value.fullPath).toBe('/titles/2001/borrow')
+    await form.get('[data-testid="login-password"]').setValue('password123')
+    await form.get('[data-testid="login-form"]').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('.app-shell').attributes('inert')).toBeUndefined()
+    expect(wrapper.get('.title-borrow-view').element).toBe(borrowed)
+    expect(wrapper.get('#home-ai-dialog').element).toBe(assistant)
+    expect(wrapper.get('[data-testid="reserve-date"]').element.value).toBe('2026-10-20')
+    expect(wrapper.get('[data-testid="reserve-slot"]').element.value).toBe('16:00-17:00')
+    expect(calls.filter(call => call.operationId === 'getTitle')).toHaveLength(titleReads)
+    expect(calls.filter(call => call.operationId === 'reserveTitle')).toHaveLength(0)
+    const calendars = calls.filter(call => call.operationId === 'getReservationCalendar').length
+    await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
+    await flushPromises()
+    const write = calls.find(call => call.operationId === 'reserveTitle')
+    expect(write.token).toBe('Bearer fresh-reader-token')
+    expect(write.body).toMatchObject({ titleId: '2001', reservationDate: '2026-10-20', pickupSlot: '16:00-17:00', channel: 'ONLINE' })
+    expect(wrapper.get('[data-testid="reserve-confirmed"]').exists()).toBe(true)
+    expect(calls.filter(call => call.operationId === 'getReservationCalendar')).toHaveLength(calendars + 1)
+  } finally { unsubscribe() }
+})
+
+it('preserves the fields when an expired reservation session is reauthenticated without replaying the write', async () => {
+  const { flushPromises } = await import('@vue/test-utils')
+  const { wrapper, calls } = await mountBorrowingAuthentication({ expired: true })
+  await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
+  await flushPromises()
+  expect(wrapper.vm.$router.currentRoute.value.fullPath).toBe('/titles/2001/borrow')
+  const form = wrapper.getComponent({ name: 'LoginForm' })
+  await form.get('[data-testid="login-username"]').setValue('reader01')
+  await form.get('[data-testid="login-password"]').setValue('password123')
+  await form.get('[data-testid="login-form"]').trigger('submit')
+  await flushPromises()
+  expect(calls.filter(call => call.operationId === 'reserveTitle')).toHaveLength(1)
+  expect(wrapper.get('[data-testid="reserve-date"]').element.value).toBe('2026-10-20')
+  await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
+  await flushPromises()
+  const writes = calls.filter(call => call.operationId === 'reserveTitle')
+  expect(writes).toHaveLength(2)
+  expect(writes[1].body).toEqual(writes[0].body)
+  expect(writes[1].token).toBe('Bearer fresh-reader-token')
+  expect(writes[1].key).not.toBe(writes[0].key)
+})
+
+it('cancels only the login layer while keeping the borrowing values and route', async () => {
+  const { flushPromises } = await import('@vue/test-utils')
+  const { wrapper, calls } = await mountBorrowingAuthentication()
+  await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
+  await flushPromises()
+  const { ElDialog } = await import('element-plus')
+  const dialog = wrapper.findAllComponents(ElDialog).find(component => component.props('title') === '登录后提交预约')
+  dialog.vm.$emit('update:modelValue', false)
+  await flushPromises()
+  expect(wrapper.get('.app-shell').attributes('inert')).toBeUndefined()
+  expect(wrapper.vm.$router.currentRoute.value.fullPath).toBe('/titles/2001/borrow')
+  expect(wrapper.get('[data-testid="reserve-date"]').element.value).toBe('2026-10-20')
+  expect(wrapper.get('[data-testid="reserve-slot"]').element.value).toBe('16:00-17:00')
+  expect(calls.filter(call => call.operationId === 'reserveTitle')).toHaveLength(0)
 })

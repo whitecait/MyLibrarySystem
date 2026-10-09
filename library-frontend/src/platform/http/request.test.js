@@ -76,6 +76,19 @@ describe('http request core', () => {
     unsubscribe()
   })
 
+  it('lets a form handle 401 locally while preserving the typed failure', async () => {
+    stubFetch(() => jsonResponse(401, { code: 'MLS-ID-001', message: 'sign in required', data: {} }))
+    const globalListener = vi.fn()
+    const localHandler = vi.fn()
+    const unsubscribe = onUnauthorized(globalListener)
+    try {
+      const failure = await executeRequest({ operationId: 'reserveTitle', body: {}, onUnauthorizedResponse: localHandler }).catch(error => error)
+      expect(failure.kind).toBe(FailureKind.UNAUTHENTICATED)
+      expect(localHandler).toHaveBeenCalledExactlyOnceWith(failure)
+      expect(globalListener).not.toHaveBeenCalled()
+    } finally { unsubscribe() }
+  })
+
   it('refuses to treat a non-success code on 2xx as success', async () => {
     stubFetch(() => jsonResponse(200, { code: 'MLS-PAY-001', message: 'disguised error', data: {} }))
     const failure = await executeRequest({ operationId: 'searchTitles' }).catch((error) => error)

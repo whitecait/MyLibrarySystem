@@ -364,6 +364,86 @@ class CirculationScenarioContractTest {
         assertThat(kinds).contains("RESERVATION");
     }
 
+    @Test
+    void calendarProjectsPrimaryStateFromCurrentFactsWithoutReaderOrCopyDetails() throws Exception {
+        var titleId = seedTitleWithCopies("calendar-facts-" + UUID.randomUUID(), 3);
+        var copies = jdbc.queryForList("SELECT id FROM book_copy WHERE title_id = ? ORDER BY id", Long.class, titleId);
+        var tomorrow = businessClock.today().plusDays(1);
+        var reservedReader = seedCalendarReader();
+        var lentReader = seedCalendarReader();
+        jdbc.update("UPDATE book_copy SET status = 'RESERVED' WHERE id = ?", copies.get(1));
+        jdbc.update("UPDATE book_copy SET status = 'LENT' WHERE id = ?", copies.get(2));
+        var reservedTx = jdbc.queryForObject("""
+                INSERT INTO borrow_transaction (reader_id, title_id, copy_id, status, reservation_date)
+                VALUES (?, ?, ?, 'CONFIRMED', ?) RETURNING id
+                """, Long.class, reservedReader, titleId, copies.get(1), java.sql.Date.valueOf(tomorrow));
+        var lentTx = jdbc.queryForObject("""
+                INSERT INTO borrow_transaction (reader_id, title_id, copy_id, status, reservation_date, due_date)
+                VALUES (?, ?, ?, 'LENT', ?, ?) RETURNING id
+                """, Long.class, lentReader, titleId, copies.get(2),
+                java.sql.Date.valueOf(tomorrow.minusDays(3)), java.sql.Date.valueOf(tomorrow.minusDays(2)));
+
+        var available = calendarDays(titleId, tomorrow, tomorrow.plusDays(1));
+        assertThat(available.get(0).path("displayState").asText()).isEqualTo("AVAILABLE");
+        assertThat(available.get(1).path("displayState").asText()).isEqualTo("AVAILABLE");
+        assertThat(available.get(0).path("availability").asText()).isEqualTo("NOT_GUARANTEED");
+        assertThat(available.get(1).path("availability").asText()).isEqualTo("GUARANTEED");
+        jdbc.update("UPDATE book_copy SET status = 'PENDING_SHELVING' WHERE id = ?", copies.get(0));
+        var occupied = calendarDays(titleId, tomorrow, tomorrow.plusDays(1));
+        assertThat(occupied.get(0).path("displayState").asText()).isEqualTo("RESERVED");
+        assertThat(occupied.get(1).path("displayState").asText()).isEqualTo("LENT");
+        // Passing the due date does not release a currently lent copy.
+        assertThat(calendarDays(titleId, tomorrow.plusDays(10), tomorrow.plusDays(10))
+                .get(0).path("displayState").asText()).isEqualTo("LENT");
+        jdbc.update("UPDATE borrow_transaction SET status = 'NOT_BORROWED' WHERE id = ?", reservedTx);
+        jdbc.update("UPDATE book_copy SET status = 'PENDING_SHELVING' WHERE id = ?", copies.get(1));
+        assertThat(calendarDays(titleId, tomorrow, tomorrow).get(0).path("displayState").asText())
+                .isEqualTo("LENT");
+        jdbc.update("UPDATE borrow_transaction SET status = 'RETURNED' WHERE id = ?", lentTx);
+        jdbc.update("UPDATE book_copy SET status = 'PENDING_SHELVING' WHERE id = ?", copies.get(2));
+        assertThat(calendarDays(titleId, tomorrow, tomorrow).get(0).path("displayState").isNull()).isTrue();
+        jdbc.update("UPDATE book_copy SET status = 'SHELF_READY' WHERE id = ?", copies.get(2));
+        assertThat(calendarDays(titleId, tomorrow, tomorrow).get(0).path("displayState").asText())
+                .isEqualTo("AVAILABLE");
+    }
+
+    @Test
+    void calendarDoesNotPresentCurrentFactsAsHistoricalAvailability() throws Exception {
+        var titleId = seedTitleWithCopies("calendar-past-" + UUID.randomUUID(), 1);
+        var today = businessClock.today();
+        var days = calendarDays(titleId, today.minusDays(1), today);
+        assertThat(days.get(0).path("displayState").isNull()).isTrue();
+        assertThat(days.get(1).path("displayState").asText()).isEqualTo("AVAILABLE");
+        var emptyTitle = seedTitleWithCopies("calendar-empty-" + UUID.randomUUID(), 0);
+        var empty = calendarDays(emptyTitle, today.plusDays(1), today.plusDays(1)).get(0);
+        assertThat(empty.path("displayState").isNull()).isTrue();
+        assertThat(empty.path("availability").asText()).isEqualTo("UNAVAILABLE");
+    }
+
+    private long seedCalendarReader() {
+        return jdbc.queryForObject("""
+                INSERT INTO account (username, password_hash, display_name, role)
+                VALUES (?, 'x', 'Calendar test', 'READER') RETURNING id
+                """, Long.class, "calendar-" + UUID.randomUUID());
+    }
+
+    private JsonNode calendarDays(long titleId, java.time.LocalDate from, java.time.LocalDate to) throws Exception {
+        var response = rest.getForEntity("/api/v1/titles/" + titleId
+                + "/reservation-calendar?from=" + from + "&to=" + to, String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        var body = json.readTree(response.getBody());
+        assertThat(InstanceValidator.validate(contract.responseSchema(
+                "get", "/titles/{titleId}/reservation-calendar", 200), body)).isEmpty();
+        var days = body.at("/data/items");
+        assertThat(days).hasSize((int) java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1);
+        days.forEach(day -> {
+            var fields = new HashSet<String>();
+            day.fieldNames().forEachRemaining(fields::add);
+            assertThat(fields).containsExactlyInAnyOrder("businessDate", "availability", "displayState");
+        });
+        return days;
+    }
+
     // ---- helpers ----------------------------------------------------------------
 
     private String key() {

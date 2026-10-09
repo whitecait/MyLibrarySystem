@@ -184,9 +184,13 @@ public class CirculationController {
         return responses.forResult(result, SuccessCodes.of("getReservationCalendar"),
                 calendar -> {
                     var data = new LinkedHashMap<String, Object>();
-                    data.put("items", calendar.days().stream().map(day -> Map.of(
-                            "businessDate", day.businessDate().asString(),
-                            "availability", day.availability())).toList());
+                    data.put("items", calendar.days().stream().map(day -> {
+                        var item = new LinkedHashMap<String, Object>();
+                        item.put("businessDate", day.businessDate().asString());
+                        item.put("availability", day.availability());
+                        item.put("displayState", day.displayState() == null ? null : day.displayState().name());
+                        return item;
+                    }).toList());
                     return data;
                 });
     }

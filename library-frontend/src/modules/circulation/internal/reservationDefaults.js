@@ -7,6 +7,11 @@ const libraryTime = new Intl.DateTimeFormat('en-CA', {
 })
 
 // Defaults are suggestions. Reservation eligibility still comes from the server.
+export function getLibraryDate(now = new Date()) {
+  const parts = Object.fromEntries(libraryTime.formatToParts(now).map(part => [part.type, part.value]))
+  return `${parts.year}-${parts.month}-${parts.day}`
+}
+
 export function getReservationDefaults(now = new Date()) {
   const parts = Object.fromEntries(libraryTime.formatToParts(now).map(part => [part.type, part.value]))
   const tomorrow = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) + 1))

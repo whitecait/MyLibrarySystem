@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MyLibrarySystem HTTP Contract
-  version: 3.0.0
+  version: 3.1.0
   description: >-
     Frontend and backend shared structural contract. Business semantics, permissions,
     idempotency and transaction guarantees remain normative in MLS-DOC-MD-0003.
@@ -311,7 +311,7 @@ components:
     CopyActionRequest: {type: object, additionalProperties: false, required: [action, version], properties: {action: {type: string, enum: [SHELVE, MAINTAIN, RESTORE, REMOVE]}, version: {type: integer, minimum: 0}}}
     CopyData: {type: object, additionalProperties: false, required: [copyId, titleId, copyNo, status, version], properties: {copyId: {$ref: '#/components/schemas/Id'}, titleId: {$ref: '#/components/schemas/Id'}, copyNo: {type: string}, status: {$ref: '#/components/schemas/CopyStatus'}, version: {type: integer, minimum: 0}}}
     CopyPageData: {type: object, additionalProperties: false, required: [items, nextCursor], properties: {items: {type: array, items: {$ref: '#/components/schemas/CopyData'}}, nextCursor: {type: [string, 'null']}}}
-    CalendarDay: {type: object, additionalProperties: false, required: [businessDate, availability], properties: {businessDate: {$ref: '#/components/schemas/BusinessDate'}, availability: {type: string, enum: [GUARANTEED, NOT_GUARANTEED, UNAVAILABLE]}}}
+    CalendarDay: {type: object, additionalProperties: false, required: [businessDate, availability, displayState], properties: {businessDate: {$ref: '#/components/schemas/BusinessDate'}, availability: {type: string, enum: [GUARANTEED, NOT_GUARANTEED, UNAVAILABLE]}, displayState: {type: [string, 'null'], enum: [AVAILABLE, RESERVED, LENT, null], description: '当前馆藏的日期主状态，优先 AVAILABLE、RESERVED、LENT；过去日期或没有这三类事实时为 null。LENT 在实际归还前持续标注未来日期，不按应还日自动解除。'}}}
     ReservationCalendarData: {type: object, additionalProperties: false, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/CalendarDay'}}}}
     PickupSlot:
       type: string

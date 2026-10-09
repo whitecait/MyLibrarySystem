@@ -33,6 +33,7 @@ export async function executeRequest({
   signal,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   getToken = null,
+  onUnauthorizedResponse = null,
   fetchImpl = globalThis.fetch,
 }) {
   const operation = getOperation(operationId)
@@ -93,7 +94,11 @@ export async function executeRequest({
 
   if (!response.ok) {
     const failure = failureFromHttpStatus(response.status, parsedBody ?? null)
-    if (response.status === 401) notifyUnauthorized(failure)
+    if (response.status === 401) {
+      // A form may preserve its local state while presenting an authentication layer.
+      if (onUnauthorizedResponse) onUnauthorizedResponse(failure)
+      else notifyUnauthorized(failure)
+    }
     throw failure
   }
 

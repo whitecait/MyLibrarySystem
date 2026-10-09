@@ -91,13 +91,18 @@ public interface CirculationStore {
 
     int countBookableCopies(long titleId);
 
-    int countConfirmedForDate(long titleId, LocalDate date);
+    /** Read one database snapshot for the displayed range; no per-reader data leaves this seam. */
+    List<CalendarFacts> calendarFacts(long titleId, LocalDate from, LocalDate to);
 
     int countExpectedForDate(LocalDate date);
 
     int countManualForDate(LocalDate date);
 
     List<TxRow> myTransactions(long readerId, List<String> statuses, long afterId, int limit);
+
+    record CalendarFacts(LocalDate businessDate, int totalCopies, int availableCopies,
+                         int guaranteeReservations, boolean hasConfirmedReservation, boolean hasLentCopy) {
+    }
 
     record CopyRow(long id, long titleId, String copyNo, String status, long version) {
     }

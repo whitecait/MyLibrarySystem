@@ -6,7 +6,8 @@
     width="min(1240px, calc(100vw - 48px))"
     align-center
     :show-close="false"
-    :close-on-click-modal="true"
+    :close-on-click-modal="!locked"
+    :close-on-press-escape="!locked"
     :before-close="requestClose"
     @mousedown="trackOutsidePress"
     @mouseup="trackOutsideRelease"
@@ -42,7 +43,7 @@ import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { ElDialog } from 'element-plus'
 import { RouterLink } from 'vue-router'
 import HomeAiDialog from './HomeAiDialog.vue'
-const props = defineProps({ state: { type: Object, required: true } })
+const props = defineProps({ state: { type: Object, required: true }, locked: { type: Boolean, default: false } })
 const { entries, active, open, assistantOpen } = props.state
 const triggerHost = ref(null)
 watch([open, active, () => active.value?.assistant, triggerHost], () => {
@@ -68,11 +69,13 @@ function trackOutsideRelease(event) {
   releasedOutside = isOutsidePanel(event)
 }
 function closeFromEmptySpace(event) {
+  if (props.locked) return
   // A drag that starts inside a card must not dismiss its unfinished form.
   if (pressedOutside && releasedOutside && isOutsidePanel(event)) props.state.closeAll()
   pressedOutside = releasedOutside = false
 }
 function requestClose(done) {
+  if (props.locked) return
   props.state.closeAll()
   done()
 }

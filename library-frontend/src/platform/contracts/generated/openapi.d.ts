@@ -909,6 +909,11 @@ export interface components {
             businessDate: components["schemas"]["BusinessDate"];
             /** @enum {string} */
             availability: "GUARANTEED" | "NOT_GUARANTEED" | "UNAVAILABLE";
+            /**
+             * @description 当前馆藏的日期主状态，优先 AVAILABLE、RESERVED、LENT；过去日期或没有这三类事实时为 null。LENT 在实际归还前持续标注未来日期，不按应还日自动解除。
+             * @enum {string|null}
+             */
+            displayState: "AVAILABLE" | "RESERVED" | "LENT" | null;
         };
         ReservationCalendarData: {
             items: components["schemas"]["CalendarDay"][];

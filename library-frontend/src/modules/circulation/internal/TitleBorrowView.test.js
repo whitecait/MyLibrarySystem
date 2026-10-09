@@ -8,7 +8,7 @@ import TitleBorrowView from './TitleBorrowView.vue'
 afterEach(() => setTransport(null))
 
 describe('TitleBorrowView', () => {
-  it('queries the same title calendar without clearing the selected reservation fields', async () => {
+  it('loads the title calendar directly without clearing the selected reservation fields', async () => {
     const calls = []
     const mock = installMockTransport({ fixtures: sharedFixtures })
     setTransport({ mode: 'mock', request(operationId, options) { calls.push({ operationId, options }); return mock.request(operationId, options) } })
@@ -16,15 +16,14 @@ describe('TitleBorrowView', () => {
     await flushPromises()
     expect(wrapper.get('[data-testid="borrow-title-name"]').text()).toBe('Database Systems')
     expect(wrapper.get('[data-testid="reserve-form"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="calendar-form"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="calendar-grid"]').exists()).toBe(true)
+    expect(calls.filter(call => call.operationId === 'getReservationCalendar')).toHaveLength(1)
+    expect(calls.find(call => call.operationId === 'getReservationCalendar').options.params).toEqual({ titleId: '2001' })
     await wrapper.get('[data-testid="reserve-date"]').setValue('2026-10-15')
     await wrapper.get('[data-testid="reserve-slot"]').setValue('16:00-17:00')
-    await wrapper.get('[data-testid="calendar-from"]').setValue('2026-10-14')
-    await wrapper.get('[data-testid="calendar-to"]').setValue('2026-10-18')
-    await wrapper.get('[data-testid="calendar-form"]').trigger('submit')
+    await wrapper.get('[aria-label="下个月"]').trigger('click')
     await flushPromises()
-    expect(calls.find(call => call.operationId === 'getReservationCalendar').options).toMatchObject({ params: { titleId: '2001' }, query: { from: '2026-10-14', to: '2026-10-18' } })
-    expect(wrapper.get('[data-testid="calendar-table"]').exists()).toBe(true)
+    expect(calls.filter(call => call.operationId === 'getReservationCalendar')).toHaveLength(2)
     expect(wrapper.get('[data-testid="reserve-date"]').element.value).toBe('2026-10-15')
     expect(wrapper.get('[data-testid="reserve-slot"]').element.value).toBe('16:00-17:00')
     expect(calls.some(call => call.operationId === 'reserveTitle')).toBe(false)
@@ -36,6 +35,6 @@ describe('TitleBorrowView', () => {
     await flushPromises()
     expect(wrapper.get('[data-testid="borrow-title-not-found"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="reserve-form"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="calendar-form"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="calendar-grid"]').exists()).toBe(false)
   })
 })

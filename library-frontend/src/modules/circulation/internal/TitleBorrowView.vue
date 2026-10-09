@@ -6,11 +6,11 @@
       <header class="borrow-intro">
         <p>线上借阅</p>
         <h1 data-testid="borrow-title-name">{{ detail.title }}</h1>
-        <span>选择预约日期与取书时段；日历可查询各日的预约保障。</span>
+        <span>选择预约日期与取书时段；日历直接显示馆藏状态。</span>
       </header>
       <div class="borrowing-tools">
-        <ReservePanel :title-id="titleId" />
-        <ReservationCalendarView :title-id="titleId" />
+        <ReservePanel :title-id="titleId" @reserved="calendarRefreshKey++" />
+        <ReservationCalendarView :title-id="titleId" :refresh-key="calendarRefreshKey" />
       </div>
     </template>
     <ErrorAlert v-if="state.status === 'failure' && !notFound" :failure="state.failure" />
@@ -27,6 +27,7 @@ import ReservationCalendarView from './ReservationCalendarView.vue'
 
 const props = defineProps({ titleId: { type: String, required: true } })
 const detail = ref(null)
+const calendarRefreshKey = ref(0)
 const { state, run } = useApiRequest()
 const notFound = computed(() => state.status === 'failure' && state.failure?.kind === FailureKind.NOT_FOUND)
 

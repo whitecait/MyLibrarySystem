@@ -70,13 +70,17 @@
 </template>
 
 <script setup>
-import { ref, useId } from 'vue'
+import { inject, ref, useId } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
-import { useApiRequest } from '@/platform/http'
+import { FailureKind, useApiRequest } from '@/platform/http'
+import { isAuthenticated, logout } from '@/platform/auth/session'
+import { loginPromptKey } from '@/platform/auth/loginPrompt'
 import { PICKUP_SLOTS, reserveTitle } from '../index'
 import { getReservationDefaults } from './reservationDefaults'
 
 const props = defineProps({ titleId: { type: String, required: true } })
+const emit = defineEmits(['reserved'])
+const requestLogin = inject(loginPromptKey, null)
 
 const defaults = getReservationDefaults()
 const reservationDate = ref(defaults.reservationDate)
@@ -85,10 +89,15 @@ const fieldId = useId()
 const dateInputId = fieldId + '-date'
 const slotInputId = fieldId + '-slot'
 const result = ref(null)
-const { state, run } = useApiRequest()
+const { state, run, reset } = useApiRequest()
 
 async function submit(confirm = false) {
   if (!reservationDate.value || !PICKUP_SLOTS.includes(pickupSlot.value)) return
+
+  if (requestLogin && !isAuthenticated()) {
+    await requestLogin()
+    return // Login restores the form; the user must submit again.
+  }
 
   const envelope = await run(() =>
     reserveTitle({
@@ -97,9 +106,15 @@ async function submit(confirm = false) {
       pickupSlot: pickupSlot.value,
       channel: 'ONLINE',
       confirmWaitlist: confirm,
-    }),
+    }, requestLogin ? { onUnauthorizedResponse: logout } : {}),
   )
-  if (envelope) result.value = envelope.data
+  if (envelope) {
+    result.value = envelope.data
+    if (envelope.data.txId && envelope.data.outcome !== 'REJECTED') emit('reserved')
+  } else if (requestLogin && state.failure?.kind === FailureKind.UNAUTHENTICATED) {
+    reset()
+    await requestLogin()
+  }
 }
 
 function confirmWaitlist() {

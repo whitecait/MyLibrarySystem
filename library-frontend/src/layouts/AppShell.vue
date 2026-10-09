@@ -1,5 +1,5 @@
 <template>
-  <div :class="['app-shell', { 'app-shell--home': isHome }]">
+  <div :class="['app-shell', { 'app-shell--home': isHome }]" :inert="loginPrompt.open.value || undefined">
     <header :class="['app-header', 'app-header--home']">
       <RouterLink to="/" :class="['brand', 'brand--home']">
         <span class="brand-mark">云图</span>
@@ -88,19 +88,21 @@
         @click="openAssistant"
       >✦ 询问 AI</button>
     </Teleport>
-    <ModalWorkspace :state="workspace" />
+    <ModalWorkspace :state="workspace" :locked="loginPrompt.open.value" />
+    <LoginDialog :open="loginPrompt.open.value" @authenticated="loginPrompt.finish(true)" @cancel="loginPrompt.finish(false)" />
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, provide, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, provide, ref, shallowRef, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { getRole, getSessionState, isAuthenticated, logout } from '@/platform/auth/session'
 import BusinessDialog from '@/components/BusinessDialog.vue'
 import ModalWorkspace from '@/components/ModalWorkspace.vue'
 import { createModalWorkspace, modalWorkspaceKey } from '@/components/modalWorkspace'
 import { backgroundModalKey, getModalBreadcrumbs, isModalRoute, modalBackgrounds } from '@/router/presentation'
-import { endCurrentSession } from '@/modules/identity'
+import { endCurrentSession, LoginDialog } from '@/modules/identity'
+import { createLoginPrompt, loginPromptKey } from '@/platform/auth/loginPrompt'
 import {
   clearUnreadBusinessNotification,
   getReaderNotificationSessionKey,
@@ -114,6 +116,10 @@ const backgroundRoute = shallowRef(router.resolve(isModalRoute(route) ? modalBac
 const modalOpen = computed(() => isModalRoute(route))
 const modalBreadcrumbs = computed(() => getModalBreadcrumbs(route, router))
 const workspace = createModalWorkspace()
+const loginPrompt = createLoginPrompt()
+provide(loginPromptKey, loginPrompt.request)
+onBeforeUnmount(() => loginPrompt.finish(false))
+watch(() => route.fullPath, () => loginPrompt.finish(false), { flush: 'sync' })
 const showAssistantTrigger = computed(() => !workspace.assistantOpen.value
   && (!workspace.active.value || workspace.active.value.assistant))
 async function openAssistant() {

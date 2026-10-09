@@ -2,6 +2,7 @@ package com.library.circulation.contract;
 
 import com.library.contract.ModuleResult;
 import com.library.circulation.contract.model.BusinessDate;
+import com.library.circulation.contract.model.CalendarDisplayState;
 import com.library.catalog.contract.model.TitleId;
 
 /**
@@ -21,7 +22,10 @@ public interface AvailabilityQuery {
     record AvailabilitySnapshot(TitleId titleId, String availability, int availableCopies) {
     }
 
-    record CalendarDay(BusinessDate businessDate, String availability) {
+    record CalendarDay(BusinessDate businessDate, String availability, CalendarDisplayState displayState) {
+        public CalendarDay(BusinessDate businessDate, String availability) {
+            this(businessDate, availability, null);
+        }
     }
 
     record ReservationCalendar(java.util.List<CalendarDay> days) {

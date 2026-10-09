@@ -294,12 +294,32 @@ public class PostgresCirculationStore implements CirculationStore {
     }
 
     @Override
-    public int countConfirmedForDate(long titleId, LocalDate date) {
-        var count = jdbc.queryForObject("""
-                SELECT count(*) FROM borrow_transaction
-                WHERE title_id = ? AND reservation_date = ? AND status IN ('CONFIRMED', 'LENT')
-                """, Integer.class, titleId, Date.valueOf(date));
-        return count == null ? 0 : count;
+    public List<CalendarFacts> calendarFacts(long titleId, LocalDate from, LocalDate to) {
+        return jdbc.query("""
+                WITH copies AS (
+                    SELECT count(*) AS total,
+                           count(*) FILTER (WHERE status = 'SHELF_READY') AS available,
+                           coalesce(bool_or(status = 'LENT'), false) AS lent
+                    FROM book_copy WHERE title_id = ?
+                ), reservations AS (
+                    SELECT reservation_date,
+                           count(*) FILTER (WHERE status IN ('CONFIRMED', 'LENT')) AS guarantee_count,
+                           coalesce(bool_or(status = 'CONFIRMED'), false) AS reserved
+                    FROM borrow_transaction
+                    WHERE title_id = ? AND reservation_date BETWEEN ? AND ?
+                    GROUP BY reservation_date
+                )
+                SELECT days.day::date AS business_date, copies.total, copies.available,
+                       coalesce(reservations.guarantee_count, 0) AS guarantee_count,
+                       coalesce(reservations.reserved, false) AS reserved, copies.lent
+                FROM generate_series(?::date, ?::date, interval '1 day') AS days(day)
+                CROSS JOIN copies
+                LEFT JOIN reservations ON reservations.reservation_date = days.day::date
+                ORDER BY days.day
+                """, (rs, row) -> new CalendarFacts(rs.getDate("business_date").toLocalDate(),
+                        rs.getInt("total"), rs.getInt("available"), rs.getInt("guarantee_count"),
+                        rs.getBoolean("reserved"), rs.getBoolean("lent")),
+                titleId, titleId, Date.valueOf(from), Date.valueOf(to), Date.valueOf(from), Date.valueOf(to));
     }
 
     @Override

@@ -264,10 +264,19 @@ public class InMemoryCirculationStore implements CirculationStore {
     }
 
     @Override
-    public int countConfirmedForDate(long titleId, LocalDate date) {
-        return (int) txs.values().stream()
-                .filter(t -> t.titleId() == titleId && date.equals(t.reservationDate())
-                        && List.of("CONFIRMED", "LENT").contains(t.status())).count();
+    public List<CalendarFacts> calendarFacts(long titleId, LocalDate from, LocalDate to) {
+        var available = countAvailableCopies(titleId);
+        var total = countCopies(titleId);
+        var lent = copies.values().stream().anyMatch(copy -> copy.titleId() == titleId && "LENT".equals(copy.status()));
+        var days = new ArrayList<CalendarFacts>();
+        for (var day = from; !day.isAfter(to); day = day.plusDays(1)) {
+            var date = day;
+            var reservations = txs.values().stream().filter(tx -> tx.titleId() == titleId && date.equals(tx.reservationDate())).toList();
+            var guarantee = (int) reservations.stream().filter(tx -> List.of("CONFIRMED", "LENT").contains(tx.status())).count();
+            var reserved = reservations.stream().anyMatch(tx -> "CONFIRMED".equals(tx.status()));
+            days.add(new CalendarFacts(date, total, available, guarantee, reserved, lent));
+        }
+        return days;
     }
 
     @Override

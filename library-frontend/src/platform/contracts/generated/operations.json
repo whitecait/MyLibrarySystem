@@ -1,7 +1,7 @@
 {
   "basePath": "/api/v1",
   "openapiVersion": "3.1.0",
-  "sourceSha256": "20c9710bb7dcee54f1df1af6c686a91c4d3e8c991fe76bfa21007d1e9590f2aa",
+  "sourceSha256": "b70fdca9ea13be16e6aae064ef7352fbcb3562c59a5b0fa41915ad4831d232eb",
   "operations": [
     {
       "operationId": "listAiEvents",

@@ -191,5 +191,49 @@
     ],
     "timeout_seconds": 180,
     "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
+  },
+  {
+    "model": "CalendarProjection",
+    "config": "CalendarProjection.cfg",
+    "safety": [
+      "TypeOK",
+      "InvSnapshotProjection",
+      "InvLoanReleasedOnlyByReturn",
+      "InvReturnedCopyNotImmediatelyAvailable",
+      "InvPastNeutral",
+      "InvReservationDateLocal"
+    ],
+    "probes": [
+      "ProbeNotAvailablePriority",
+      "ProbeNotReservedPriority",
+      "ProbeNotDuePassedStillLent",
+      "ProbeNotActualReturnClearsLent",
+      "ProbeNotPastNeutral",
+      "ProbeNotNoFactsNeutral"
+    ],
+    "timeout_seconds": 180,
+    "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
+  },
+  {
+    "model": "BorrowingLogin",
+    "config": "BorrowingLogin.cfg",
+    "safety": [
+      "TypeOK",
+      "InvPromptFrozen",
+      "InvAuthenticationPreservesDraft",
+      "InvNoAutomaticWrite",
+      "InvRoutePreserved",
+      "InvSubmissionAuthenticated"
+    ],
+    "probes": [
+      "ProbeNotAnonymousPrompt",
+      "ProbeNotExpiredPrompt",
+      "ProbeNotLoginFailureKeepsDraft",
+      "ProbeNotCancelKeepsDraft",
+      "ProbeNotSuccessWithoutWrite",
+      "ProbeNotExplicitResubmit"
+    ],
+    "timeout_seconds": 180,
+    "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."
   }
 ]

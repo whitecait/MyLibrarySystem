@@ -13,7 +13,7 @@ import {
 
 const mountedWrappers = []
 
-// AppShell 只消费 identity 的 endCurrentSession；在此 mock 以捕获
+// 保留 identity 的真实组件，仅替换 endCurrentSession 以捕获
 // 「注销请求发出时会话令牌是否仍在」——令牌被清后请求不再携带 Bearer，
 // 服务端将按 MLS-ID-001 拒绝且不会真正终结会话。
 const { endCurrentSessionMock, tokenAtEndCall } = vi.hoisted(() => ({
@@ -22,7 +22,10 @@ const { endCurrentSessionMock, tokenAtEndCall } = vi.hoisted(() => ({
 }))
 const { routerPush, routeState } = vi.hoisted(() => ({ routerPush: vi.fn(), routeState: { value: null } }))
 
-vi.mock('@/modules/identity', () => ({ endCurrentSession: endCurrentSessionMock }))
+vi.mock('@/modules/identity', async (importOriginal) => ({
+  ...await importOriginal(),
+  endCurrentSession: endCurrentSessionMock,
+}))
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue')
   routeState.value = reactive({ name: 'home', fullPath: '/' })

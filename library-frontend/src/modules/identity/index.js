@@ -30,6 +30,7 @@ export function changeReaderStatus({ readerId, status, reason }, options = {}) {
   return apiRequest('changeReaderStatus', { params: { readerId }, body: { status, reason }, ...options })
 }
 
+export { default as LoginDialog } from './internal/LoginDialog.vue'
 export { default as LoginView } from './internal/LoginView.vue'
 export { default as RegisterView } from './internal/RegisterView.vue'
 export { default as AccountAdminView } from './internal/AccountAdminView.vue'

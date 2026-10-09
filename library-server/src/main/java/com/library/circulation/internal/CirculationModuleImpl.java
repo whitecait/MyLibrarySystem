@@ -17,6 +17,7 @@ import com.library.circulation.contract.ReturnCommands;
 import com.library.circulation.contract.ReaderCirculationQuery;
 import com.library.circulation.contract.Transaction;
 import com.library.circulation.contract.model.BusinessDate;
+import com.library.circulation.contract.model.CalendarDisplayState;
 import com.library.circulation.contract.model.CopyId;
 import com.library.circulation.contract.model.GuaranteeType;
 import com.library.circulation.contract.model.PickupSlot;
@@ -126,19 +127,14 @@ public class CirculationModuleImpl implements AvailabilityQuery, ReservationComm
         if (from.value().isAfter(clock.today().plusMonths(2))) {
             return ModuleResult.Rejected.of(StableErrorCode.MLS_CIRC_001.code(), "日期区间过远（超过两个月）");
         }
-        var available = store.countAvailableCopies(titleId.value());
-        var total = store.countCopies(titleId.value());
-        var days = new ArrayList<CalendarDay>();
-        for (var day = from.value(); !day.isAfter(to.value()); day = day.plusDays(1)) {
-            String state;
-            if (total == 0) {
-                state = "UNAVAILABLE";
-            } else {
-                var confirmed = store.countConfirmedForDate(titleId.value(), day);
-                state = confirmed < available ? "GUARANTEED" : "NOT_GUARANTEED";
-            }
-            days.add(new CalendarDay(BusinessDate.of(day), state));
-        }
+        var today = clock.today();
+        var days = store.calendarFacts(titleId.value(), from.value(), to.value()).stream().map(facts -> {
+            var guarantee = facts.totalCopies() == 0 ? "UNAVAILABLE"
+                    : facts.guaranteeReservations() < facts.availableCopies() ? "GUARANTEED" : "NOT_GUARANTEED";
+            var displayState = facts.businessDate().isBefore(today) ? null : CalendarDisplayState.project(
+                    facts.availableCopies() > 0, facts.hasConfirmedReservation(), facts.hasLentCopy());
+            return new CalendarDay(BusinessDate.of(facts.businessDate()), guarantee, displayState);
+        }).toList();
         return ModuleResult.Accepted.of(new ReservationCalendar(days));
     }
 
