@@ -25,7 +25,7 @@ python3 formal/verify.py --output-dir artifacts/formal-new-run
 
 工具从 toolchain.json 固定的官方 v1.7.4 发布下载，SHA-256 必须一致；工具缓存、输出和 Python 缓存不入库。可用 --tool-jar 指定同哈希的本地副本。每次选用空输出目录，禁止混合旧结果。
 
-执行入口包含当前 OD 结构覆盖检查、判定表枚举、真实 TLC 门禁自检、九个模型中的 55 项安全不变量和 92 个单独的可达性探针。安全检查必须完整结束且没有错误；每个探针只在指定取反不变量产生预期违例与状态轨迹时通过。语法错误、工具错误、未达到出口、错误性质、缺轨迹、校验和不符和超时均失败，退出码非零。真实不变量不与探针混跑。
+执行入口包含当前 OD 结构覆盖检查、判定表枚举、真实 TLC 门禁自检、九个模型中的 56 项安全不变量和 97 个单独的可达性探针。安全检查必须完整结束且没有错误；每个探针只在指定取反不变量产生预期违例与状态轨迹时通过。语法错误、工具错误、未达到出口、错误性质、缺轨迹、校验和不符和超时均失败，退出码非零。真实不变量不与探针混跑。
 
 result.json 记录实际检出提交、PR head 提交、工作树是否存在未提交差异、工具与环境版本、输入哈希、命令、退出码和结果；每例保存实际模型、配置与原始 TLC 日志。PR 作业检出的是 GitHub 生成的合并候选，其 checkout_commit 与 pr_head_commit 分别保存，不能把合并候选 SHA 当作 PR head。CI 工件保留 14 天；发布前须另封存对应结果。
 
@@ -80,9 +80,17 @@ CalendarProjection 对应 CirculationStore.calendarFacts、CalendarDisplayState.
 
 BorrowingLogin 对应 AppShell 的独立登录层、ReservePanel 及 executeRequest 的局部 401 回调。有限草稿有两天和两个时段。Submit 在匿名或过期状态打开登录层；登录失败、取消和成功均保留草稿及写入计数。成功只关闭登录层，下一次 Submit 才写入。六项安全性质及六个独立探针检查冻结、草稿保留、无自动写入、路由保持和提交认证，并覆盖匿名、过期、失败、取消及成功后的明确二次提交。
 
-当前清单含九个模型、55 项安全性质、92 个可达性探针，共 101 个模型执行用例。模型只验证有限状态及有界可达性。日历事实和登录响应作为外部输入；模型不证明真实 SQL 快照、实际密码验证、HTTP 权限、DOM、焦点或浏览器视觉。CirculationScenarioContractTest 用真实 PostgreSQL／HTTP 验证主状态、到期／归还、旧保障字段和公共响应边界；App.test.js、CirculationViews.test.js 检查真实请求层的局部 401、草稿保留、无重放及旧月响应丢弃。登录完成时保留实际 AI 组件和未发送草稿；身份变化使原会话数据失效。该异步身份边界由 App.test.js、AiAssistantView.test.js 和 request.test.js 覆盖组件实例、草稿、旧会话／回答丢弃及取消后的 401；BorrowingLogin 不证明 AI 归属或请求取消实现。两组实现测试与 Windows 产品验收分开登记。
+该次初始修订的清单含九个模型、55 项安全性质、92 个可达性探针，共 101 个模型执行用例。最新清单见下节注册补充。模型只验证有限状态及有界可达性。日历事实和登录响应作为外部输入；模型不证明真实 SQL 快照、实际密码验证、HTTP 权限、DOM、焦点或浏览器视觉。CirculationScenarioContractTest 用真实 PostgreSQL／HTTP 验证主状态、到期／归还、旧保障字段和公共响应边界；App.test.js、CirculationViews.test.js 检查真实请求层的局部 401、草稿保留、无重放及旧月响应丢弃。登录完成时保留实际 AI 组件和未发送草稿；身份变化使原会话数据失效。该异步身份边界由 App.test.js、AiAssistantView.test.js 和 request.test.js 覆盖组件实例、草稿、旧会话／回答丢弃及取消后的 401；BorrowingLogin 不证明 AI 归属或请求取消实现。两组实现测试与 Windows 产品验收分开登记。
+
+## 2026-10-09 注册导航与草稿保留映射
+
+BorrowingLogin 增加 LOGIN／REGISTER 模式及当前认证流程的 registrationCompleted。OpenRegistration、RegistrationFailed、RegistrationSuccess 和 ReturnToLogin 均保留底层借阅路由、草稿及预约写入计数。RegistrationSuccess 不认证；返回登录及 LoginSuccess 后仍须明确 Submit。新增一项注册成功不认证的安全性质和五个独立探针；该模型现有七项安全性质、十一个探针。共享清单现为九模型、56 项安全性质、97 个探针，共 106 个模型执行用例。
+
+模型的 writes 只计预约写入，注册账户创建作为外部成功／失败结果，不在本模型中证明。真实注册契约、用户名冲突和限流由原后端用例覆盖；App.test.js 验证请求层的就地注册成功／失败、返回登录、草稿与 AI 实例保持、明确再次提交。模型不证明注册账户 SQL、密码验证、组件取消、响应竞态或 DOM 高度。两卡片等高与详情阅读顺序不增加业务状态迁移；已有书目呈现回归和 Windows 原生页面分别核对内容与视觉。
 
 ## 修订记录
+
+- 2026-10-09：原因：用户新增注册引导及两项布局反馈；提出人：lingzz／Codex；日期：2026-10-09；影响需求：注册／登录续行和书目呈现；影响验收：注册不认证或预约、草稿保持及页面顺序；评审人：lingzz（反馈），技术独立复审另记；批准人：lingzz；结论：扩展原认证模型并增加五个探针，视觉验证边界保持。
 
 - 2026-10-09：原因：用户批准直接月历和独立登录层；提出人：lingzz／Codex；日期：2026-10-09；影响需求：日历主状态与预约登录交互；影响验收：优先级、实际归还、草稿保留、明确二次提交；评审人：lingzz（需求答复），独立技术复审另记；批准人：lingzz；结论：新增两个有限模型及实现映射，按固定候选执行完整回归。
 

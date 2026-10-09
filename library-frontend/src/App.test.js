@@ -321,13 +321,16 @@ async function mountBorrowingAuthentication({ expired = false } = {}) {
   let firstReservation = true
   if (expired) login({ accessToken: 'expired-token', actor: { accountId: '1001', role: 'READER' } })
   setTransport({ mode: 'test', request(operationId, options = {}) {
-    if (!['createSession', 'reserveTitle'].includes(operationId)) { calls.push({ operationId }); return mock.request(operationId, options) }
+    if (!['createSession', 'reserveTitle', 'registerReader'].includes(operationId)) { calls.push({ operationId }); return mock.request(operationId, options) }
     return executeRequest({ operationId, getToken, ...options, fetchImpl: async (_url, init) => {
       const body = JSON.parse(init.body)
       calls.push({ operationId, body, token: init.headers.get('Authorization'), key: init.headers.get('Idempotency-Key') })
       let status = 200
       let envelope
-      if (operationId === 'createSession') {
+      if (operationId === 'registerReader') {
+        if (body.username === 'taken-reader') { status = 409; envelope = { code: 'MLS-ID-002', message: '用户名已被占用', data: {} } }
+        else envelope = { code: 'MLS-ID-S001', message: 'ok', data: { accountId: '1001', role: 'READER', status: 'ACTIVE' } }
+      } else if (operationId === 'createSession') {
         if (body.password === 'wrong') { status = 401; envelope = { code: 'MLS-ID-004', message: '用户名或密码不正确', data: {} } }
         else envelope = { code: 'MLS-ID-S002', message: 'ok', data: { accessToken: 'fresh-reader-token', actor: { accountId: '1001', role: 'READER' } } }
       } else if (expired && firstReservation) {
@@ -430,3 +433,80 @@ it('cancels only the login layer while keeping the borrowing values and route', 
   expect(wrapper.get('[data-testid="reserve-slot"]').element.value).toBe('16:00-17:00')
   expect(calls.filter(call => call.operationId === 'reserveTitle')).toHaveLength(0)
 })
+
+
+it('registers inside the authentication layer and returns to login without replacing the borrowing draft', async () => {
+  const { flushPromises } = await import('@vue/test-utils')
+  const { isAuthenticated } = await import('./platform/auth/session')
+  const { wrapper, calls } = await mountBorrowingAuthentication()
+  const borrowed = wrapper.get('.title-borrow-view').element
+  const assistant = wrapper.getComponent({ name: 'AiAssistantView' }).vm.$.uid
+  await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
+  await flushPromises()
+  await clickAuthenticationEntry('register-entry')
+  await flushPromises()
+  expect(wrapper.vm.$router.currentRoute.value.fullPath).toBe('/titles/2001/borrow')
+  expect(wrapper.get('.app-shell').attributes('inert')).toBeDefined()
+  const registration = wrapper.getComponent({ name: 'RegisterForm' })
+  await registration.get('[data-testid="register-username"]').setValue('new-reader')
+  await registration.get('[data-testid="register-password"]').setValue('password123')
+  await registration.get('[data-testid="register-display-name"]').setValue('新读者')
+  await registration.get('[data-testid="register-form"]').trigger('submit')
+  await flushPromises()
+  expect(registration.get('[data-testid="register-success"]').text()).toContain('注册成功')
+  expect(calls.filter(call => call.operationId === 'registerReader')).toHaveLength(1)
+  expect(calls.filter(call => ['createSession', 'reserveTitle'].includes(call.operationId))).toHaveLength(0)
+  expect(isAuthenticated()).toBe(false)
+  await clickAuthenticationEntry('login-entry')
+  await flushPromises()
+  const loginForm = wrapper.getComponent({ name: 'LoginForm' })
+  expect(loginForm.get('[data-testid="login-username"]').element.value).toBe('new-reader')
+  expect(loginForm.get('[data-testid="login-password"]').element.value).toBe('')
+  await loginForm.get('[data-testid="login-password"]').setValue('password123')
+  await loginForm.get('[data-testid="login-form"]').trigger('submit')
+  await flushPromises()
+  expect(wrapper.get('.app-shell').attributes('inert')).toBeUndefined()
+  expect(wrapper.get('.title-borrow-view').element).toBe(borrowed)
+  expect(wrapper.getComponent({ name: 'AiAssistantView' }).vm.$.uid).toBe(assistant)
+  expect(wrapper.get('[data-testid="ai-input"]').element.value).toBe('保留这条未发送草稿')
+  expect(wrapper.get('[data-testid="reserve-date"]').element.value).toBe('2026-10-20')
+  expect(wrapper.get('[data-testid="reserve-slot"]').element.value).toBe('16:00-17:00')
+  expect(calls.filter(call => call.operationId === 'reserveTitle')).toHaveLength(0)
+  await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
+  await flushPromises()
+  expect(calls.filter(call => call.operationId === 'reserveTitle')).toHaveLength(1)
+})
+
+it('keeps a failed registration in the local layer and cancels back to the unchanged borrowing page', async () => {
+  const { flushPromises } = await import('@vue/test-utils')
+  const { ElDialog } = await import('element-plus')
+  const { wrapper, calls } = await mountBorrowingAuthentication()
+  await wrapper.get('[data-testid="reserve-form"]').trigger('submit')
+  await flushPromises()
+  await clickAuthenticationEntry('register-entry')
+  await flushPromises()
+  const registration = wrapper.getComponent({ name: 'RegisterForm' })
+  await registration.get('[data-testid="register-username"]').setValue('taken-reader')
+  await registration.get('[data-testid="register-password"]').setValue('password123')
+  await registration.get('[data-testid="register-display-name"]').setValue('重复读者')
+  await registration.get('[data-testid="register-form"]').trigger('submit')
+  await flushPromises()
+  expect(registration.get('[data-testid="error-alert"]').text()).toContain('MLS-ID-002')
+  expect(registration.get('[data-testid="register-username"]').element.value).toBe('taken-reader')
+  expect(calls.filter(call => ['createSession', 'reserveTitle'].includes(call.operationId))).toHaveLength(0)
+  const dialog = wrapper.findAllComponents(ElDialog).find(component => component.props('title') === '注册读者账户')
+  dialog.vm.$emit('update:modelValue', false)
+  await flushPromises()
+  expect(wrapper.get('.app-shell').attributes('inert')).toBeUndefined()
+  expect(wrapper.vm.$router.currentRoute.value.fullPath).toBe('/titles/2001/borrow')
+  expect(wrapper.get('[data-testid="reserve-date"]').element.value).toBe('2026-10-20')
+  expect(wrapper.get('[data-testid="reserve-slot"]').element.value).toBe('16:00-17:00')
+})
+
+
+async function clickAuthenticationEntry(testId) {
+  const { DOMWrapper } = await import('@vue/test-utils')
+  const button = document.body.querySelector(`.reservation-login-dialog [data-testid="${testId}"]`)
+  expect(button).not.toBeNull()
+  await new DOMWrapper(button).trigger('click')
+}

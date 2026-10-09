@@ -13,34 +13,36 @@
           <span class="book-category">{{ category }}</span>
         </div>
         <div class="hero-copy">
-          <span class="title-category">{{ category }}</span>
           <h1 data-testid="title-detail-name">{{ detail.title }}</h1>
-          <p class="title-authors">{{ authors }}</p>
+          <section class="title-information" aria-labelledby="title-information-heading">
+            <div class="section-heading"><span aria-hidden="true">01</span><h2 id="title-information-heading">书目信息</h2></div>
+            <dl class="title-meta" data-testid="title-metadata">
+              <div v-for="item in metadata" :key="item.label"><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+            </dl>
+          </section>
+        </div>
+      </header>
+      <section class="detail-actions" aria-label="书目操作与借阅提示">
+        <div class="title-links">
+          <RouterLink
+            v-if="detail.hasReadingContent"
+            class="reading-link"
+            :to="`/titles/${detail.titleId}/read`"
+            data-testid="title-reading-entry"
+          >开始阅读 <span aria-hidden="true">↗</span></RouterLink>
+          <RouterLink
+            :to="`/titles/${detail.titleId}/borrow`"
+            data-testid="title-borrow-entry"
+          >借阅</RouterLink>
+        </div>
+        <div class="availability-summary">
           <span
             class="title-availability"
             :class="{ 'is-unavailable': detail.availability === 'UNAVAILABLE', 'is-unknown': detail.availability === 'UNKNOWN' }"
             data-testid="title-availability"
           >{{ availabilityLabel(detail.availability) }}</span>
           <p class="availability-note">可借状态为书目级展示，不构成借阅承诺。</p>
-          <div class="title-links">
-            <RouterLink
-              v-if="detail.hasReadingContent"
-              class="reading-link"
-              :to="`/titles/${detail.titleId}/read`"
-              data-testid="title-reading-entry"
-            >开始阅读 <span aria-hidden="true">↗</span></RouterLink>
-            <RouterLink
-              :to="`/titles/${detail.titleId}/borrow`"
-              data-testid="title-borrow-entry"
-            >借阅</RouterLink>
-          </div>
         </div>
-      </header>
-      <section class="title-information" aria-labelledby="title-information-heading">
-        <div class="section-heading"><span aria-hidden="true">01</span><h2 id="title-information-heading">书目信息</h2></div>
-        <dl class="title-meta" data-testid="title-metadata">
-          <div v-for="item in metadata" :key="item.label"><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
-        </dl>
       </section>
     </template>
     <ErrorAlert v-if="state.status === 'failure' && !notFound" :failure="state.failure" />
@@ -94,7 +96,7 @@ onMounted(async () => {
   container: title-detail / inline-size;
 }
 .detail-topline { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--detail-line); color: var(--detail-muted); font-size: 10px; letter-spacing: 2px; }
-.detail-hero { display: grid; grid-template-columns: minmax(0, .76fr) minmax(0, 1.24fr); gap: 30px; align-items: center; padding: 30px 0; }
+.detail-hero { display: grid; grid-template-columns: minmax(0, .76fr) minmax(0, 1.24fr); gap: 30px; align-items: start; padding: 28px 0; }
 .book-graphic { min-width: 0; height: 300px; box-sizing: border-box; padding: 23px 22px; border-left: 8px solid #d6ddc8; border-radius: 2px 10px 10px 2px; background: #e8eddf; box-shadow: 8px 10px 0 #f1f3eb; display: flex; flex-direction: column; gap: 14px; }
 .book-imprint { font-size: 10px; letter-spacing: 3px; color: #627056; }
 .book-graphic strong { min-height: 0; font-family: 'Noto Serif CJK SC', 'Songti SC', SimSun, serif; font-size: 26px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
@@ -103,22 +105,23 @@ onMounted(async () => {
 .book-imprint, .book-author, .book-rule, .book-category { flex-shrink: 0; }
 .book-rule { width: 32px; height: 1px; margin-top: auto; background: #65725d; }
 .hero-copy { min-width: 0; }
-.title-category { display: block; color: var(--detail-muted); font-size: 11px; line-height: 1.7; margin-bottom: 12px; overflow-wrap: anywhere; }
 h1 { margin: 0; font-family: 'Noto Serif CJK SC', 'Songti SC', SimSun, serif; font-size: clamp(20px, 3.6cqi, 26px); font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
-.title-authors { margin: 14px 0 20px; color: var(--detail-muted); font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
 .title-availability { display: inline-block; border: 1px solid #dbe2cd; border-radius: 20px; padding: 5px 10px; background: #f0f4e9; color: #536743; font-size: 12px; }
 .title-availability.is-unavailable, .title-availability.is-unknown { background: #f5f3ee; color: #786950; border-color: #e7e0d1; }
-.availability-note { margin: 14px 0 24px; color: var(--detail-muted); font-size: 11px; line-height: 1.8; }
+.availability-note { margin: 0; color: var(--detail-muted); font-size: 11px; line-height: 1.8; }
 .title-links { display: flex; flex-wrap: wrap; gap: 9px; }
 .title-links a { border: 1px solid #d9dfcf; border-radius: 9px; padding: 11px 15px; color: var(--detail-accent); background: #fff; font-size: 13px; text-decoration: none; }
 .title-links .reading-link { background: var(--detail-accent); color: #fff; border-color: var(--detail-accent); }
 .reading-link span { margin-left: 16px; }
-.title-information { margin-bottom: 26px; }
-.section-heading { display: flex; align-items: center; gap: 12px; padding-top: 20px; border-top: 1px solid var(--detail-line); }
+.title-information { margin-top: 18px; }
+.detail-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding-top: 18px; border-top: 1px solid var(--detail-line); }
+.availability-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.availability-summary .title-availability { flex-shrink: 0; }
+.section-heading { display: flex; align-items: center; gap: 12px; padding-top: 14px; border-top: 1px solid var(--detail-line); }
 .section-heading > span { color: var(--detail-muted); font-size: 11px; }
 h2 { margin: 0 0 4px; font-size: 15px; font-weight: 500; }
 .title-meta { margin: 0; }
-.title-meta > div { display: grid; grid-template-columns: 5em minmax(0, 1fr); gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--detail-line); }
+.title-meta > div { display: grid; grid-template-columns: 5em minmax(0, 1fr); gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--detail-line); }
 .title-meta dt { color: var(--detail-muted); font-size: 12px; line-height: 1.8; }
 .title-meta dd { margin: 0; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 .title-links a:focus-visible { outline-color: var(--detail-accent); }

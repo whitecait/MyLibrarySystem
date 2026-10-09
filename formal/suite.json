@@ -223,7 +223,8 @@
       "InvAuthenticationPreservesDraft",
       "InvNoAutomaticWrite",
       "InvRoutePreserved",
-      "InvSubmissionAuthenticated"
+      "InvSubmissionAuthenticated",
+      "InvRegistrationDoesNotAuthenticate"
     ],
     "probes": [
       "ProbeNotAnonymousPrompt",
@@ -231,7 +232,12 @@
       "ProbeNotLoginFailureKeepsDraft",
       "ProbeNotCancelKeepsDraft",
       "ProbeNotSuccessWithoutWrite",
-      "ProbeNotExplicitResubmit"
+      "ProbeNotExplicitResubmit",
+      "ProbeNotRegistrationOpened",
+      "ProbeNotRegistrationFailureKeepsDraft",
+      "ProbeNotRegisteredWithoutLogin",
+      "ProbeNotReturnToLogin",
+      "ProbeNotRegisteredThenExplicitResubmit"
     ],
     "timeout_seconds": 180,
     "deadlock": "Finite terminal states are intentional; no liveness proof is claimed."

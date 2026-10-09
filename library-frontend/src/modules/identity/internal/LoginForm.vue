@@ -12,25 +12,38 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import ErrorAlert from '@/platform/components/ErrorAlert.vue'
 import { useApiRequest } from '@/platform/http'
 import { login as saveSession } from '@/platform/auth/session'
 import { createSession } from '../index'
 
-const emit = defineEmits(['authenticated'])
-const username = ref('')
+const props = defineProps({ suggestedUsername: { type: String, default: '' } })
+const emit = defineEmits(['authenticated', 'pending'])
+const username = ref(props.suggestedUsername)
 const password = ref('')
-const { state, run } = useApiRequest()
+const { state, run, reset } = useApiRequest()
+const controller = new AbortController()
+onBeforeUnmount(() => controller.abort())
+watch(() => props.suggestedUsername, value => {
+  username.value = value
+  password.value = ''
+  reset()
+})
 
 async function onSubmit() {
-  const envelope = await run(() => createSession(
-    { username: username.value, password: password.value },
-    // Wrong credentials belong to this form; they do not replace the current page.
-    { onUnauthorizedResponse: () => {} },
-  ))
-  if (!envelope) return
-  saveSession(envelope.data)
-  emit('authenticated')
+  if (state.status === 'loading') return
+  emit('pending', true)
+  try {
+    const envelope = await run(() => createSession(
+      { username: username.value, password: password.value },
+      // Wrong credentials belong to this form; they do not replace the current page.
+      { signal: controller.signal, onUnauthorizedResponse: () => {} },
+    ))
+    if (!envelope || controller.signal.aborted) return
+    saveSession(envelope.data)
+    password.value = ''
+    emit('authenticated')
+  } finally { if (!controller.signal.aborted) emit('pending', false) }
 }
 </script>

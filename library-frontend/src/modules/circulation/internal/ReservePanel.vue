@@ -129,7 +129,7 @@ function onSubmit() {
 </script>
 
 <style scoped>
-.reserve-panel { container: reservation / inline-size; border: 1px solid var(--detail-line, #e2e6d9); border-radius: 16px; padding: 20px; background: var(--detail-surface, #fafbf6); }
+.reserve-panel { display: flex; flex-direction: column; container: reservation / inline-size; border: 1px solid var(--detail-line, #e2e6d9); border-radius: 16px; padding: 20px; background: var(--detail-surface, #fafbf6); }
 .reserve-heading { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
 .reserve-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--detail-tint, #eef1e7); color: var(--detail-accent, #52634a); font-size: 22px; }
 h2 { margin: 0 0 5px; font-size: 16px; }
@@ -141,6 +141,6 @@ h2 { margin: 0 0 5px; font-size: 16px; }
 .reserve-panel :deep(.el-input__wrapper) { min-height: 40px; box-shadow: 0 0 0 1px var(--detail-line, #e2e6d9) inset; border-radius: 9px; }
 .reserve-submit { grid-column: 1 / -1; min-height: 42px; margin: 0; background: var(--detail-accent, #52634a); border-color: var(--detail-accent, #52634a); border-radius: 9px; }
 .reserve-submit:hover, .reserve-submit:focus-visible { background: var(--detail-accent, #52634a); border-color: var(--detail-accent, #52634a); filter: brightness(1.08); }
-.note { margin: 14px 0 0; color: var(--detail-muted, #68715f); font-size: 11px; line-height: 1.8; }
+.note { margin: auto 0 0; padding-top: 14px; color: var(--detail-muted, #68715f); font-size: 11px; line-height: 1.8; }
 @container reservation (max-width: 370px) { .reserve-panel form { grid-template-columns: minmax(0, 1fr); } }
 </style>

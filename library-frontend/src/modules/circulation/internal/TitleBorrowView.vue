@@ -43,6 +43,6 @@ onMounted(async () => {
 .borrow-intro p { margin: 0 0 10px; color: #68715f; font-size: 12px; }
 .borrow-intro h1 { margin: 0 0 12px; font-size: 24px; line-height: 1.5; font-weight: 500; overflow-wrap: anywhere; }
 .borrow-intro span { color: #68715f; font-size: 12px; line-height: 1.8; }
-.borrowing-tools { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.borrowing-tools { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
 @container title-borrow (max-width: 580px) { .borrowing-tools { grid-template-columns: minmax(0, 1fr); } }
 </style>
